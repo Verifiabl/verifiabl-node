@@ -94,7 +94,7 @@ describe("VerifiablClient", () => {
     });
   });
 
-  it("maps API symbols to barcode images for createBarcode", async () => {
+  it("maps the API response to a barcode image for createBarcode", async () => {
     const fetch = mockFetch(201, {
       id: "barcode-record",
       symbol: {
