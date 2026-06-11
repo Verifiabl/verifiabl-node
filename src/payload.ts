@@ -20,7 +20,7 @@ export const ciphertextSchema = z
   .regex(BASE64URL_RE, "Ciphertext must be base64url encoded");
 
 export interface BarcodeParts {
-  /** Linking token returned by `client.registerPayslip`. */
+  /** Linking token returned by `client.registerNonPii`. */
   linkingToken: string;
   /** Encrypted PII ciphertext (base64url). */
   encryptedPii: string;

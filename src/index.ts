@@ -1,14 +1,6 @@
 export { VerifiablApiError, VerifiablClient, type VerifiablClientOptions } from "./client.js";
 export { type EncryptedPii, encryptPii } from "./crypto.js";
 export {
-  formatP1,
-  P1_FIELD_ORDER,
-  type P1FieldName,
-  type P1Fields,
-  p1FieldsSchema,
-  parseP1,
-} from "./p1.js";
-export {
   type BarcodeParts,
   buildBarcodePayload,
   buildScanUrl,
@@ -18,24 +10,32 @@ export {
   linkingTokenSchema,
   type ScanUrlOptions,
 } from "./payload.js";
-
-export { createVerificationQrPng, type VerificationQrPngResult } from "./qr/png.js";
 export {
-  createVerificationQr,
+  formatPii,
+  PII_FIELD_ORDER,
+  type PiiFieldName,
+  type PiiFields,
+  parsePii,
+  piiFieldsSchema,
+} from "./pii.js";
+
+export { type BarcodePngResult, createBarcodePng } from "./qr/png.js";
+export {
+  type BarcodeSvgColors,
+  type BarcodeSvgOptions,
+  type BarcodeSvgResult,
+  createBarcodeSvg,
   type QrErrorCorrectionLevel,
-  type VerificationQrColors,
-  type VerificationQrOptions,
-  type VerificationQrResult,
 } from "./qr/styled.js";
 
 export type {
-  CreatePayslipSymbolRequest,
-  CreatePayslipSymbolResponse,
-  DataMatrixSymbol,
+  BarcodeImage,
+  CreateBarcodeRequest,
+  CreateBarcodeResponse,
   EncryptionMetadata,
   PayslipData,
-  RegisterPayslipRequest,
-  RegisterPayslipResponse,
+  RegisterNonPiiRequest,
+  RegisterNonPiiResponse,
   VerifiablErrorBody,
   VerifiablErrorCode,
   VerifiablErrorDetail,

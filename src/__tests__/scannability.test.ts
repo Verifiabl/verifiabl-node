@@ -3,7 +3,7 @@ import { Resvg } from "@resvg/resvg-js";
 import jsQR = require("jsqr");
 
 import { extractPayloadFromScan } from "../payload.js";
-import { createVerificationQr, type VerificationQrOptions } from "../qr/styled.js";
+import { type BarcodeSvgOptions, createBarcodeSvg } from "../qr/styled.js";
 
 /**
  * End-to-end scannability: rasterise the styled SVG and decode it with an
@@ -17,8 +17,8 @@ const PARTS = {
     "Zm9vYmFyYmF6cXV4XzEyMzQ1Njc4OTBhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ekFCQ0RFRkdISUpLTE1OT1A",
 };
 
-function decode(parts: typeof PARTS, options: VerificationQrOptions = {}): string {
-  const { svg } = createVerificationQr(parts, options);
+function decode(parts: typeof PARTS, options: BarcodeSvgOptions = {}): string {
+  const { svg } = createBarcodeSvg(parts, options);
   const rendered = new Resvg(svg, { fitTo: { mode: "width", value: 900 } }).render();
   const result = jsQR.default(
     new Uint8ClampedArray(rendered.pixels),
@@ -31,7 +31,7 @@ function decode(parts: typeof PARTS, options: VerificationQrOptions = {}): strin
 
 describe("styled QR scannability", () => {
   it("decodes the framed badge back to the scan URL", () => {
-    expect(decode(PARTS)).toBe(createVerificationQr(PARTS).content);
+    expect(decode(PARTS)).toBe(createBarcodeSvg(PARTS).content);
   });
 
   it("decoded URL round-trips to the original payload", () => {
@@ -40,9 +40,7 @@ describe("styled QR scannability", () => {
   });
 
   it("decodes the frameless variant", () => {
-    expect(decode(PARTS, { frame: false })).toBe(
-      createVerificationQr(PARTS, { frame: false }).content,
-    );
+    expect(decode(PARTS, { frame: false })).toBe(createBarcodeSvg(PARTS, { frame: false }).content);
   });
 
   it("decodes bare-payload encoding", () => {
@@ -57,7 +55,7 @@ describe("styled QR scannability", () => {
       encryptedPii: "A".repeat(600),
     };
     expect(decode(longParts, { errorCorrectionLevel: "H" })).toBe(
-      createVerificationQr(longParts, { errorCorrectionLevel: "H" }).content,
+      createBarcodeSvg(longParts, { errorCorrectionLevel: "H" }).content,
     );
   });
 });

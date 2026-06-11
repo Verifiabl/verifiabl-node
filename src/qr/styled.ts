@@ -12,7 +12,7 @@ import { type BarcodeParts, buildBarcodePayload, buildScanUrl } from "../payload
 
 export type QrErrorCorrectionLevel = "L" | "M" | "Q" | "H";
 
-export interface VerificationQrColors {
+export interface BarcodeSvgColors {
   /** Card background and module colour (default: Verifiabl navy). */
   navy?: string;
   /** QR panel background (default: white). */
@@ -21,7 +21,7 @@ export interface VerificationQrColors {
   text?: string;
 }
 
-export interface VerificationQrOptions {
+export interface BarcodeSvgOptions {
   /** API origin embedded in the QR scan URL (default: https://api.verifiabl.io). */
   baseUrl?: string;
   /**
@@ -43,10 +43,10 @@ export interface VerificationQrOptions {
    * user-controlled content.
    */
   logoSvg?: string;
-  colors?: VerificationQrColors;
+  colors?: BarcodeSvgColors;
 }
 
-export interface VerificationQrResult {
+export interface BarcodeSvgResult {
   /** Complete standalone SVG document. */
   svg: string;
   width: number;
@@ -142,7 +142,7 @@ function round2(n: number): number {
 /**
  * Verifiabl wordmark as vector paths (official logo asset, 80x16 design
  * units). Fills are applied by the containing group so the `colors.text`
- * option drives the colour; the source clipPath is intentionally dropped
+ * option drives the colour. The source clipPath is intentionally dropped:
  * the paths stay in bounds and a fixed clipPath id would collide when
  * multiple badges are inlined in one document.
  */
@@ -175,14 +175,14 @@ function renderWordmark(centerX: number, top: number, color: string, scale: numb
 /**
  * Render the branded Verifiabl QR badge as SVG.
  *
- * Takes the linking token (from `client.registerPayslip`) and the encrypted PII
- * ciphertext (from `encryptPii`), and returns a standalone SVG suitable
- * for embedding in a payslip PDF.
+ * Takes the linking token from `client.registerNonPii` and the encrypted PII
+ * ciphertext from `encryptPii`, then returns a standalone SVG suitable for
+ * embedding in a payslip PDF.
  */
-export function createVerificationQr(
+export function createBarcodeSvg(
   parts: BarcodeParts,
-  options: VerificationQrOptions = {},
-): VerificationQrResult {
+  options: BarcodeSvgOptions = {},
+): BarcodeSvgResult {
   const {
     encode: encodeOption = "url",
     errorCorrectionLevel: errorCorrectionLevelOption = "M",
@@ -264,7 +264,7 @@ function validatePositiveNumber(value: number, name: string): number {
   return value;
 }
 
-function validateEncode(value: VerificationQrOptions["encode"]): "url" | "payload" {
+function validateEncode(value: BarcodeSvgOptions["encode"]): "url" | "payload" {
   if (value === "url" || value === "payload") {
     return value;
   }
@@ -272,7 +272,7 @@ function validateEncode(value: VerificationQrOptions["encode"]): "url" | "payloa
 }
 
 function validateErrorCorrectionLevel(
-  value: VerificationQrOptions["errorCorrectionLevel"],
+  value: BarcodeSvgOptions["errorCorrectionLevel"],
 ): QrErrorCorrectionLevel {
   if (value === "L" || value === "M" || value === "Q" || value === "H") {
     return value;
