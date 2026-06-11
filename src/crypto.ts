@@ -6,13 +6,13 @@ import { createCipheriv, randomBytes } from "node:crypto";
  * Verifiabl's verification service decrypts barcode ciphertext with
  * AES-256-GCM using a 96-bit IV and a 128-bit auth tag, all base64url
  * encoded without padding. This helper produces exactly that shape from a
- * P1 plaintext string and your provider key.
+ * formatted PII string and your provider key.
  *
  * Key handling rules (ISO 27001-aligned, these are your obligations as a
  * provider):
  *  - The 32-byte key must come from a KMS or secrets manager. Never hard
  *    code it, commit it, or log it.
- *  - The plaintext P1 string is PII. Keep it in memory only; never log it
+ *  - The formatted plaintext string is PII. Keep it in memory only; never log it
  *    or persist it.
  */
 
@@ -21,7 +21,7 @@ const KEY_BYTES = 32; // AES-256
 const KEY_VERSION_RE = /^[A-Za-z0-9._-]+$/;
 
 export interface EncryptedPii {
-  /** Base64url ciphertext to embed in the barcode or send to createPayslipSymbol. */
+  /** Base64url ciphertext to embed in the barcode or send to createBarcode. */
   encrypted_pii: string;
   /** Server-side decryption metadata for the register endpoints. */
   encryption_metadata: {
@@ -36,9 +36,9 @@ function base64Url(buf: Buffer): string {
 }
 
 /**
- * Encrypt a P1 plaintext string with AES-256-GCM.
+ * Encrypt a formatted PII string with AES-256-GCM.
  *
- * @param plaintext The P1 string from `formatP1`.
+ * @param plaintext The formatted string from `formatPii`.
  * @param key Your 32-byte provider encryption key.
  * @param keyVersion Identifier of the key version in use (sent to the API
  *   so the matching key can be selected at verification time).

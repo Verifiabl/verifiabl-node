@@ -1,6 +1,6 @@
 import { createDecipheriv, randomBytes } from "node:crypto";
 import { encryptPii } from "../crypto.js";
-import { formatP1, parseP1 } from "../p1.js";
+import { formatPii, parsePii } from "../pii.js";
 
 /**
  * Mirrors the Verifiabl verifier's decryption exactly: AES-256-GCM,
@@ -25,7 +25,7 @@ describe("encryptPii", () => {
   const key = randomBytes(32);
 
   it("produces ciphertext the verifier's decrypt logic can read", () => {
-    const plaintext = formatP1({
+    const plaintext = formatPii({
       employee_name: "Jane A. Doe",
       position: "Senior Developer",
       department: "Engineering",
@@ -44,7 +44,7 @@ describe("encryptPii", () => {
     );
 
     expect(decrypted).toBe(plaintext);
-    expect(parseP1(decrypted)).toMatchObject({ employee_name: "Jane A. Doe" });
+    expect(parsePii(decrypted)).toMatchObject({ employee_name: "Jane A. Doe" });
   });
 
   it("emits metadata in the exact wire sizes the API validates", () => {

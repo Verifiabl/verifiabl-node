@@ -1,16 +1,21 @@
 import { VerifiablApiError, VerifiablClient } from "../client.js";
 import { buildScanUrl } from "../payload.js";
-import type { RegisterPayslipRequest } from "../types.js";
+import type { CreateBarcodeRequest, RegisterNonPiiRequest } from "../types.js";
 
 const LT = "AbCdEfGhIjKlMnOpQrStUv";
 const CT = "Zm9v";
 const PAYLOAD = `1|${LT}|${CT}`;
 
-const REQUEST: RegisterPayslipRequest = {
+const REQUEST: RegisterNonPiiRequest = {
   schema: "au.payslip.v1",
   issued_at: "2026-06-11T00:00:00Z",
   payslip_data: { period_start: "2026-05-01", period_end: "2026-05-31", gross: "9000.00" },
   encryption_metadata: { iv: "AAAAAAAAAAAAAAAA", tag: "AAAAAAAAAAAAAAAAAAAAAA", key_version: "v1" },
+};
+
+const CREATE_BARCODE_REQUEST: CreateBarcodeRequest = {
+  ...REQUEST,
+  encrypted_pii: CT,
 };
 
 function mockFetch(status: number, body: unknown): jest.MockedFunction<typeof fetch> {
@@ -62,7 +67,7 @@ describe("VerifiablClient", () => {
       fetch,
     });
 
-    const result = await client.registerPayslip(REQUEST);
+    const result = await client.registerNonPii(REQUEST);
 
     expect(result.linking_token).toBe("AbCdEfGhIjKlMnOpQrStUv");
     const [url, init] = firstFetchCall(fetch);
@@ -82,11 +87,46 @@ describe("VerifiablClient", () => {
       fetch,
     });
 
-    await expect(client.registerPayslip(REQUEST)).rejects.toMatchObject({
+    await expect(client.registerNonPii(REQUEST)).rejects.toMatchObject({
       name: "VerifiablApiError",
       status: 401,
       code: "UNAUTHORIZED",
     });
+  });
+
+  it("maps API symbols to barcode images for createBarcode", async () => {
+    const fetch = mockFetch(201, {
+      id: "barcode-record",
+      symbol: {
+        format: "png",
+        data: "iVBORw0KGgo=",
+        width_px: 720,
+        height_px: 720,
+      },
+    });
+    const client = new VerifiablClient({
+      apiKey: "k",
+      fetch,
+    });
+
+    const result = await client.createBarcode(CREATE_BARCODE_REQUEST);
+
+    expect(result).toEqual({
+      id: "barcode-record",
+      barcode: {
+        format: "png",
+        data: "iVBORw0KGgo=",
+        width_px: 720,
+        height_px: 720,
+      },
+    });
+    const [url, init] = firstFetchCall(fetch);
+    if (init === undefined) {
+      throw new Error("Expected fetch init options");
+    }
+    expect(url).toBe("https://api.verifiabl.io/v1/registerAndBuildSymbol");
+    const parsedBody: unknown = JSON.parse(String(init.body));
+    expect(parsedBody).toEqual(CREATE_BARCODE_REQUEST);
   });
 
   it("survives non-JSON error bodies", async () => {

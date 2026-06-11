@@ -6,8 +6,8 @@ Verifiabl lets payroll providers issue payslips with a scannable verification co
 
 This SDK gives you everything needed to integrate:
 
-- **`createVerificationQr`**: branded "Secured by Verifiabl" QR badge as dependency-free SVG (PNG optional)
-- **`formatP1`**: formats employee PII into Verifiabl's compact `P1|...` plaintext format
+- **`createBarcodeSvg`**: branded "Secured by Verifiabl" QR badge as dependency-free SVG (PNG optional)
+- **`formatPii`**: formats employee PII into Verifiabl's compact barcode payload format
 - **`encryptPii`**: AES-256-GCM encryption producing exactly the ciphertext and metadata the API expects
 - **`VerifiablClient`**: typed, zero-dependency API client using native `fetch`
 
@@ -22,9 +22,9 @@ npm install @verifiabl/node
 ```ts
 import {
   VerifiablClient,
-  formatP1,
+  formatPii,
   encryptPii,
-  createVerificationQr,
+  createBarcodeSvg,
 } from "@verifiabl/node";
 
 const apiKey = process.env.VERIFIABL_API_KEY;
@@ -38,8 +38,8 @@ const client = new VerifiablClient({
   apiKey,
 });
 
-// 1. Format the employee PII into the P1 plaintext format
-const p1 = formatP1({
+// 1. Format the employee PII into Verifiabl's compact plaintext format
+const formattedPii = formatPii({
   employee_name: "Jane A. Doe",
   position: "Senior Developer",
   department: "Engineering",
@@ -52,10 +52,10 @@ const p1 = formatP1({
 
 // 2. Encrypt it with your key (32 bytes, from your KMS or secrets manager)
 const providerKey = Buffer.from(encryptionKeyBase64, "base64");
-const { encrypted_pii, encryption_metadata } = encryptPii(p1, providerKey, "v1");
+const { encrypted_pii, encryption_metadata } = encryptPii(formattedPii, providerKey, "v1");
 
 // 3. Register the non-PII payslip data and decryption metadata
-const { linking_token } = await client.registerPayslip({
+const { linking_token } = await client.registerNonPii({
   schema: "au.payslip.v1",
   issued_at: new Date().toISOString(),
   payslip_data: {
@@ -67,7 +67,7 @@ const { linking_token } = await client.registerPayslip({
 });
 
 // 4. Render the branded QR badge and embed it in your payslip PDF
-const { svg } = createVerificationQr({
+const { svg } = createBarcodeSvg({
   linkingToken: linking_token,
   encryptedPii: encrypted_pii,
 });
@@ -78,7 +78,7 @@ The QR code encodes `https://api.verifiabl.io/v/<payload>`: lenders' scanning in
 ## Styled QR options
 
 ```ts
-const { svg, width, height, content } = createVerificationQr(parts, {
+const { svg, width, height, content } = createBarcodeSvg(parts, {
   width: 720,                  // badge width (default 360)
   frame: false,                // bare styled QR, no card/header
   encode: "payload",           // encode bare "1|lt|ct" instead of the scan URL
@@ -99,9 +99,9 @@ npm install @resvg/resvg-js
 ```
 
 ```ts
-import { createVerificationQrPng } from "@verifiabl/node";
+import { createBarcodePng } from "@verifiabl/node";
 
-const { png } = await createVerificationQrPng(parts, {}, 720); // 720px wide PNG buffer
+const { png } = await createBarcodePng(parts, {}, 720); // 720px wide PNG buffer
 ```
 
 ## API client
@@ -109,8 +109,8 @@ const { png } = await createVerificationQrPng(parts, {}, 720); // 720px wide PNG
 All three endpoints are fully typed:
 
 ```ts
-await client.registerPayslip(request);          // self-managed flow: { id, linking_token }
-await client.createPayslipSymbol(request);      // API-managed flow: { id, symbol }
+await client.registerNonPii(request);          // self-managed flow: { id, linking_token }
+await client.createBarcode(request);           // API-managed flow: { id, barcode }
 await client.verifyBarcode({ barcode: "1|..." }); // lender-side verification
 ```
 
@@ -132,8 +132,8 @@ try {
 
 ## Security model
 
-- **PII never leaves your infrastructure in plaintext.** The P1 string is encrypted locally with your key; Verifiabl stores only non-PII data plus the IV/tag/key-version needed to verify later.
-- **Keep your encryption key in a KMS or secrets manager.** Never commit it, log it, or send it anywhere. The same applies to the P1 plaintext: hold it in memory only. Never write it to logs or disk.
+- **PII never leaves your infrastructure in plaintext.** The formatted PII string is encrypted locally with your key; Verifiabl stores only non-PII data plus the IV/tag/key-version needed to verify later.
+- **Keep your encryption key in a KMS or secrets manager.** Never commit it, log it, or send it anywhere. The same applies to the formatted PII plaintext: hold it in memory only. Never write it to logs or disk.
 - **API keys are personal to your organisation.** Load them from a secrets manager or environment variable.
 - All SDK inputs are validated with strict allow-lists (Zod) before use.
 

@@ -45,15 +45,15 @@ const basePayslipRegistrationSchema = z
   .strict();
 
 /**
- * Request for `client.registerPayslip`. Calls POST /v1/registerNonPII.
+ * Request for `client.registerNonPii`. Calls POST /v1/registerNonPII.
  * The encrypted PII stays with you and goes into a locally generated
  * barcode; only non-PII data and decryption metadata are sent.
  */
-export const registerPayslipRequestSchema = basePayslipRegistrationSchema;
+export const registerNonPiiRequestSchema = basePayslipRegistrationSchema;
 
-export type RegisterPayslipRequest = z.infer<typeof registerPayslipRequestSchema>;
+export type RegisterNonPiiRequest = z.infer<typeof registerNonPiiRequestSchema>;
 
-export const registerPayslipResponseSchema = z
+export const registerNonPiiResponseSchema = z
   .object({
     /** Server record id (UUID). */
     id: z.string().min(1),
@@ -62,23 +62,23 @@ export const registerPayslipResponseSchema = z
   })
   .strict();
 
-export type RegisterPayslipResponse = z.infer<typeof registerPayslipResponseSchema>;
+export type RegisterNonPiiResponse = z.infer<typeof registerNonPiiResponseSchema>;
 
 /**
- * Request for `client.createPayslipSymbol`. Calls POST
+ * Request for `client.createBarcode`. Calls POST
  * /v1/registerAndBuildSymbol. This API-managed flow also sends the
- * ciphertext, and the server returns a ready-made Data Matrix symbol.
+ * ciphertext, and the server returns a ready-made barcode image.
  */
-export const createPayslipSymbolRequestSchema = basePayslipRegistrationSchema
+export const createBarcodeRequestSchema = basePayslipRegistrationSchema
   .extend({
-    /** Base64url AES-256-GCM ciphertext of the P1 plaintext. */
+    /** Base64url AES-256-GCM ciphertext of the formatted PII plaintext. */
     encrypted_pii: z.string().min(1).max(10_000).regex(BASE64URL_RE),
   })
   .strict();
 
-export type CreatePayslipSymbolRequest = z.infer<typeof createPayslipSymbolRequestSchema>;
+export type CreateBarcodeRequest = z.infer<typeof createBarcodeRequestSchema>;
 
-export const dataMatrixSymbolSchema = z
+export const barcodeImageSchema = z
   .object({
     format: z.literal("png"),
     /** Base64-encoded PNG. */
@@ -88,16 +88,23 @@ export const dataMatrixSymbolSchema = z
   })
   .strict();
 
-export type DataMatrixSymbol = z.infer<typeof dataMatrixSymbolSchema>;
+export type BarcodeImage = z.infer<typeof barcodeImageSchema>;
 
-export const createPayslipSymbolResponseSchema = z
+export const createBarcodeApiResponseSchema = z
   .object({
     id: z.string().min(1),
-    symbol: dataMatrixSymbolSchema,
+    symbol: barcodeImageSchema,
   })
   .strict();
 
-export type CreatePayslipSymbolResponse = z.infer<typeof createPayslipSymbolResponseSchema>;
+export const createBarcodeResponseSchema = z
+  .object({
+    id: z.string().min(1),
+    barcode: barcodeImageSchema,
+  })
+  .strict();
+
+export type CreateBarcodeResponse = z.infer<typeof createBarcodeResponseSchema>;
 
 /**
  * Request for `client.verifyBarcode`. Calls POST /v1/verifications/payload.
@@ -121,7 +128,7 @@ export const verifyBarcodeResponseSchema = z
     linking_token: z.string().length(22).regex(BASE64URL_RE),
     /** Non-PII payslip data as registered. */
     payslip: z.record(z.string(), z.unknown()),
-    /** Decrypted employee PII fields (P1 layout). */
+    /** Decrypted employee PII fields. */
     employee: z.record(z.string(), z.unknown()),
     decrypted_at: z.string().datetime({ offset: true }),
   })

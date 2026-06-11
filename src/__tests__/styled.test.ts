@@ -1,24 +1,24 @@
 import QRCode from "qrcode";
 import { buildScanUrl } from "../payload.js";
-import { createVerificationQr } from "../qr/styled.js";
+import { createBarcodeSvg } from "../qr/styled.js";
 
 const LT = "AbCdEfGhIjKlMnOpQrStUv";
 const CT = "Zm9vYmFyYmF6cXV4XzEyMzQ1Njc4OTBhYmNkZWZnaGlqa2xtbm9w";
 const PARTS = { linkingToken: LT, encryptedPii: CT };
 
-describe("createVerificationQr", () => {
+describe("createBarcodeSvg", () => {
   it("encodes the /v/ scan URL by default", () => {
-    const { content } = createVerificationQr(PARTS);
+    const { content } = createBarcodeSvg(PARTS);
     expect(content).toBe(buildScanUrl(PARTS));
   });
 
   it("can encode the bare payload", () => {
-    const { content } = createVerificationQr(PARTS, { encode: "payload" });
+    const { content } = createBarcodeSvg(PARTS, { encode: "payload" });
     expect(content).toBe(`1|${LT}|${CT}`);
   });
 
   it("renders one dot per dark non-finder module", () => {
-    const { svg, content } = createVerificationQr(PARTS);
+    const { svg, content } = createBarcodeSvg(PARTS);
     const qr = QRCode.create(content, { errorCorrectionLevel: "M" });
     const size = qr.modules.size;
 
@@ -37,7 +37,7 @@ describe("createVerificationQr", () => {
   });
 
   it("renders the branded frame with header by default", () => {
-    const { svg, width, height } = createVerificationQr(PARTS);
+    const { svg, width, height } = createBarcodeSvg(PARTS);
     expect(svg).toContain("Secured by");
     expect(svg).toContain("Verifiabl");
     expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"');
@@ -46,44 +46,44 @@ describe("createVerificationQr", () => {
   });
 
   it("omits frame and header when frame=false", () => {
-    const { svg, width, height } = createVerificationQr(PARTS, { frame: false });
+    const { svg, width, height } = createBarcodeSvg(PARTS, { frame: false });
     expect(svg).not.toContain("Secured by");
     expect(width).toBe(height);
   });
 
   it("escapes XML in custom header text", () => {
-    const { svg } = createVerificationQr(PARTS, { headerText: 'Powered by <"&>' });
+    const { svg } = createBarcodeSvg(PARTS, { headerText: 'Powered by <"&>' });
     expect(svg).toContain("Powered by &lt;&quot;&amp;&gt;");
     expect(svg).not.toContain('by <"&>');
   });
 
   it("applies custom colours", () => {
-    const { svg } = createVerificationQr(PARTS, { colors: { navy: "#123456" } });
+    const { svg } = createBarcodeSvg(PARTS, { colors: { navy: "#123456" } });
     expect(svg).toContain("#123456");
   });
 
   it("rejects unsafe colour attributes", () => {
-    expect(() => createVerificationQr(PARTS, { colors: { navy: '" onload="alert(1)' } })).toThrow(
+    expect(() => createBarcodeSvg(PARTS, { colors: { navy: '" onload="alert(1)' } })).toThrow(
       "colors.navy",
     );
     expect(() =>
-      createVerificationQr(PARTS, { colors: { panel: "url(javascript:alert(1))" } }),
+      createBarcodeSvg(PARTS, { colors: { panel: "url(javascript:alert(1))" } }),
     ).toThrow("colors.panel");
   });
 
   it("respects custom width", () => {
-    const { svg, width } = createVerificationQr(PARTS, { width: 720 });
+    const { svg, width } = createBarcodeSvg(PARTS, { width: 720 });
     expect(width).toBe(720);
     expect(svg).toContain('width="720"');
   });
 
   it("rejects invalid widths", () => {
-    expect(() => createVerificationQr(PARTS, { width: 0 })).toThrow("width");
+    expect(() => createBarcodeSvg(PARTS, { width: 0 })).toThrow("width");
   });
 
   it("uses higher ECC levels on request", () => {
-    const m = createVerificationQr(PARTS, { errorCorrectionLevel: "M" });
-    const h = createVerificationQr(PARTS, { errorCorrectionLevel: "H" });
+    const m = createBarcodeSvg(PARTS, { errorCorrectionLevel: "M" });
+    const h = createBarcodeSvg(PARTS, { errorCorrectionLevel: "H" });
     const mSize = QRCode.create(m.content, { errorCorrectionLevel: "M" }).modules.size;
     const hSize = QRCode.create(h.content, { errorCorrectionLevel: "H" }).modules.size;
     expect(hSize).toBeGreaterThanOrEqual(mSize);

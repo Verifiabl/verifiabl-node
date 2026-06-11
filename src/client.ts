@@ -1,13 +1,13 @@
 import { DEFAULT_BASE_URL, extractPayloadFromScan } from "./payload.js";
 import {
-  type CreatePayslipSymbolRequest,
-  type CreatePayslipSymbolResponse,
-  createPayslipSymbolRequestSchema,
-  createPayslipSymbolResponseSchema,
-  type RegisterPayslipRequest,
-  type RegisterPayslipResponse,
-  registerPayslipRequestSchema,
-  registerPayslipResponseSchema,
+  type CreateBarcodeRequest,
+  type CreateBarcodeResponse,
+  createBarcodeApiResponseSchema,
+  createBarcodeRequestSchema,
+  type RegisterNonPiiRequest,
+  type RegisterNonPiiResponse,
+  registerNonPiiRequestSchema,
+  registerNonPiiResponseSchema,
   type VerifiablErrorBody,
   type VerifiablErrorCode,
   type VerifyBarcodeRequest,
@@ -84,24 +84,23 @@ export class VerifiablClient {
    * Register non-PII payslip data and decryption metadata. Returns the
    * linking token to embed in a locally generated barcode.
    */
-  async registerPayslip(request: RegisterPayslipRequest): Promise<RegisterPayslipResponse> {
-    const body = registerPayslipRequestSchema.parse(request);
+  async registerNonPii(request: RegisterNonPiiRequest): Promise<RegisterNonPiiResponse> {
+    const body = registerNonPiiRequestSchema.parse(request);
     return this.post("/v1/registerNonPII", body, (value) =>
-      registerPayslipResponseSchema.parse(value),
+      registerNonPiiResponseSchema.parse(value),
     );
   }
 
   /**
-   * Register a payslip and have the API build the Data Matrix symbol.
-   * Sends the ciphertext alongside the non-PII data.
+   * Register non-PII payslip data and have the API build the barcode.
+   * Sends the encrypted PII alongside the non-PII data.
    */
-  async createPayslipSymbol(
-    request: CreatePayslipSymbolRequest,
-  ): Promise<CreatePayslipSymbolResponse> {
-    const body = createPayslipSymbolRequestSchema.parse(request);
-    return this.post("/v1/registerAndBuildSymbol", body, (value) =>
-      createPayslipSymbolResponseSchema.parse(value),
-    );
+  async createBarcode(request: CreateBarcodeRequest): Promise<CreateBarcodeResponse> {
+    const body = createBarcodeRequestSchema.parse(request);
+    return this.post("/v1/registerAndBuildSymbol", body, (value) => {
+      const response = createBarcodeApiResponseSchema.parse(value);
+      return { id: response.id, barcode: response.symbol };
+    });
   }
 
   /**
