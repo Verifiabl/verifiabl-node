@@ -1,5 +1,10 @@
 import { VerifiablApiError, VerifiablClient } from "../client.js";
+import { buildScanUrl } from "../payload.js";
 import type { RegisterPayslipRequest } from "../types.js";
+
+const LT = "AbCdEfGhIjKlMnOpQrStUv";
+const CT = "Zm9v";
+const PAYLOAD = `1|${LT}|${CT}`;
 
 const REQUEST: RegisterPayslipRequest = {
   schema: "au.payslip.v1",
@@ -27,16 +32,23 @@ describe("VerifiablClient", () => {
     expect(() => new VerifiablClient({ apiKey: "" })).toThrow("apiKey is required");
   });
 
-  it("rejects non-https base URLs", () => {
+  it("rejects non-https base URLs except local http development", () => {
     expect(() => new VerifiablClient({ apiKey: "k", baseUrl: "http://api.example" })).toThrow(
+      "https",
+    );
+    expect(() => new VerifiablClient({ apiKey: "k", baseUrl: "file://localhost/tmp" })).toThrow(
       "https",
     );
   });
 
-  it("allows http for localhost development", () => {
+  it("allows http for loopback development", () => {
     expect(
       () => new VerifiablClient({ apiKey: "k", baseUrl: "http://localhost:3001" }),
     ).not.toThrow();
+    expect(
+      () => new VerifiablClient({ apiKey: "k", baseUrl: "http://127.0.0.1:3001" }),
+    ).not.toThrow();
+    expect(() => new VerifiablClient({ apiKey: "k", baseUrl: "http://[::1]:3001" })).not.toThrow();
   });
 
   it("rejects invalid timeouts", () => {
@@ -88,7 +100,7 @@ describe("VerifiablClient", () => {
 
     let error: unknown;
     try {
-      await client.verifyBarcode({ barcode: "1|a|b" });
+      await client.verifyBarcode({ barcode: PAYLOAD });
     } catch (err) {
       error = err;
     }
@@ -111,10 +123,32 @@ describe("VerifiablClient", () => {
       fetch,
     });
 
-    const result = await client.verifyBarcode({ lt: "AbCdEfGhIjKlMnOpQrStUv", ct: "Zm9v" });
+    const result = await client.verifyBarcode({ lt: LT, ct: CT });
     expect(result.verified).toBe(true);
     const [url] = firstFetchCall(fetch);
     expect(url).toBe("https://api.verifiabl.io/v1/verifications/payload");
+  });
+
+  it("normalises scan URLs before verifying a barcode", async () => {
+    const fetch = mockFetch(200, {
+      verified: true,
+      linking_token: LT,
+      payslip: {},
+      employee: {},
+      decrypted_at: "2026-06-11T00:00:00Z",
+    });
+    const client = new VerifiablClient({ apiKey: "k", fetch });
+
+    await client.verifyBarcode({
+      barcode: ` ${buildScanUrl({ linkingToken: LT, encryptedPii: CT })} `,
+    });
+
+    const [, init] = firstFetchCall(fetch);
+    if (init === undefined) {
+      throw new Error("Expected fetch init options");
+    }
+    const parsedBody: unknown = JSON.parse(String(init.body));
+    expect(parsedBody).toEqual({ barcode: PAYLOAD });
   });
 
   it("validates request bodies before sending", async () => {

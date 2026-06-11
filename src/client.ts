@@ -1,4 +1,4 @@
-import { DEFAULT_BASE_URL } from "./payload.js";
+import { DEFAULT_BASE_URL, extractPayloadFromScan } from "./payload.js";
 import {
   type CreatePayslipSymbolRequest,
   type CreatePayslipSymbolResponse,
@@ -64,8 +64,8 @@ export class VerifiablClient {
       throw new Error("apiKey is required");
     }
     const baseUrl = new URL(options.baseUrl ?? DEFAULT_BASE_URL);
-    if (baseUrl.protocol !== "https:" && baseUrl.hostname !== "localhost") {
-      throw new Error("baseUrl must use https");
+    if (!isAllowedBaseUrl(baseUrl)) {
+      throw new Error("baseUrl must use https, or http for localhost");
     }
     const timeoutMs = options.timeoutMs ?? 30_000;
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
@@ -109,7 +109,7 @@ export class VerifiablClient {
    * or pre-parsed parts (`{ lt, ct }`).
    */
   async verifyBarcode(request: VerifyBarcodeRequest): Promise<VerifyBarcodeResponse> {
-    const body = verifyBarcodeRequestSchema.parse(request);
+    const body = normaliseVerifyBarcodeRequest(verifyBarcodeRequestSchema.parse(request));
     return this.post("/v1/verifications/payload", body, (value) =>
       verifyBarcodeResponseSchema.parse(value),
     );
@@ -138,6 +138,25 @@ export class VerifiablClient {
 
     return parseResponse(await readJsonBody(response));
   }
+}
+
+function normaliseVerifyBarcodeRequest(request: VerifyBarcodeRequest): VerifyBarcodeRequest {
+  if ("barcode" in request) {
+    return { barcode: extractPayloadFromScan(request.barcode.trim()) };
+  }
+  return request;
+}
+
+function isAllowedBaseUrl(baseUrl: URL): boolean {
+  if (baseUrl.protocol === "https:") {
+    return true;
+  }
+  return baseUrl.protocol === "http:" && isLoopbackHost(baseUrl.hostname);
+}
+
+function isLoopbackHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return host === "localhost" || host === "127.0.0.1" || host === "[::1]";
 }
 
 async function readJsonBody(response: Response): Promise<unknown> {

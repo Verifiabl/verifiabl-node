@@ -36,11 +36,7 @@ export type P1FieldName = (typeof P1_FIELD_ORDER)[number];
  */
 function isPrintableWithoutPipe(value: string): boolean {
   if (value.includes("|")) return false;
-  for (const ch of value) {
-    const code = ch.codePointAt(0) ?? 0;
-    if (code < 0x20 || code === 0x7f) return false;
-  }
-  return true;
+  return !/\p{Cc}/u.test(value);
 }
 
 const p1FieldSchema = z
