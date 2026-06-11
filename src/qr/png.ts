@@ -6,7 +6,7 @@ export interface BarcodePngResult {
   png: Buffer;
   width: number;
   height: number;
-  /** The exact string encoded in the QR symbol. */
+  /** The exact string encoded in the QR code. */
   content: string;
 }
 

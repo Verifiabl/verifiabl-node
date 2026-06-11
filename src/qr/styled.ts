@@ -26,7 +26,7 @@ export interface BarcodeSvgOptions {
   baseUrl?: string;
   /**
    * What the QR encodes: the public scan URL (default, phone-scan
-   * friendly) or the bare `1|lt|ct` payload (smaller symbol).
+   * friendly) or the bare `1|lt|ct` payload (smaller QR code).
    */
   encode?: "url" | "payload";
   /** QR error correction level (default: "M"). */
@@ -51,7 +51,7 @@ export interface BarcodeSvgResult {
   svg: string;
   width: number;
   height: number;
-  /** The exact string encoded in the QR symbol. */
+  /** The exact string encoded in the QR code. */
   content: string;
 }
 
