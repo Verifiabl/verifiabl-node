@@ -85,7 +85,7 @@ const { svg, width, height, content } = createVerificationQr(parts, {
   errorCorrectionLevel: "Q",   // L | M (default) | Q | H
   baseUrl: "https://api.sandbox.verifiabl.io",
   headerText: "Secured by",
-  colors: { navy: "#0B1547", panel: "#FFFFFF", text: "#FFFFFF" },
+  colors: { navy: "#0B1547", panel: "#FFFFFF", text: "#FFFFFF" }, // safe SVG colours
   logoSvg: "<g>...</g>",       // replace the built-in header artwork
 });
 ```
@@ -113,6 +113,8 @@ await client.registerPayslip(request);          // self-managed flow: { id, link
 await client.createPayslipSymbol(request);      // API-managed flow: { id, symbol }
 await client.verifyBarcode({ barcode: "1|..." }); // lender-side verification
 ```
+
+`verifyBarcode({ barcode })` accepts either the full QR scan URL or the bare `1|...` payload.
 
 Errors throw `VerifiablApiError` with a stable `code` to match on:
 

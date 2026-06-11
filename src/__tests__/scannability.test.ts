@@ -1,19 +1,6 @@
 import { Resvg } from "@resvg/resvg-js";
-import type { QRCode as DecodedQr, Options } from "jsqr";
-import * as jsqrModule from "jsqr";
 
-// jsqr publishes ESM-flavoured types over a CJS UMD build, which NodeNext
-// cannot model: the callable lives on `.default` at runtime but the types
-// resolve to the namespace. Dev-only test dependency, so resolve manually.
-type JsQrFn = (
-  data: Uint8ClampedArray,
-  width: number,
-  height: number,
-  options?: Options,
-) => DecodedQr | null;
-
-const jsqrNamespace = jsqrModule as unknown as Record<string, unknown>;
-const jsQR = (jsqrNamespace.default ?? jsqrModule) as JsQrFn;
+import jsQR = require("jsqr");
 
 import { extractPayloadFromScan } from "../payload.js";
 import { createVerificationQr, type VerificationQrOptions } from "../qr/styled.js";
@@ -33,7 +20,11 @@ const PARTS = {
 function decode(parts: typeof PARTS, options: VerificationQrOptions = {}): string {
   const { svg } = createVerificationQr(parts, options);
   const rendered = new Resvg(svg, { fitTo: { mode: "width", value: 900 } }).render();
-  const result = jsQR(new Uint8ClampedArray(rendered.pixels), rendered.width, rendered.height);
+  const result = jsQR.default(
+    new Uint8ClampedArray(rendered.pixels),
+    rendered.width,
+    rendered.height,
+  );
   if (!result) throw new Error("QR code could not be decoded");
   return result.data;
 }

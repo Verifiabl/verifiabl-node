@@ -62,6 +62,15 @@ describe("createVerificationQr", () => {
     expect(svg).toContain("#123456");
   });
 
+  it("rejects unsafe colour attributes", () => {
+    expect(() => createVerificationQr(PARTS, { colors: { navy: '" onload="alert(1)' } })).toThrow(
+      "colors.navy",
+    );
+    expect(() =>
+      createVerificationQr(PARTS, { colors: { panel: "url(javascript:alert(1))" } }),
+    ).toThrow("colors.panel");
+  });
+
   it("respects custom width", () => {
     const { svg, width } = createVerificationQr(PARTS, { width: 720 });
     expect(width).toBe(720);

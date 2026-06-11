@@ -1,4 +1,4 @@
-import { formatP1, parseP1 } from "../p1.js";
+import { formatP1, p1FieldsSchema, parseP1 } from "../p1.js";
 
 describe("formatP1", () => {
   it("formats the documented example exactly", () => {
@@ -31,12 +31,11 @@ describe("formatP1", () => {
   it("rejects control characters in field values", () => {
     expect(() => formatP1({ position: "Dev\nOps" })).toThrow();
     expect(() => formatP1({ position: "Dev\tOps" })).toThrow();
+    expect(() => formatP1({ position: "Dev\u0085Ops" })).toThrow();
   });
 
   it("rejects unknown fields", () => {
-    expect(() =>
-      formatP1({ tax_file_number: "123" } as unknown as Parameters<typeof formatP1>[0]),
-    ).toThrow();
+    expect(() => p1FieldsSchema.parse({ tax_file_number: "123" })).toThrow();
   });
 
   it("rejects fields over 256 characters", () => {

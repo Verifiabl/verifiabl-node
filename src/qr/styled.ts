@@ -58,6 +58,8 @@ export interface VerificationQrResult {
 const DEFAULT_NAVY = "#0B1547";
 const FINDER_SIZE = 7;
 const QUIET_ZONE_MODULES = 2;
+const SVG_COLOR_RE =
+  /^(#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{1})?|#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?|[a-zA-Z][a-zA-Z0-9-]*|(?:rgb|rgba|hsl|hsla)\([0-9%.,\s/+-]+\))$/;
 
 function escapeXml(value: string): string {
   return value
@@ -65,6 +67,18 @@ function escapeXml(value: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function escapeXmlAttr(value: string): string {
+  return escapeXml(value).replace(/'/g, "&apos;");
+}
+
+function validateSvgColor(value: string, name: string): string {
+  const color = value.trim();
+  if (!SVG_COLOR_RE.test(color)) {
+    throw new Error(`${name} must be a valid SVG color`);
+  }
+  return escapeXmlAttr(color);
 }
 
 function isFinderModule(row: number, col: number, size: number): boolean {
@@ -170,8 +184,8 @@ export function createVerificationQr(
   options: VerificationQrOptions = {},
 ): VerificationQrResult {
   const {
-    encode = "url",
-    errorCorrectionLevel = "M",
+    encode: encodeOption = "url",
+    errorCorrectionLevel: errorCorrectionLevelOption = "M",
     width = 360,
     frame = true,
     headerText = "Secured by",
@@ -179,9 +193,11 @@ export function createVerificationQr(
     colors = {},
   } = options;
 
-  const navy = colors.navy ?? DEFAULT_NAVY;
-  const panel = colors.panel ?? "#FFFFFF";
-  const textColor = colors.text ?? "#FFFFFF";
+  const encode = validateEncode(encodeOption);
+  const errorCorrectionLevel = validateErrorCorrectionLevel(errorCorrectionLevelOption);
+  const navy = validateSvgColor(colors.navy ?? DEFAULT_NAVY, "colors.navy");
+  const panel = validateSvgColor(colors.panel ?? "#FFFFFF", "colors.panel");
+  const textColor = validateSvgColor(colors.text ?? "#FFFFFF", "colors.text");
   const badgeWidth = validatePositiveNumber(width, "width");
 
   const content =
@@ -246,4 +262,20 @@ function validatePositiveNumber(value: number, name: string): number {
     throw new Error(`${name} must be a positive number`);
   }
   return value;
+}
+
+function validateEncode(value: VerificationQrOptions["encode"]): "url" | "payload" {
+  if (value === "url" || value === "payload") {
+    return value;
+  }
+  throw new Error("encode must be 'url' or 'payload'");
+}
+
+function validateErrorCorrectionLevel(
+  value: VerificationQrOptions["errorCorrectionLevel"],
+): QrErrorCorrectionLevel {
+  if (value === "L" || value === "M" || value === "Q" || value === "H") {
+    return value;
+  }
+  throw new Error("errorCorrectionLevel must be 'L', 'M', 'Q', or 'H'");
 }
