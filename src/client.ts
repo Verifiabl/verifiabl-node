@@ -197,7 +197,20 @@ const SCAN_URL_RE = /^https:\/\/[^/]+\/v\//;
 function normaliseVerifyBarcodeRequest(request: VerifyBarcodeRequest): VerifyBarcodeRequest {
   if ("barcode" in request) {
     const scanned = request.barcode.trim();
-    return { barcode: SCAN_URL_RE.test(scanned) ? extractPayloadFromScan(scanned) : scanned };
+    if (scanned.length === 0) {
+      throw new Error("barcode must not be empty");
+    }
+    if (SCAN_URL_RE.test(scanned)) {
+      try {
+        return { barcode: extractPayloadFromScan(scanned) };
+      } catch {
+        // Scan-URL-shaped but not extractable (empty payload, bad
+        // percent-encoding): let the API rule on it rather than failing
+        // before the network call.
+        return { barcode: scanned };
+      }
+    }
+    return { barcode: scanned };
   }
   return request;
 }
@@ -224,7 +237,9 @@ function isAllowedBaseUrl(baseUrl: URL): boolean {
 
 function isLoopbackHost(hostname: string): boolean {
   const host = hostname.toLowerCase();
-  return host === "localhost" || host === "127.0.0.1" || host === "[::1]";
+  // WHATWG URL serialises the IPv6 loopback as "[::1]"; accept the
+  // bracketless form too in case the hostname arrives pre-stripped.
+  return host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1";
 }
 
 async function readJsonBody(response: Response): Promise<unknown> {
