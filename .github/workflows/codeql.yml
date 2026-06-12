@@ -21,6 +21,12 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # Installed dependencies let CodeQL resolve imports/types fully
+      - run: npm ci
       - uses: github/codeql-action/init@v3
         with:
           languages: javascript-typescript

@@ -99,6 +99,8 @@ The QR code encodes `https://verify.verifiabl.io/v/<payload>`: lenders' scanning
 ## Styled QR options
 
 ```ts
+const parts = { linkingToken: linking_token, encryptedPii: encrypted_pii };
+
 const { svg, width, height, content } = createQrBadgeSvg(parts, {
   width: 720,                  // badge width (default 360)
   frame: false,                // bare styled QR, no card/header
