@@ -27,13 +27,13 @@ export {
   piiFieldsSchema,
 } from "./pii.js";
 
-export { createQrBadgePng, type QrBadgePngResult } from "./qr/png.js";
+export { type RenderQrPngResult, renderQrPng } from "./qr/png.js";
 export {
-  createQrBadgeSvg,
-  type QrBadgeColors,
-  type QrBadgeOptions,
-  type QrBadgeSvgResult,
   type QrErrorCorrectionLevel,
+  type RenderQrColors,
+  type RenderQrOptions,
+  type RenderQrSvgResult,
+  renderQrSvg,
 } from "./qr/styled.js";
 
 export {

@@ -6,7 +6,7 @@ Verifiabl lets payroll providers issue payslips with a scannable verification co
 
 This SDK gives you everything needed to integrate:
 
-- **`createQrBadgeSvg`**: branded "Secured by Verifiabl" QR badge as dependency-free SVG (PNG optional)
+- **`renderQrSvg`**: branded "Secured by Verifiabl" QR badge as dependency-free SVG (PNG optional)
 - **`formatPii`**: formats employee PII into Verifiabl's compact barcode payload format
 - **`encryptPii`**: AES-256-GCM encryption producing exactly the ciphertext and metadata the API expects
 - **`VerifiablClient`**: typed, zero-dependency API client using native `fetch`
@@ -39,7 +39,7 @@ import {
   VerifiablClient,
   formatPii,
   encryptPii,
-  createQrBadgeSvg,
+  renderQrSvg,
 } from "@verifiabl/node";
 
 const apiKey = process.env.VERIFIABL_API_KEY;
@@ -84,7 +84,7 @@ const { linking_token } = await client.registerNonPii({
 });
 
 // 4. Render the branded QR badge and embed it in your payslip PDF
-const { svg } = createQrBadgeSvg({
+const { svg } = renderQrSvg({
   linkingToken: linking_token,
   encryptedPii: encrypted_pii,
 });
@@ -101,7 +101,7 @@ The QR code encodes `https://verify.verifiabl.io/v/<payload>`: lenders' scanning
 ```ts
 const parts = { linkingToken: linking_token, encryptedPii: encrypted_pii };
 
-const { svg, width, height, content } = createQrBadgeSvg(parts, {
+const { svg, width, height, content } = renderQrSvg(parts, {
   width: 720,                  // badge width (default 360)
   frame: false,                // bare styled QR, no card/header
   encode: "payload",           // encode bare "1|lt|ct" instead of the scan URL
@@ -124,9 +124,9 @@ npm install @resvg/resvg-js
 ```
 
 ```ts
-import { createQrBadgePng } from "@verifiabl/node";
+import { renderQrPng } from "@verifiabl/node";
 
-const { png } = await createQrBadgePng(parts, {}, 720); // 720px wide PNG buffer
+const { png } = await renderQrPng(parts, {}, 720); // 720px wide PNG buffer
 ```
 
 ## API client
