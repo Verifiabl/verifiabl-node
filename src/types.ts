@@ -7,6 +7,12 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 /**
  * Request and response schemas for the Verifiabl API. Field names are the
  * wire contract, while client method names use the SDK's domain language.
+ *
+ * Request schemas are strict: they reject unknown fields so integration
+ * mistakes fail fast and locally. Response schemas are deliberately
+ * tolerant: they validate the fields this SDK version knows about and
+ * ignore any the API adds later, so an additive API change never breaks
+ * a deployed integration.
  */
 
 /** Decryption metadata stored server-side at registration time. */
@@ -36,9 +42,18 @@ export type PayslipData = z.infer<typeof payslipDataSchema>;
 const basePayslipRegistrationSchema = z
   .object({
     /** Payslip schema identifier, e.g. "au.payslip.v1". */
-    schema: z.string().min(1),
-    /** ISO 8601 datetime the payslip was issued. */
-    issued_at: z.string().datetime({ offset: true }),
+    schema: z.string().regex(/^[a-z]{2}\.[a-z]+\.v\d+$/, {
+      error: "schema must be in format 'xx.type.vN' (e.g. 'au.payslip.v1')",
+    }),
+    /**
+     * ISO 8601 UTC datetime the payslip was issued. The API only accepts
+     * UTC ("Z") timestamps; convert local times first, e.g. with
+     * `new Date().toISOString()`.
+     */
+    issued_at: z.iso.datetime({
+      error:
+        "issued_at must be an ISO 8601 UTC datetime ending in 'Z' (use new Date().toISOString())",
+    }),
     payslip_data: payslipDataSchema,
     encryption_metadata: encryptionMetadataSchema,
   })
@@ -53,14 +68,12 @@ export const registerNonPiiRequestSchema = basePayslipRegistrationSchema;
 
 export type RegisterNonPiiRequest = z.infer<typeof registerNonPiiRequestSchema>;
 
-export const registerNonPiiResponseSchema = z
-  .object({
-    /** Server record id (UUID). */
-    id: z.string().min(1),
-    /** 22-char base64url linking token to embed in the barcode. */
-    linking_token: z.string().length(22).regex(BASE64URL_RE),
-  })
-  .strict();
+export const registerNonPiiResponseSchema = z.object({
+  /** Server record id (UUID). */
+  id: z.string().min(1),
+  /** 22-char base64url linking token to embed in the barcode. */
+  linking_token: z.string().length(22).regex(BASE64URL_RE),
+});
 
 export type RegisterNonPiiResponse = z.infer<typeof registerNonPiiResponseSchema>;
 
@@ -78,31 +91,25 @@ export const createBarcodeRequestSchema = basePayslipRegistrationSchema
 
 export type CreateBarcodeRequest = z.infer<typeof createBarcodeRequestSchema>;
 
-export const barcodeImageSchema = z
-  .object({
-    format: z.literal("png"),
-    /** Base64-encoded PNG. */
-    data: z.string().min(1),
-    width_px: z.number().int().positive(),
-    height_px: z.number().int().positive(),
-  })
-  .strict();
+export const barcodeImageSchema = z.object({
+  format: z.literal("png"),
+  /** Base64-encoded PNG. */
+  data: z.string().min(1),
+  width_px: z.number().int().positive(),
+  height_px: z.number().int().positive(),
+});
 
 export type BarcodeImage = z.infer<typeof barcodeImageSchema>;
 
-export const createBarcodeApiResponseSchema = z
-  .object({
-    id: z.string().min(1),
-    symbol: barcodeImageSchema,
-  })
-  .strict();
+export const createBarcodeApiResponseSchema = z.object({
+  id: z.string().min(1),
+  symbol: barcodeImageSchema,
+});
 
-export const createBarcodeResponseSchema = z
-  .object({
-    id: z.string().min(1),
-    barcode: barcodeImageSchema,
-  })
-  .strict();
+export const createBarcodeResponseSchema = z.object({
+  id: z.string().min(1),
+  barcode: barcodeImageSchema,
+});
 
 export type CreateBarcodeResponse = z.infer<typeof createBarcodeResponseSchema>;
 
@@ -122,22 +129,24 @@ export const verifyBarcodeRequestSchema = z.union([
 
 export type VerifyBarcodeRequest = z.infer<typeof verifyBarcodeRequestSchema>;
 
-export const verifyBarcodeResponseSchema = z
-  .object({
-    verified: z.boolean(),
-    linking_token: z.string().length(22).regex(BASE64URL_RE),
-    /** Non-PII payslip data as registered. */
-    payslip: z.record(z.string(), z.unknown()),
-    /** Decrypted employee PII fields. */
-    employee: z.record(z.string(), z.unknown()),
-    decrypted_at: z.string().datetime({ offset: true }),
-  })
-  .strict();
+export const verifyBarcodeResponseSchema = z.object({
+  verified: z.boolean(),
+  linking_token: z.string().length(22).regex(BASE64URL_RE),
+  /** Non-PII payslip data as registered. */
+  payslip: z.record(z.string(), z.unknown()),
+  /** Decrypted employee PII fields. */
+  employee: z.record(z.string(), z.unknown()),
+  decrypted_at: z.iso.datetime({ offset: true }),
+});
 
 export type VerifyBarcodeResponse = z.infer<typeof verifyBarcodeResponseSchema>;
 
-/** Stable machine-readable error codes returned by the API. */
-export const verifiablErrorCodeSchema = z.enum([
+/**
+ * Error codes the API is known to return today. The API may add codes
+ * over time; treat anything not in this list as a generic failure rather
+ * than rejecting the response.
+ */
+export const KNOWN_VERIFIABL_ERROR_CODES = [
   "VALIDATION_FAILED",
   "DECRYPTION_FAILED",
   "UNAUTHORIZED",
@@ -146,28 +155,31 @@ export const verifiablErrorCodeSchema = z.enum([
   "KEY_VERSION_UNAVAILABLE",
   "INTERNAL_ERROR",
   "SERVICE_UNAVAILABLE",
-]);
+] as const;
 
-export type VerifiablErrorCode = z.infer<typeof verifiablErrorCodeSchema>;
+export type KnownVerifiablErrorCode = (typeof KNOWN_VERIFIABL_ERROR_CODES)[number];
 
-export const verifiablErrorDetailSchema = z
-  .object({
-    /** Dot-delimited field path, or "" when not field-specific. */
-    path: z.string(),
-    message: z.string(),
-  })
-  .strict();
+/**
+ * Stable machine-readable error code. Typed as the known codes plus
+ * `string` so future API codes flow through to your error handling
+ * untouched while autocomplete still offers the known values.
+ */
+export type VerifiablErrorCode = KnownVerifiablErrorCode | (string & {});
+
+export const verifiablErrorDetailSchema = z.object({
+  /** Dot-delimited field path, or "" when not field-specific. */
+  path: z.string(),
+  message: z.string(),
+});
 
 export type VerifiablErrorDetail = z.infer<typeof verifiablErrorDetailSchema>;
 
 /** Body shape of every non-2xx JSON response. */
-export const verifiablErrorBodySchema = z
-  .object({
-    error: z.string(),
-    code: verifiablErrorCodeSchema,
-    detail: z.string().optional(),
-    details: z.array(verifiablErrorDetailSchema).optional(),
-  })
-  .strict();
+export const verifiablErrorBodySchema = z.object({
+  error: z.string(),
+  code: z.string(),
+  detail: z.string().optional(),
+  details: z.array(verifiablErrorDetailSchema).optional(),
+});
 
 export type VerifiablErrorBody = z.infer<typeof verifiablErrorBodySchema>;

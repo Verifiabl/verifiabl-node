@@ -12,7 +12,7 @@ import { type BarcodeParts, buildBarcodePayload, buildScanUrl } from "../payload
 
 export type QrErrorCorrectionLevel = "L" | "M" | "Q" | "H";
 
-export interface BarcodeSvgColors {
+export interface QrBadgeColors {
   /** Card background and module colour (default: Verifiabl navy). */
   navy?: string;
   /** QR panel background (default: white). */
@@ -21,8 +21,12 @@ export interface BarcodeSvgColors {
   text?: string;
 }
 
-export interface BarcodeSvgOptions {
-  /** API origin embedded in the QR scan URL (default: https://api.verifiabl.io). */
+export interface QrBadgeOptions {
+  /**
+   * Verifier origin embedded in the QR scan URL (default:
+   * https://verify.verifiabl.io; use https://verify.sandbox.verifiabl.io
+   * for sandbox documents).
+   */
   baseUrl?: string;
   /**
    * What the QR encodes: the public scan URL (default, phone-scan
@@ -43,10 +47,10 @@ export interface BarcodeSvgOptions {
    * user-controlled content.
    */
   logoSvg?: string;
-  colors?: BarcodeSvgColors;
+  colors?: QrBadgeColors;
 }
 
-export interface BarcodeSvgResult {
+export interface QrBadgeSvgResult {
   /** Complete standalone SVG document. */
   svg: string;
   width: number;
@@ -57,7 +61,9 @@ export interface BarcodeSvgResult {
 
 const DEFAULT_NAVY = "#0B1547";
 const FINDER_SIZE = 7;
-const QUIET_ZONE_MODULES = 2;
+// ISO/IEC 18004 requires a quiet zone of at least 4 modules on every side
+// for reliable scanning after print + recapture.
+const QUIET_ZONE_MODULES = 4;
 const SVG_COLOR_RE =
   /^(#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{1})?|#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?|[a-zA-Z][a-zA-Z0-9-]*|(?:rgb|rgba|hsl|hsla)\([0-9%.,\s/+-]+\))$/;
 
@@ -115,7 +121,9 @@ function renderModules(
   parts.push(renderFinder((size - FINDER_SIZE) * moduleSize, 0, moduleSize, color));
   parts.push(renderFinder(0, (size - FINDER_SIZE) * moduleSize, moduleSize, color));
 
-  const dotSize = moduleSize * 0.94;
+  // 0.98 keeps the rounded-dot look but leaves enough ink coverage per
+  // module to decode reliably; at 0.94 decoders fail at some raster scales.
+  const dotSize = moduleSize * 0.98;
   const dotRadius = moduleSize * 0.3;
   const inset = (moduleSize - dotSize) / 2;
 
@@ -179,10 +187,10 @@ function renderWordmark(centerX: number, top: number, color: string, scale: numb
  * ciphertext from `encryptPii`, then returns a standalone SVG suitable for
  * embedding in a payslip PDF.
  */
-export function createBarcodeSvg(
+export function createQrBadgeSvg(
   parts: BarcodeParts,
-  options: BarcodeSvgOptions = {},
-): BarcodeSvgResult {
+  options: QrBadgeOptions = {},
+): QrBadgeSvgResult {
   const {
     encode: encodeOption = "url",
     errorCorrectionLevel: errorCorrectionLevelOption = "M",
@@ -228,11 +236,12 @@ export function createBarcodeSvg(
   const headerHeight = 92 * scale;
   const panelMargin = 10 * scale;
   const panelRadius = 14 * scale;
-  const qrPadding = 18 * scale;
 
   const panelSize = badgeWidth - panelMargin * 2;
-  const qrArea = panelSize - qrPadding * 2;
-  const moduleSize = qrArea / size;
+  // Size modules so the white panel itself provides the 4-module quiet
+  // zone around the symbol.
+  const moduleSize = panelSize / (size + QUIET_ZONE_MODULES * 2);
+  const qrPadding = QUIET_ZONE_MODULES * moduleSize;
   const height = headerHeight + panelSize + panelMargin;
 
   const header =
@@ -264,7 +273,7 @@ function validatePositiveNumber(value: number, name: string): number {
   return value;
 }
 
-function validateEncode(value: BarcodeSvgOptions["encode"]): "url" | "payload" {
+function validateEncode(value: QrBadgeOptions["encode"]): "url" | "payload" {
   if (value === "url" || value === "payload") {
     return value;
   }
@@ -272,7 +281,7 @@ function validateEncode(value: BarcodeSvgOptions["encode"]): "url" | "payload" {
 }
 
 function validateErrorCorrectionLevel(
-  value: BarcodeSvgOptions["errorCorrectionLevel"],
+  value: QrBadgeOptions["errorCorrectionLevel"],
 ): QrErrorCorrectionLevel {
   if (value === "L" || value === "M" || value === "Q" || value === "H") {
     return value;
