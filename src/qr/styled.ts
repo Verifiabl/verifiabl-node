@@ -12,7 +12,7 @@ import { type BarcodeParts, buildBarcodePayload, buildScanUrl } from "../payload
 
 export type QrErrorCorrectionLevel = "L" | "M" | "Q" | "H";
 
-export interface QrBadgeColors {
+export interface RenderQrColors {
   /** Card background and module colour (default: Verifiabl navy). */
   navy?: string;
   /** QR panel background (default: white). */
@@ -21,7 +21,7 @@ export interface QrBadgeColors {
   text?: string;
 }
 
-export interface QrBadgeOptions {
+export interface RenderQrOptions {
   /**
    * Verifier origin embedded in the QR scan URL (default:
    * https://verify.verifiabl.io; use https://verify.sandbox.verifiabl.io
@@ -47,10 +47,10 @@ export interface QrBadgeOptions {
    * user-controlled content.
    */
   logoSvg?: string;
-  colors?: QrBadgeColors;
+  colors?: RenderQrColors;
 }
 
-export interface QrBadgeSvgResult {
+export interface RenderQrSvgResult {
   /** Complete standalone SVG document. */
   svg: string;
   width: number;
@@ -187,10 +187,7 @@ function renderWordmark(centerX: number, top: number, color: string, scale: numb
  * ciphertext from `encryptPii`, then returns a standalone SVG suitable for
  * embedding in a payslip PDF.
  */
-export function createQrBadgeSvg(
-  parts: BarcodeParts,
-  options: QrBadgeOptions = {},
-): QrBadgeSvgResult {
+export function renderQrSvg(parts: BarcodeParts, options: RenderQrOptions = {}): RenderQrSvgResult {
   const {
     encode: encodeOption = "url",
     errorCorrectionLevel: errorCorrectionLevelOption = "M",
@@ -273,7 +270,7 @@ function validatePositiveNumber(value: number, name: string): number {
   return value;
 }
 
-function validateEncode(value: QrBadgeOptions["encode"]): "url" | "payload" {
+function validateEncode(value: RenderQrOptions["encode"]): "url" | "payload" {
   if (value === "url" || value === "payload") {
     return value;
   }
@@ -281,7 +278,7 @@ function validateEncode(value: QrBadgeOptions["encode"]): "url" | "payload" {
 }
 
 function validateErrorCorrectionLevel(
-  value: QrBadgeOptions["errorCorrectionLevel"],
+  value: RenderQrOptions["errorCorrectionLevel"],
 ): QrErrorCorrectionLevel {
   if (value === "L" || value === "M" || value === "Q" || value === "H") {
     return value;
