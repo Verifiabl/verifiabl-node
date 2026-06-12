@@ -1,8 +1,30 @@
 import { z } from "zod";
 
+function tuple<const T extends readonly string[]>(value: T): T {
+  return value;
+}
+
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
-const KEY_VERSION_RE = /^[A-Za-z0-9._-]+$/;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Deployed key_version contract: `<provider-id>.<n>` where provider-id is
+ * your lowercase client UUID and n increments on key rotation. The
+ * Verifiabl derives your provider id from this value when reconstructing
+ * the AAD, so no other format can decrypt.
+ */
+export const KEY_VERSION_RE =
+  /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.[1-9][0-9]{0,5}$/;
+
+export const SCHEMA_RE = /^[a-z]{2}\.[a-z]+\.v\d+$/;
+
+export const keyVersionSchema = z.string().regex(KEY_VERSION_RE, {
+  error: "keyVersion must be '<provider-id>.<n>' (lowercase client UUID, rotation counter from 1)",
+});
+
+export const payslipSchemaIdSchema = z.string().regex(SCHEMA_RE, {
+  error: "schema must be in format 'xx.type.vN' (e.g. 'au.payslip.v1')",
+});
 
 /**
  * Request and response schemas for the Verifiabl API. Field names are the
@@ -22,8 +44,8 @@ export const encryptionMetadataSchema = z
     iv: z.string().length(16).regex(BASE64URL_RE),
     /** 128-bit GCM auth tag, exactly 22 base64url characters. */
     tag: z.string().length(22).regex(BASE64URL_RE),
-    /** Provider key version identifier, 1-128 chars of [A-Za-z0-9._-]. */
-    key_version: z.string().min(1).max(128).regex(KEY_VERSION_RE),
+    /** Provider key version identifier in deployed `<provider-id>.<n>` format. */
+    key_version: keyVersionSchema,
   })
   .strict();
 
@@ -42,9 +64,7 @@ export type PayslipData = z.infer<typeof payslipDataSchema>;
 const basePayslipRegistrationSchema = z
   .object({
     /** Payslip schema identifier, e.g. "au.payslip.v1". */
-    schema: z.string().regex(/^[a-z]{2}\.[a-z]+\.v\d+$/, {
-      error: "schema must be in format 'xx.type.vN' (e.g. 'au.payslip.v1')",
-    }),
+    schema: payslipSchemaIdSchema,
     /**
      * ISO 8601 UTC datetime the payslip was issued. The API only accepts
      * UTC ("Z") timestamps; convert local times first, e.g. with
@@ -114,48 +134,19 @@ export const createBarcodeResponseSchema = z.object({
 export type CreateBarcodeResponse = z.infer<typeof createBarcodeResponseSchema>;
 
 /**
- * Request for `client.verifyBarcode`. Calls POST /v1/verifications/payload.
- * Send either the raw scanned barcode text or the pre-parsed parts.
- */
-export const verifyBarcodeRequestSchema = z.union([
-  z.object({ barcode: z.string().min(1) }).strict(),
-  z
-    .object({
-      lt: z.string().length(22).regex(BASE64URL_RE),
-      ct: z.string().min(1).max(10_000).regex(BASE64URL_RE),
-    })
-    .strict(),
-]);
-
-export type VerifyBarcodeRequest = z.infer<typeof verifyBarcodeRequestSchema>;
-
-export const verifyBarcodeResponseSchema = z.object({
-  verified: z.boolean(),
-  linking_token: z.string().length(22).regex(BASE64URL_RE),
-  /** Non-PII payslip data as registered. */
-  payslip: z.record(z.string(), z.unknown()),
-  /** Decrypted employee PII fields. */
-  employee: z.record(z.string(), z.unknown()),
-  decrypted_at: z.iso.datetime({ offset: true }),
-});
-
-export type VerifyBarcodeResponse = z.infer<typeof verifyBarcodeResponseSchema>;
-
-/**
  * Error codes the API is known to return today. The API may add codes
  * over time; treat anything not in this list as a generic failure rather
  * than rejecting the response.
  */
-export const KNOWN_VERIFIABL_ERROR_CODES = [
+export const KNOWN_VERIFIABL_ERROR_CODES = tuple([
   "VALIDATION_FAILED",
   "DECRYPTION_FAILED",
   "UNAUTHORIZED",
   "FORBIDDEN",
-  "LINKING_TOKEN_NOT_FOUND",
   "KEY_VERSION_UNAVAILABLE",
   "INTERNAL_ERROR",
   "SERVICE_UNAVAILABLE",
-] as const;
+]);
 
 export type KnownVerifiablErrorCode = (typeof KNOWN_VERIFIABL_ERROR_CODES)[number];
 

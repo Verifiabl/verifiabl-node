@@ -1,7 +1,7 @@
 import type { BarcodeParts } from "../payload.js";
-import { type RenderQrOptions, renderQrSvg } from "./styled.js";
+import { type BarcodeSvgOptions, createBarcodeSvg } from "./styled.js";
 
-export interface RenderQrPngResult {
+export interface BarcodePngResult {
   /** PNG image bytes. */
   png: Buffer;
   width: number;
@@ -17,16 +17,16 @@ export interface RenderQrPngResult {
  *
  *   npm install @resvg/resvg-js
  *
- * If your PDF pipeline accepts SVG, prefer `renderQrSvg`. It has no
+ * If your PDF pipeline accepts SVG, prefer `createBarcodeSvg`. It has no
  * native dependencies and scales without rasterisation artefacts.
  *
  * @param pixelWidth Output bitmap width in pixels (default: 720).
  */
-export async function renderQrPng(
+export async function createBarcodePng(
   parts: BarcodeParts,
-  options: RenderQrOptions = {},
+  options: BarcodeSvgOptions = {},
   pixelWidth = 720,
-): Promise<RenderQrPngResult> {
+): Promise<BarcodePngResult> {
   if (!Number.isInteger(pixelWidth) || pixelWidth <= 0) {
     throw new Error("pixelWidth must be a positive integer");
   }
@@ -37,11 +37,11 @@ export async function renderQrPng(
   } catch {
     throw new Error(
       "PNG output requires the optional peer dependency '@resvg/resvg-js'. " +
-        "Install it with: npm install @resvg/resvg-js, or use renderQrSvg for SVG output.",
+        "Install it with: npm install @resvg/resvg-js, or use createBarcodeSvg for SVG output.",
     );
   }
 
-  const { svg, content } = renderQrSvg(parts, options);
+  const { svg, content } = createBarcodeSvg(parts, options);
   const rendered = new Resvg(svg, {
     fitTo: { mode: "width", value: pixelWidth },
   }).render();

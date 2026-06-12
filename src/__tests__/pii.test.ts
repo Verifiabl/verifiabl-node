@@ -57,7 +57,7 @@ describe("parsePii", () => {
     expect(parsePii(formatPii(fields))).toEqual(fields);
   });
 
-  it("omits empty segments like the verifier does", () => {
+  it("omits empty segments like Verifiabl does", () => {
     expect(parsePii("P1|Jane||||||")).toEqual({ employee_name: "Jane" });
   });
 

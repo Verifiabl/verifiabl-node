@@ -1,21 +1,26 @@
 export {
   VerifiablApiError,
+  type VerifiablAuth,
+  VerifiablAuthError,
   VerifiablClient,
   type VerifiablClientOptions,
   type VerifiablEnvironment,
+  type VerifiablErrorEvent,
+  type VerifiablRequestEvent,
+  type VerifiablRequestOptions,
+  type VerifiablResponseEvent,
 } from "./client.js";
-export { type EncryptedPii, encryptPii } from "./crypto.js";
+export { buildPiiAad, type EncryptedPii, encryptPii } from "./crypto.js";
 export {
   type BarcodeParts,
   buildBarcodePayload,
   buildScanUrl,
   ciphertextSchema,
   DEFAULT_ISSUER_BASE_URL,
-  DEFAULT_VERIFIER_BASE_URL,
-  extractPayloadFromScan,
+  DEFAULT_SCAN_BASE_URL,
   linkingTokenSchema,
   SANDBOX_ISSUER_BASE_URL,
-  SANDBOX_VERIFIER_BASE_URL,
+  SANDBOX_SCAN_BASE_URL,
   type ScanUrlOptions,
 } from "./payload.js";
 export {
@@ -27,13 +32,13 @@ export {
   piiFieldsSchema,
 } from "./pii.js";
 
-export { type RenderQrPngResult, renderQrPng } from "./qr/png.js";
+export { type BarcodePngResult, createBarcodePng } from "./qr/png.js";
 export {
+  type BarcodeSvgColors,
+  type BarcodeSvgOptions,
+  type BarcodeSvgResult,
+  createBarcodeSvg,
   type QrErrorCorrectionLevel,
-  type RenderQrColors,
-  type RenderQrOptions,
-  type RenderQrSvgResult,
-  renderQrSvg,
 } from "./qr/styled.js";
 
 export {
@@ -41,14 +46,14 @@ export {
   type CreateBarcodeRequest,
   type CreateBarcodeResponse,
   type EncryptionMetadata,
+  KEY_VERSION_RE,
   KNOWN_VERIFIABL_ERROR_CODES,
   type KnownVerifiablErrorCode,
   type PayslipData,
   type RegisterNonPiiRequest,
   type RegisterNonPiiResponse,
+  SCHEMA_RE,
   type VerifiablErrorBody,
   type VerifiablErrorCode,
   type VerifiablErrorDetail,
-  type VerifyBarcodeRequest,
-  type VerifyBarcodeResponse,
 } from "./types.js";

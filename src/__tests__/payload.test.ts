@@ -1,9 +1,4 @@
-import {
-  buildBarcodePayload,
-  buildScanUrl,
-  DEFAULT_VERIFIER_BASE_URL,
-  extractPayloadFromScan,
-} from "../payload.js";
+import { buildBarcodePayload, buildScanUrl, DEFAULT_SCAN_BASE_URL } from "../payload.js";
 
 const LT = "AbCdEfGhIjKlMnOpQrStUv"; // 22 base64url chars
 const CT = "Zm9vYmFyYmF6cXV4";
@@ -29,36 +24,26 @@ describe("buildBarcodePayload", () => {
 describe("buildScanUrl", () => {
   it("wraps the payload in the production /v/ URL with URL encoding", () => {
     const url = buildScanUrl({ linkingToken: LT, encryptedPii: CT });
-    expect(url).toBe(`${DEFAULT_VERIFIER_BASE_URL}/v/${encodeURIComponent(`1|${LT}|${CT}`)}`);
+    expect(url).toBe(`${DEFAULT_SCAN_BASE_URL}/v/${encodeURIComponent(`1|${LT}|${CT}`)}`);
     expect(url).toContain("%7C"); // pipes must be encoded
   });
 
-  it("accepts a custom https base URL", () => {
+  it("uses the sandbox scan URL when environment is sandbox", () => {
+    const url = buildScanUrl({ linkingToken: LT, encryptedPii: CT }, { environment: "sandbox" });
+    expect(url.startsWith("https://verify.sandbox.verifiabl.io/v/")).toBe(true);
+  });
+
+  it("accepts a custom https scan URL origin", () => {
     const url = buildScanUrl(
       { linkingToken: LT, encryptedPii: CT },
-      { baseUrl: "https://api.sandbox.verifiabl.io" },
+      { scanBaseUrl: "https://scan.local.example" },
     );
-    expect(url.startsWith("https://api.sandbox.verifiabl.io/v/")).toBe(true);
+    expect(url.startsWith("https://scan.local.example/v/")).toBe(true);
   });
 
-  it("rejects http base URLs", () => {
+  it("rejects http scan URL origins", () => {
     expect(() =>
-      buildScanUrl({ linkingToken: LT, encryptedPii: CT }, { baseUrl: "http://evil.example" }),
+      buildScanUrl({ linkingToken: LT, encryptedPii: CT }, { scanBaseUrl: "http://evil.example" }),
     ).toThrow("https");
-  });
-});
-
-describe("extractPayloadFromScan", () => {
-  it("round-trips a scan URL back to the bare payload", () => {
-    const url = buildScanUrl({ linkingToken: LT, encryptedPii: CT });
-    expect(extractPayloadFromScan(url)).toBe(`1|${LT}|${CT}`);
-  });
-
-  it("passes through bare payloads", () => {
-    expect(extractPayloadFromScan(`1|${LT}|${CT}`)).toBe(`1|${LT}|${CT}`);
-  });
-
-  it("rejects unrecognised input", () => {
-    expect(() => extractPayloadFromScan("hello world")).toThrow("Unrecognised scan format");
   });
 });

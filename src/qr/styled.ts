@@ -1,5 +1,11 @@
 import QRCode from "qrcode";
-import { type BarcodeParts, buildBarcodePayload, buildScanUrl } from "../payload.js";
+import {
+  type BarcodeParts,
+  buildBarcodePayload,
+  buildScanUrl,
+  type ScanUrlOptions,
+  type VerifiablEnvironment,
+} from "../payload.js";
 
 /**
  * Branded "Secured by Verifiabl" QR badge renderer.
@@ -12,7 +18,7 @@ import { type BarcodeParts, buildBarcodePayload, buildScanUrl } from "../payload
 
 export type QrErrorCorrectionLevel = "L" | "M" | "Q" | "H";
 
-export interface RenderQrColors {
+export interface BarcodeSvgColors {
   /** Card background and module colour (default: Verifiabl navy). */
   navy?: string;
   /** QR panel background (default: white). */
@@ -21,13 +27,14 @@ export interface RenderQrColors {
   text?: string;
 }
 
-export interface RenderQrOptions {
+export interface BarcodeSvgOptions {
+  /** API environment for the public QR scan URL. Defaults to "production". */
+  environment?: VerifiablEnvironment;
   /**
-   * Verifier origin embedded in the QR scan URL (default:
-   * https://verify.verifiabl.io; use https://verify.sandbox.verifiabl.io
-   * for sandbox documents).
+   * Advanced override for the public QR scan URL origin. Defaults to the
+   * selected environment's scan URL origin. Must use https.
    */
-  baseUrl?: string;
+  scanBaseUrl?: string;
   /**
    * What the QR encodes: the public scan URL (default, phone-scan
    * friendly) or the bare `1|lt|ct` payload (smaller QR code).
@@ -47,10 +54,10 @@ export interface RenderQrOptions {
    * user-controlled content.
    */
   logoSvg?: string;
-  colors?: RenderQrColors;
+  colors?: BarcodeSvgColors;
 }
 
-export interface RenderQrSvgResult {
+export interface BarcodeSvgResult {
   /** Complete standalone SVG document. */
   svg: string;
   width: number;
@@ -187,7 +194,10 @@ function renderWordmark(centerX: number, top: number, color: string, scale: numb
  * ciphertext from `encryptPii`, then returns a standalone SVG suitable for
  * embedding in a payslip PDF.
  */
-export function renderQrSvg(parts: BarcodeParts, options: RenderQrOptions = {}): RenderQrSvgResult {
+export function createBarcodeSvg(
+  parts: BarcodeParts,
+  options: BarcodeSvgOptions = {},
+): BarcodeSvgResult {
   const {
     encode: encodeOption = "url",
     errorCorrectionLevel: errorCorrectionLevelOption = "M",
@@ -205,10 +215,15 @@ export function renderQrSvg(parts: BarcodeParts, options: RenderQrOptions = {}):
   const textColor = validateSvgColor(colors.text ?? "#FFFFFF", "colors.text");
   const badgeWidth = validatePositiveNumber(width, "width");
 
-  const content =
-    encode === "url"
-      ? buildScanUrl(parts, options.baseUrl !== undefined ? { baseUrl: options.baseUrl } : {})
-      : buildBarcodePayload(parts);
+  const scanOptions: ScanUrlOptions = {};
+  if (options.environment !== undefined) {
+    scanOptions.environment = options.environment;
+  }
+  if (options.scanBaseUrl !== undefined) {
+    scanOptions.scanBaseUrl = options.scanBaseUrl;
+  }
+
+  const content = encode === "url" ? buildScanUrl(parts, scanOptions) : buildBarcodePayload(parts);
 
   const qr = QRCode.create(content, { errorCorrectionLevel });
   const size = qr.modules.size;
@@ -219,7 +234,7 @@ export function renderQrSvg(parts: BarcodeParts, options: RenderQrOptions = {}):
     const quiet = QUIET_ZONE_MODULES * moduleSize;
     const svg =
       `<svg xmlns="http://www.w3.org/2000/svg" width="${badgeWidth}" height="${badgeWidth}" ` +
-      `viewBox="0 0 ${badgeWidth} ${badgeWidth}" role="img" aria-label="Verifiabl verification QR code">` +
+      `viewBox="0 0 ${badgeWidth} ${badgeWidth}" role="img" aria-label="Verifiabl payslip QR code">` +
       `<rect width="${badgeWidth}" height="${badgeWidth}" fill="${panel}"/>` +
       `<g transform="translate(${round2(quiet)} ${round2(quiet)})">` +
       renderModules(matrixData, size, moduleSize, navy) +
@@ -251,7 +266,7 @@ export function renderQrSvg(parts: BarcodeParts, options: RenderQrOptions = {}):
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${round2(badgeWidth)}" height="${round2(height)}" ` +
     `viewBox="0 0 ${round2(badgeWidth)} ${round2(height)}" role="img" ` +
-    `aria-label="Secured by Verifiabl verification QR code">` +
+    `aria-label="Secured by Verifiabl payslip QR code">` +
     `<rect width="${round2(badgeWidth)}" height="${round2(height)}" rx="${round2(cardRadius)}" fill="${navy}"/>` +
     `<rect x="${round2(panelMargin)}" y="${round2(headerHeight)}" width="${round2(panelSize)}" ` +
     `height="${round2(panelSize)}" rx="${round2(panelRadius)}" fill="${panel}"/>` +
@@ -270,7 +285,7 @@ function validatePositiveNumber(value: number, name: string): number {
   return value;
 }
 
-function validateEncode(value: RenderQrOptions["encode"]): "url" | "payload" {
+function validateEncode(value: BarcodeSvgOptions["encode"]): "url" | "payload" {
   if (value === "url" || value === "payload") {
     return value;
   }
@@ -278,7 +293,7 @@ function validateEncode(value: RenderQrOptions["encode"]): "url" | "payload" {
 }
 
 function validateErrorCorrectionLevel(
-  value: RenderQrOptions["errorCorrectionLevel"],
+  value: BarcodeSvgOptions["errorCorrectionLevel"],
 ): QrErrorCorrectionLevel {
   if (value === "L" || value === "M" || value === "Q" || value === "H") {
     return value;
