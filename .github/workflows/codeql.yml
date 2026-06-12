@@ -1,0 +1,28 @@
+name: CodeQL
+
+# Static analysis (SAST) on every PR and on main, per the ISMS SDLC
+# policy requirement that SAST and SCA run before merge (SCA is the
+# npm audit job in ci.yml).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "30 18 * * 1" # weekly, Tuesday 04:30 AEST
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+      - uses: github/codeql-action/analyze@v3

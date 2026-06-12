@@ -1,4 +1,10 @@
-import { DEFAULT_BASE_URL, extractPayloadFromScan } from "./payload.js";
+import {
+  DEFAULT_ISSUER_BASE_URL,
+  DEFAULT_VERIFIER_BASE_URL,
+  extractPayloadFromScan,
+  SANDBOX_ISSUER_BASE_URL,
+  SANDBOX_VERIFIER_BASE_URL,
+} from "./payload.js";
 import {
   type CreateBarcodeRequest,
   type CreateBarcodeResponse,
@@ -20,6 +26,10 @@ import {
 /**
  * Error thrown for any non-2xx Verifiabl API response. Match on `code`
  * (stable) rather than `message` (may change).
+ *
+ * `code` is "INTERNAL_ERROR" when the response carried no parseable
+ * Verifiabl error body (e.g. a gateway error page); check `status` for
+ * the raw HTTP status in that case.
  */
 export class VerifiablApiError extends Error {
   readonly status: number;
@@ -35,14 +45,46 @@ export class VerifiablApiError extends Error {
   }
 }
 
+export type VerifiablEnvironment = "production" | "sandbox";
+
+/**
+ * Registration and verification are separately deployed Verifiabl
+ * services on separate domains. The client routes each call to the
+ * right origin for the selected environment.
+ */
+const ENVIRONMENT_ORIGINS: Record<VerifiablEnvironment, { issuer: string; verifier: string }> = {
+  production: {
+    issuer: DEFAULT_ISSUER_BASE_URL,
+    verifier: DEFAULT_VERIFIER_BASE_URL,
+  },
+  sandbox: {
+    issuer: SANDBOX_ISSUER_BASE_URL,
+    verifier: SANDBOX_VERIFIER_BASE_URL,
+  },
+};
+
 export interface VerifiablClientOptions {
   /**
    * Your Verifiabl API key. Load it from a secrets manager or environment
    * variable. Never hard-code it.
    */
   apiKey: string;
-  /** API origin (default: production, https://api.verifiabl.io). Must be https. */
-  baseUrl?: string;
+  /** Which Verifiabl environment to call (default: "production"). */
+  environment?: VerifiablEnvironment;
+  /**
+   * Override the issuer (registration) origin, e.g. for local
+   * development. Default: https://register.verifiabl.io, or the sandbox
+   * equivalent when `environment: "sandbox"`. Must be https (http is
+   * allowed for localhost only).
+   */
+  issuerBaseUrl?: string;
+  /**
+   * Override the verifier (verification) origin. Default:
+   * https://verify.verifiabl.io, or the sandbox equivalent when
+   * `environment: "sandbox"`. Must be https (http is allowed for
+   * localhost only).
+   */
+  verifierBaseUrl?: string;
   /** Request timeout in milliseconds (default: 30000). */
   timeoutMs?: number;
   /** Custom fetch implementation (for testing or instrumentation). */
@@ -55,7 +97,8 @@ export interface VerifiablClientOptions {
  */
 export class VerifiablClient {
   private readonly apiKey: string;
-  private readonly baseUrl: string;
+  private readonly issuerBaseUrl: string;
+  private readonly verifierBaseUrl: string;
   private readonly timeoutMs: number;
   private readonly fetchImpl: typeof globalThis.fetch;
 
@@ -63,10 +106,16 @@ export class VerifiablClient {
     if (options.apiKey.trim().length === 0) {
       throw new Error("apiKey is required");
     }
-    const baseUrl = new URL(options.baseUrl ?? DEFAULT_BASE_URL);
-    if (!isAllowedBaseUrl(baseUrl)) {
-      throw new Error("baseUrl must use https, or http for localhost");
+    const environment = options.environment ?? "production";
+    const origins = ENVIRONMENT_ORIGINS[environment];
+    if (origins === undefined) {
+      throw new Error("environment must be 'production' or 'sandbox'");
     }
+    this.issuerBaseUrl = parseBaseUrl(options.issuerBaseUrl ?? origins.issuer, "issuerBaseUrl");
+    this.verifierBaseUrl = parseBaseUrl(
+      options.verifierBaseUrl ?? origins.verifier,
+      "verifierBaseUrl",
+    );
     const timeoutMs = options.timeoutMs ?? 30_000;
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
       throw new Error("timeoutMs must be a positive number");
@@ -75,7 +124,6 @@ export class VerifiablClient {
       throw new Error("A fetch implementation is required");
     }
     this.apiKey = options.apiKey;
-    this.baseUrl = baseUrl.origin;
     this.timeoutMs = timeoutMs;
     this.fetchImpl = options.fetch ?? globalThis.fetch;
   }
@@ -86,7 +134,7 @@ export class VerifiablClient {
    */
   async registerNonPii(request: RegisterNonPiiRequest): Promise<RegisterNonPiiResponse> {
     const body = registerNonPiiRequestSchema.parse(request);
-    return this.post("/v1/registerNonPII", body, (value) =>
+    return this.post(this.issuerBaseUrl, "/v1/registerNonPII", body, (value) =>
       registerNonPiiResponseSchema.parse(value),
     );
   }
@@ -97,7 +145,7 @@ export class VerifiablClient {
    */
   async createBarcode(request: CreateBarcodeRequest): Promise<CreateBarcodeResponse> {
     const body = createBarcodeRequestSchema.parse(request);
-    return this.post("/v1/registerAndBuildSymbol", body, (value) => {
+    return this.post(this.issuerBaseUrl, "/v1/registerAndBuildSymbol", body, (value) => {
       const response = createBarcodeApiResponseSchema.parse(value);
       return { id: response.id, barcode: response.symbol };
     });
@@ -106,20 +154,25 @@ export class VerifiablClient {
   /**
    * Verify a scanned barcode. Accepts the raw scanned text (`{ barcode }`)
    * or pre-parsed parts (`{ lt, ct }`).
+   *
+   * Scanned QR scan URLs (`https://.../v/<payload>`) are unwrapped to the
+   * bare payload locally; every other barcode shape is passed to the API
+   * as scanned, so the server stays the authority on accepted formats.
    */
   async verifyBarcode(request: VerifyBarcodeRequest): Promise<VerifyBarcodeResponse> {
     const body = normaliseVerifyBarcodeRequest(verifyBarcodeRequestSchema.parse(request));
-    return this.post("/v1/verifications/payload", body, (value) =>
+    return this.post(this.verifierBaseUrl, "/v1/verifications/payload", body, (value) =>
       verifyBarcodeResponseSchema.parse(value),
     );
   }
 
   private async post<T>(
+    origin: string,
     path: string,
     body: unknown,
     parseResponse: (value: unknown) => T,
   ): Promise<T> {
-    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+    const response = await this.fetchImpl(`${origin}${path}`, {
       method: "POST",
       headers: {
         authorization: `Bearer ${this.apiKey}`,
@@ -139,11 +192,27 @@ export class VerifiablClient {
   }
 }
 
+const SCAN_URL_RE = /^https:\/\/[^/]+\/v\//;
+
 function normaliseVerifyBarcodeRequest(request: VerifyBarcodeRequest): VerifyBarcodeRequest {
   if ("barcode" in request) {
-    return { barcode: extractPayloadFromScan(request.barcode.trim()) };
+    const scanned = request.barcode.trim();
+    return { barcode: SCAN_URL_RE.test(scanned) ? extractPayloadFromScan(scanned) : scanned };
   }
   return request;
+}
+
+function parseBaseUrl(value: string, name: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`Invalid ${name}: ${value}`);
+  }
+  if (!isAllowedBaseUrl(url)) {
+    throw new Error(`${name} must use https, or http for localhost`);
+  }
+  return url.origin;
 }
 
 function isAllowedBaseUrl(baseUrl: URL): boolean {

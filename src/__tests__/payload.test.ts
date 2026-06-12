@@ -1,7 +1,7 @@
 import {
   buildBarcodePayload,
   buildScanUrl,
-  DEFAULT_BASE_URL,
+  DEFAULT_VERIFIER_BASE_URL,
   extractPayloadFromScan,
 } from "../payload.js";
 
@@ -29,7 +29,7 @@ describe("buildBarcodePayload", () => {
 describe("buildScanUrl", () => {
   it("wraps the payload in the production /v/ URL with URL encoding", () => {
     const url = buildScanUrl({ linkingToken: LT, encryptedPii: CT });
-    expect(url).toBe(`${DEFAULT_BASE_URL}/v/${encodeURIComponent(`1|${LT}|${CT}`)}`);
+    expect(url).toBe(`${DEFAULT_VERIFIER_BASE_URL}/v/${encodeURIComponent(`1|${LT}|${CT}`)}`);
     expect(url).toContain("%7C"); // pipes must be encoded
   });
 

@@ -41,7 +41,13 @@ function base64Url(buf: Buffer): string {
  * @param plaintext The formatted string from `formatPii`.
  * @param key Your 32-byte provider encryption key.
  * @param keyVersion Identifier of the key version in use (sent to the API
- *   so the matching key can be selected at verification time).
+ *   so the matching key can be selected at verification time). In deployed
+ *   Verifiabl environments this must be the value assigned during
+ *   onboarding: `<provider-id>.<n>`, where provider-id is your client UUID
+ *   and n starts at 1 and increments each time you rotate your key (e.g.
+ *   "0f8fad5b-d9cb-469f-a165-70867728950e.1"). Records registered with any
+ *   other value (including bare "v1") cannot be decrypted at verification
+ *   time — verification fails closed on unknown key versions.
  */
 export function encryptPii(plaintext: string, key: Buffer, keyVersion: string): EncryptedPii {
   if (key.length !== KEY_BYTES) {

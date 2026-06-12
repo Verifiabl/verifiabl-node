@@ -26,8 +26,18 @@ export interface BarcodeParts {
   encryptedPii: string;
 }
 
-/** Default production API origin. Override for sandbox environments. */
-export const DEFAULT_BASE_URL = "https://api.verifiabl.io";
+/**
+ * Default production origins. Verifiabl runs registration and verification
+ * as separately deployed services on separate domains: payslip registration
+ * goes to the issuer service, barcode verification and the public QR scan
+ * redirect go to the verifier service.
+ */
+export const DEFAULT_ISSUER_BASE_URL = "https://register.verifiabl.io";
+export const DEFAULT_VERIFIER_BASE_URL = "https://verify.verifiabl.io";
+
+/** Sandbox origins, selected via `environment: "sandbox"` on the client. */
+export const SANDBOX_ISSUER_BASE_URL = "https://register.sandbox.verifiabl.io";
+export const SANDBOX_VERIFIER_BASE_URL = "https://verify.sandbox.verifiabl.io";
 
 /**
  * Build the v1 barcode payload: `1|<linkingToken>|<ciphertext>`.
@@ -44,8 +54,12 @@ export function buildBarcodePayload({ linkingToken, encryptedPii }: BarcodeParts
 
 export interface ScanUrlOptions {
   /**
-   * API origin to embed in the QR code (default: production,
-   * `https://api.verifiabl.io`). Must be https.
+   * Verifier origin to embed in the QR code (default: production,
+   * `https://verify.verifiabl.io`). The `/v/` scan-redirect route is
+   * served by the verifier service, so this must be a verifier origin
+   * (use `https://verify.sandbox.verifiabl.io` for sandbox). Must be
+   * https. This URL is printed on payslip documents and cannot be
+   * changed after issuance.
    */
   baseUrl?: string;
 }
@@ -53,7 +67,7 @@ export interface ScanUrlOptions {
 /**
  * Build the URL encoded into Verifiabl QR codes:
  *
- *   https://api.verifiabl.io/v/<urlencoded "1|lt|ct">
+ *   https://verify.verifiabl.io/v/<urlencoded "1|lt|ct">
  *
  * Verifier integrations strip the origin + `/v/` prefix and POST the
  * decoded payload to /v1/verifications/payload. A casual phone scan hits
@@ -61,7 +75,7 @@ export interface ScanUrlOptions {
  * seeing raw ciphertext.
  */
 export function buildScanUrl(parts: BarcodeParts, options: ScanUrlOptions = {}): string {
-  const baseUrl = normaliseBaseUrl(options.baseUrl ?? DEFAULT_BASE_URL);
+  const baseUrl = normaliseBaseUrl(options.baseUrl ?? DEFAULT_VERIFIER_BASE_URL);
   const payload = buildBarcodePayload(parts);
   return `${baseUrl}/v/${encodeURIComponent(payload)}`;
 }
