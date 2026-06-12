@@ -1,0 +1,317 @@
+import { VerifiablApiError, VerifiablClient } from "../client.js";
+import { buildScanUrl } from "../payload.js";
+import type { CreateBarcodeRequest, RegisterNonPiiRequest } from "../types.js";
+
+const LT = "AbCdEfGhIjKlMnOpQrStUv";
+const CT = "Zm9v";
+const PAYLOAD = `1|${LT}|${CT}`;
+
+const REQUEST: RegisterNonPiiRequest = {
+  schema: "au.payslip.v1",
+  issued_at: "2026-06-11T00:00:00Z",
+  payslip_data: { period_start: "2026-05-01", period_end: "2026-05-31", gross: "9000.00" },
+  encryption_metadata: { iv: "AAAAAAAAAAAAAAAA", tag: "AAAAAAAAAAAAAAAAAAAAAA", key_version: "v1" },
+};
+
+const CREATE_BARCODE_REQUEST: CreateBarcodeRequest = {
+  ...REQUEST,
+  encrypted_pii: CT,
+};
+
+const VERIFY_RESPONSE = {
+  verified: true,
+  linking_token: LT,
+  payslip: {},
+  employee: { employee_name: "Jane A. Doe" },
+  decrypted_at: "2026-06-11T00:00:00Z",
+};
+
+function mockFetch(status: number, body: unknown): jest.MockedFunction<typeof fetch> {
+  return jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
+    return new Response(JSON.stringify(body), { status });
+  });
+}
+
+function firstFetchCall(fetchMock: jest.MockedFunction<typeof fetch>): Parameters<typeof fetch> {
+  const call = fetchMock.mock.calls[0];
+  if (call === undefined) {
+    throw new Error("Expected fetch to be called");
+  }
+  return call;
+}
+
+describe("VerifiablClient", () => {
+  it("requires an apiKey", () => {
+    expect(() => new VerifiablClient({ apiKey: "" })).toThrow("apiKey is required");
+  });
+
+  it("rejects non-https base URLs except local http development", () => {
+    expect(() => new VerifiablClient({ apiKey: "k", issuerBaseUrl: "http://api.example" })).toThrow(
+      "https",
+    );
+    expect(
+      () => new VerifiablClient({ apiKey: "k", verifierBaseUrl: "file://localhost/tmp" }),
+    ).toThrow("https");
+  });
+
+  it("allows http for loopback development", () => {
+    expect(
+      () =>
+        new VerifiablClient({
+          apiKey: "k",
+          issuerBaseUrl: "http://localhost:3001",
+          verifierBaseUrl: "http://localhost:3002",
+        }),
+    ).not.toThrow();
+    expect(
+      () => new VerifiablClient({ apiKey: "k", issuerBaseUrl: "http://127.0.0.1:3001" }),
+    ).not.toThrow();
+    expect(
+      () => new VerifiablClient({ apiKey: "k", verifierBaseUrl: "http://[::1]:3002" }),
+    ).not.toThrow();
+  });
+
+  it("rejects invalid timeouts", () => {
+    expect(() => new VerifiablClient({ apiKey: "k", timeoutMs: 0 })).toThrow("timeoutMs");
+  });
+
+  it("sends registration to the production issuer origin with bearer auth", async () => {
+    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const client = new VerifiablClient({
+      apiKey: "secret-key",
+      fetch,
+    });
+
+    const result = await client.registerNonPii(REQUEST);
+
+    expect(result.linking_token).toBe(LT);
+    const [url, init] = firstFetchCall(fetch);
+    if (init === undefined) {
+      throw new Error("Expected fetch init options");
+    }
+    expect(url).toBe("https://register.verifiabl.io/v1/registerNonPII");
+    expect(new Headers(init.headers).get("authorization")).toBe("Bearer secret-key");
+    const parsedBody: unknown = JSON.parse(String(init.body));
+    expect(parsedBody).toEqual(REQUEST);
+  });
+
+  it("routes verification to the production verifier origin", async () => {
+    const fetch = mockFetch(200, VERIFY_RESPONSE);
+    const client = new VerifiablClient({ apiKey: "k", fetch });
+
+    const result = await client.verifyBarcode({ lt: LT, ct: CT });
+    expect(result.verified).toBe(true);
+    const [url] = firstFetchCall(fetch);
+    expect(url).toBe("https://verify.verifiabl.io/v1/verifications/payload");
+  });
+
+  it("routes to sandbox origins when environment is sandbox", async () => {
+    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const client = new VerifiablClient({ apiKey: "k", environment: "sandbox", fetch });
+
+    await client.registerNonPii(REQUEST);
+    expect(firstFetchCall(fetch)[0]).toBe(
+      "https://register.sandbox.verifiabl.io/v1/registerNonPII",
+    );
+
+    const verifyFetch = mockFetch(200, VERIFY_RESPONSE);
+    const verifyClient = new VerifiablClient({
+      apiKey: "k",
+      environment: "sandbox",
+      fetch: verifyFetch,
+    });
+    await verifyClient.verifyBarcode({ lt: LT, ct: CT });
+    expect(firstFetchCall(verifyFetch)[0]).toBe(
+      "https://verify.sandbox.verifiabl.io/v1/verifications/payload",
+    );
+  });
+
+  it("lets explicit base URL overrides win over the environment", async () => {
+    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const client = new VerifiablClient({
+      apiKey: "k",
+      environment: "sandbox",
+      issuerBaseUrl: "http://localhost:3001",
+      fetch,
+    });
+
+    await client.registerNonPii(REQUEST);
+    expect(firstFetchCall(fetch)[0]).toBe("http://localhost:3001/v1/registerNonPII");
+  });
+
+  it("throws VerifiablApiError with the stable code on API errors", async () => {
+    const fetch = mockFetch(401, { error: "Unauthorized", code: "UNAUTHORIZED" });
+    const client = new VerifiablClient({
+      apiKey: "bad-key",
+      fetch,
+    });
+
+    await expect(client.registerNonPii(REQUEST)).rejects.toMatchObject({
+      name: "VerifiablApiError",
+      status: 401,
+      code: "UNAUTHORIZED",
+    });
+  });
+
+  it("preserves the error code when the error body has fields this SDK does not know", async () => {
+    const fetch = mockFetch(404, {
+      error: "Not found",
+      code: "LINKING_TOKEN_NOT_FOUND",
+      request_id: "req_123",
+    });
+    const client = new VerifiablClient({ apiKey: "k", fetch });
+
+    await expect(client.verifyBarcode({ lt: LT, ct: CT })).rejects.toMatchObject({
+      status: 404,
+      code: "LINKING_TOKEN_NOT_FOUND",
+    });
+  });
+
+  it("passes through error codes this SDK version does not know", async () => {
+    const fetch = mockFetch(429, { error: "Slow down", code: "RATE_LIMITED" });
+    const client = new VerifiablClient({ apiKey: "k", fetch });
+
+    await expect(client.verifyBarcode({ lt: LT, ct: CT })).rejects.toMatchObject({
+      status: 429,
+      code: "RATE_LIMITED",
+    });
+  });
+
+  it("tolerates additive fields in success responses", async () => {
+    const fetch = mockFetch(200, { ...VERIFY_RESPONSE, audit_ref: "added-in-a-future-release" });
+    const client = new VerifiablClient({ apiKey: "k", fetch });
+
+    const result = await client.verifyBarcode({ lt: LT, ct: CT });
+    expect(result.verified).toBe(true);
+  });
+
+  it("maps the API response to a barcode image for createBarcode", async () => {
+    const fetch = mockFetch(201, {
+      id: "barcode-record",
+      symbol: {
+        format: "png",
+        data: "iVBORw0KGgo=",
+        width_px: 720,
+        height_px: 720,
+      },
+    });
+    const client = new VerifiablClient({
+      apiKey: "k",
+      fetch,
+    });
+
+    const result = await client.createBarcode(CREATE_BARCODE_REQUEST);
+
+    expect(result).toEqual({
+      id: "barcode-record",
+      barcode: {
+        format: "png",
+        data: "iVBORw0KGgo=",
+        width_px: 720,
+        height_px: 720,
+      },
+    });
+    const [url, init] = firstFetchCall(fetch);
+    if (init === undefined) {
+      throw new Error("Expected fetch init options");
+    }
+    expect(url).toBe("https://register.verifiabl.io/v1/registerAndBuildSymbol");
+    const parsedBody: unknown = JSON.parse(String(init.body));
+    expect(parsedBody).toEqual(CREATE_BARCODE_REQUEST);
+  });
+
+  it("survives non-JSON error bodies", async () => {
+    const fetchMock = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
+      return new Response("not json", { status: 502 });
+    });
+    const client = new VerifiablClient({
+      apiKey: "k",
+      fetch: fetchMock,
+    });
+
+    let error: unknown;
+    try {
+      await client.verifyBarcode({ barcode: PAYLOAD });
+    } catch (err) {
+      error = err;
+    }
+    if (!(error instanceof VerifiablApiError)) {
+      throw new Error("Expected VerifiablApiError");
+    }
+    expect(error.status).toBe(502);
+  });
+
+  it("normalises scan URLs before verifying a barcode", async () => {
+    const fetch = mockFetch(200, VERIFY_RESPONSE);
+    const client = new VerifiablClient({ apiKey: "k", fetch });
+
+    await client.verifyBarcode({
+      barcode: ` ${buildScanUrl({ linkingToken: LT, encryptedPii: CT })} `,
+    });
+
+    const [, init] = firstFetchCall(fetch);
+    if (init === undefined) {
+      throw new Error("Expected fetch init options");
+    }
+    const parsedBody: unknown = JSON.parse(String(init.body));
+    expect(parsedBody).toEqual({ barcode: PAYLOAD });
+  });
+
+  it("passes non-URL barcode shapes through to the API untouched", async () => {
+    const fetch = mockFetch(200, VERIFY_RESPONSE);
+    const client = new VerifiablClient({ apiKey: "k", fetch });
+
+    const jsonBarcode = JSON.stringify({ v: 1, lt: LT, ct: CT });
+    await client.verifyBarcode({ barcode: jsonBarcode });
+
+    const [, init] = firstFetchCall(fetch);
+    if (init === undefined) {
+      throw new Error("Expected fetch init options");
+    }
+    const parsedBody: unknown = JSON.parse(String(init.body));
+    expect(parsedBody).toEqual({ barcode: jsonBarcode });
+  });
+
+  it("rejects whitespace-only barcodes locally", async () => {
+    const fetch = mockFetch(200, VERIFY_RESPONSE);
+    const client = new VerifiablClient({ apiKey: "k", fetch });
+
+    await expect(client.verifyBarcode({ barcode: "   " })).rejects.toThrow(
+      "barcode must not be empty",
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("passes scan-URL-shaped but unextractable barcodes through to the API", async () => {
+    const fetch = mockFetch(200, VERIFY_RESPONSE);
+    const client = new VerifiablClient({ apiKey: "k", fetch });
+
+    // Bad percent-encoding makes decodeURIComponent throw; the SDK must
+    // not fail locally — the API stays the authority on accepted formats.
+    const malformed = "https://verify.verifiabl.io/v/%E0%A4%A";
+    await client.verifyBarcode({ barcode: malformed });
+
+    const [, init] = firstFetchCall(fetch);
+    if (init === undefined) {
+      throw new Error("Expected fetch init options");
+    }
+    const parsedBody: unknown = JSON.parse(String(init.body));
+    expect(parsedBody).toEqual({ barcode: malformed });
+  });
+
+  it("validates request bodies before sending", async () => {
+    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const client = new VerifiablClient({ apiKey: "k", fetch });
+    await expect(client.verifyBarcode({ lt: "too-short", ct: "Zm9v" })).rejects.toThrow();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects issued_at with a UTC offset, matching the API", async () => {
+    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const client = new VerifiablClient({ apiKey: "k", fetch });
+    await expect(
+      client.registerNonPii({ ...REQUEST, issued_at: "2026-06-11T10:00:00+10:00" }),
+    ).rejects.toThrow("UTC");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});

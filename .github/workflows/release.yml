@@ -1,0 +1,31 @@
+name: Release
+
+# Publishes to npm when a GitHub release is published.
+#
+# Auth uses npm "trusted publishing" (OIDC), with no long-lived token secret.
+# One-time setup on npmjs.com after the @verifiabl scope exists:
+#   package Settings → Trusted Publisher → GitHub Actions
+#   repository: Verifiabl/verifiabl-node, workflow: release.yml
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write # OIDC token for npm provenance + trusted publishing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm ci
+      # Trusted publishing requires a recent npm
+      - run: npm install -g npm@latest
+      # prepublishOnly runs typecheck + tests + build before publish
+      - run: npm publish --provenance --access public
