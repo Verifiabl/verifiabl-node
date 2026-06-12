@@ -1,4 +1,4 @@
-# @verifiabl/node
+# verifiabl
 
 Official Node.js SDK for [Verifiabl](https://verifiabl.io) payslip verification.
 
@@ -14,7 +14,7 @@ This SDK gives you everything needed to integrate:
 Requires Node.js 20+.
 
 ```bash
-npm install @verifiabl/node
+npm install verifiabl
 ```
 
 ## Environments
@@ -40,7 +40,7 @@ import {
   formatPii,
   encryptPii,
   renderQrSvg,
-} from "@verifiabl/node";
+} from "verifiabl";
 
 const apiKey = process.env.VERIFIABL_API_KEY;
 const encryptionKeyBase64 = process.env.VERIFIABL_ENCRYPTION_KEY_BASE64;
@@ -124,7 +124,7 @@ npm install @resvg/resvg-js
 ```
 
 ```ts
-import { renderQrPng } from "@verifiabl/node";
+import { renderQrPng } from "verifiabl";
 
 const { png } = await renderQrPng(parts, {}, 720); // 720px wide PNG buffer
 ```
@@ -144,7 +144,7 @@ await client.verifyBarcode({ barcode: "1|..." }); // lender-side verification
 Errors throw `VerifiablApiError` with a stable `code` to match on:
 
 ```ts
-import { VerifiablApiError } from "@verifiabl/node";
+import { VerifiablApiError } from "verifiabl";
 
 try {
   await client.verifyBarcode({ barcode: scanned });
