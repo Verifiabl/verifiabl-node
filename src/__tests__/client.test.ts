@@ -272,6 +272,33 @@ describe("VerifiablClient", () => {
     expect(parsedBody).toEqual({ barcode: jsonBarcode });
   });
 
+  it("rejects whitespace-only barcodes locally", async () => {
+    const fetch = mockFetch(200, VERIFY_RESPONSE);
+    const client = new VerifiablClient({ apiKey: "k", fetch });
+
+    await expect(client.verifyBarcode({ barcode: "   " })).rejects.toThrow(
+      "barcode must not be empty",
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("passes scan-URL-shaped but unextractable barcodes through to the API", async () => {
+    const fetch = mockFetch(200, VERIFY_RESPONSE);
+    const client = new VerifiablClient({ apiKey: "k", fetch });
+
+    // Bad percent-encoding makes decodeURIComponent throw; the SDK must
+    // not fail locally — the API stays the authority on accepted formats.
+    const malformed = "https://verify.verifiabl.io/v/%E0%A4%A";
+    await client.verifyBarcode({ barcode: malformed });
+
+    const [, init] = firstFetchCall(fetch);
+    if (init === undefined) {
+      throw new Error("Expected fetch init options");
+    }
+    const parsedBody: unknown = JSON.parse(String(init.body));
+    expect(parsedBody).toEqual({ barcode: malformed });
+  });
+
   it("validates request bodies before sending", async () => {
     const fetch = mockFetch(201, { id: "x", linking_token: LT });
     const client = new VerifiablClient({ apiKey: "k", fetch });
