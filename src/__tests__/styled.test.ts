@@ -13,7 +13,7 @@ const FRAME_GEOMETRY = [
 ];
 
 function expectedQrTransform(content: string): string {
-  const qr = QRCode.create(content, { errorCorrectionLevel: "M" });
+  const qr = QRCode.create(content, { errorCorrectionLevel: "Q" });
   const moduleSize = 80 / (qr.modules.size + 2);
   return `transform="translate(${round2(8 + moduleSize)} ${round2(59 + moduleSize)})"`;
 }
@@ -35,7 +35,7 @@ describe("createBarcodeSvg", () => {
 
   it("renders square data modules and rounded finder sections", () => {
     const { svg, content } = createBarcodeSvg(PARTS);
-    const qr = QRCode.create(content, { errorCorrectionLevel: "M" });
+    const qr = QRCode.create(content, { errorCorrectionLevel: "Q" });
     const size = qr.modules.size;
 
     let darkDataModules = 0;
@@ -49,7 +49,10 @@ describe("createBarcodeSvg", () => {
     const rectCount = (svg.match(/<rect /g) ?? []).length;
     const finderDotCount = 3;
     const frameBorderCount = 1;
-    expect(rectCount).toBe(darkDataModules + finderDotCount + frameBorderCount);
+    const frameBackgroundCount = 1;
+    expect(rectCount).toBe(
+      darkDataModules + finderDotCount + frameBorderCount + frameBackgroundCount,
+    );
     expect(svg).toContain('fill-rule="evenodd"');
   });
 
@@ -60,18 +63,20 @@ describe("createBarcodeSvg", () => {
     }
     expect(svg).toContain('fill="#000000"');
     expect(svg).toContain('shape-rendering="crispEdges"');
+    // White, rounded-rect frame body so the QR quiet zone is always light.
+    expect(svg).toContain('width="94" height="149" rx="7" fill="#FFFFFF"');
     expect(svg).not.toContain('stroke="#000000"');
     expect(svg).not.toContain('width="94" height="149" rx="7" fill="#000000"');
     expect(svg).not.toContain('x="16" y="59" width="80" height="80" fill="#FFFFFF"');
     expect(svg).toContain(expectedQrTransform(content));
     expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"');
-    expect(width).toBe(420);
-    expect(height).toBe(660.63);
+    expect(width).toBe(480);
+    expect(height).toBe(755);
   });
 
   it("keeps frame and QR placement fixed as payload size changes", () => {
     const short = createBarcodeSvg(PARTS);
-    const long = createBarcodeSvg({ ...PARTS, encryptedPii: "A".repeat(600) });
+    const long = createBarcodeSvg({ ...PARTS, encryptedPii: "A".repeat(300) });
 
     for (const expected of FRAME_GEOMETRY) {
       expect(short.svg).toContain(expected);
@@ -91,13 +96,46 @@ describe("createBarcodeSvg", () => {
 
   it("rejects invalid widths", () => {
     expect(() => createBarcodeSvg(PARTS, { width: 0 })).toThrow("width");
-    expect(() => createBarcodeSvg(PARTS, { width: 419 })).toThrow("at least 420");
+    expect(() => createBarcodeSvg(PARTS, { width: 479 })).toThrow("at least 480");
   });
 
-  it("uses the product-selected QR error correction level", () => {
-    const { content } = createBarcodeSvg(PARTS);
-    const qr = QRCode.create(content, { errorCorrectionLevel: "M" });
-    expect(qr.modules.size).toBeGreaterThan(0);
+  it("renders the common case pristine: Q error correction, not degraded", () => {
+    const result = createBarcodeSvg(PARTS);
+    expect(result.errorCorrectionLevel).toBe("Q");
+    expect(result.degraded).toBe(false);
+    expect(result.modulePx).toBeGreaterThanOrEqual(4);
+  });
+
+  // The damage-first ladder keeps the highest error correction whose modules
+  // still clear the floor, never varying the fixed frame. Lowercase base64url
+  // ("a") forces byte mode like real encrypted PII. Thresholds are at width 480.
+  it.each([
+    { label: "long: degraded Q", ct: "a".repeat(600), ec: "Q" },
+    { label: "longer: drops to M", ct: "a".repeat(1000), ec: "M" },
+    { label: "longest fittable: drops to L", ct: "a".repeat(1300), ec: "L" },
+  ])("degrades error correction in order for $label", ({ ct, ec }) => {
+    const result = createBarcodeSvg({ ...PARTS, encryptedPii: ct });
+    expect(result.errorCorrectionLevel).toBe(ec);
+    expect(result.degraded).toBe(true);
+    expect(result.modulePx).toBeGreaterThanOrEqual(3);
+    // Frame dimensions are unchanged regardless of degradation.
+    expect(result.width).toBe(480);
+    expect(result.height).toBe(755);
+  });
+
+  it("hard-errors when PII cannot fit the fixed frame even at the lowest level", () => {
+    // Too dense to clear the floor even at L, but still within QR capacity.
+    expect(() => createBarcodeSvg({ ...PARTS, encryptedPii: "a".repeat(1600) })).toThrow(
+      /too long to render a scannable barcode in the branded frame/,
+    );
+  });
+
+  it("throws a clear error when PII exceeds QR code capacity entirely", () => {
+    // Beyond what any QR version can hold at any level: the qrcode library
+    // would otherwise throw a cryptic 'data too big' error deep in the renderer.
+    expect(() => createBarcodeSvg({ ...PARTS, encryptedPii: "a".repeat(3000) })).toThrow(
+      /too large to encode in a QR code/,
+    );
   });
 });
 

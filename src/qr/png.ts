@@ -1,5 +1,9 @@
 import type { BarcodeParts } from "../payload.js";
-import { type BarcodeSvgOptions, createBarcodeSvg } from "./styled.js";
+import {
+  type BarcodeErrorCorrectionLevel,
+  type BarcodeSvgOptions,
+  createBarcodeSvg,
+} from "./styled.js";
 
 export interface BarcodePngResult {
   /** PNG image bytes. */
@@ -8,9 +12,15 @@ export interface BarcodePngResult {
   height: number;
   /** The exact string encoded in the QR code. */
   content: string;
+  /** Error-correction level actually used (see {@link BarcodeSvgResult}). */
+  errorCorrectionLevel: BarcodeErrorCorrectionLevel;
+  /** Rendered size of one QR module, in output pixels. */
+  modulePx: number;
+  /** True when the ladder traded scan robustness to fit the payload. */
+  degraded: boolean;
 }
 
-const MIN_PIXEL_WIDTH = 420;
+const MIN_PIXEL_WIDTH = 480;
 
 /**
  * Render the branded Verifiabl QR badge as a PNG.
@@ -46,7 +56,13 @@ export async function createBarcodePng(
     );
   }
 
-  const { svg, content } = createBarcodeSvg(parts, options);
+  // resvg rasterises to pixelWidth regardless of the SVG's width attribute, so
+  // build the SVG at that same width. This makes the scannability floor in
+  // createBarcodeSvg reflect the actual PNG resolution rather than the default.
+  const { svg, content, errorCorrectionLevel, modulePx, degraded } = createBarcodeSvg(parts, {
+    ...options,
+    width: pixelWidth,
+  });
   const rendered = new Resvg(svg, {
     fitTo: { mode: "width", value: pixelWidth },
   }).render();
@@ -56,5 +72,8 @@ export async function createBarcodePng(
     width: rendered.width,
     height: rendered.height,
     content,
+    errorCorrectionLevel,
+    modulePx,
+    degraded,
   };
 }

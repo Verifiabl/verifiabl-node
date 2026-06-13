@@ -135,15 +135,30 @@ The ciphertext is additionally bound (via AES-GCM AAD) to `<provider-id>|<key_ve
 ```ts
 const parts = { linkingToken: linking_token, encryptedPii: encrypted_pii };
 
-const { svg, width, height, content } = createBarcodeSvg(parts, {
-  width: 720,             // badge width, default 420
-  environment: "sandbox", // production (default) | sandbox
-});
+const { svg, width, height, content, errorCorrectionLevel, modulePx, degraded } =
+  createBarcodeSvg(parts, {
+    width: 720,             // badge width, default 480 (also the minimum)
+    environment: "sandbox", // production (default) | sandbox
+  });
 ```
 
-The SVG always uses the approved branded "Secured by Verifiabl" frame. Layout, colours, quiet zone, QR placement, and error correction are intentionally not configurable, so the badge remains consistent across customer documents. `width` only scales the complete badge uniformly and must be at least `420`. The returned `height` is always `width * 151 / 96`.
+The SVG always uses the approved branded "Secured by Verifiabl" frame. Layout, colours, quiet zone, and QR placement are intentionally not configurable, so the badge remains consistent across customer documents. `width` only scales the complete badge uniformly and must be at least `480`. The returned `height` is always `width * 151 / 96`. **The frame's outer dimensions never change** to accommodate the payload.
 
-The frame uses a fixed `viewBox="0 0 96 151"`. The header is navy `#010A4F`, the border is `#ADADAD`, and QR modules are black for maximum scanner contrast. The QR box is fixed at `x=8`, `y=59`, `width=80`, `height=80`. The QR matrix is sized inside that box with the required quiet zone, so payload length changes module size but never moves the frame or QR placement.
+The frame uses a fixed `viewBox="0 0 96 151"`. The header is navy `#010A4F`, the border is `#ADADAD`, the body is white `#FFFFFF` (with transparent rounded corners), and QR modules are black for maximum scanner contrast. The QR box is fixed at `x=8`, `y=59`, `width=80`, `height=80`. The QR matrix is sized inside that box, so payload length changes module size but never moves the frame or QR placement.
+
+### Scannability and the degradation ladder
+
+QR module size shrinks as the encrypted PII grows. Because the frame size is fixed, `createBarcodeSvg` keeps every emitted code scannable using a **damage-first ladder** that adjusts only the QR, never the frame:
+
+1. **Q error correction** (~25% damage recovery) while modules stay at the ideal size. This is the pristine tier, and essentially all real payslip records land here.
+2. For unusually long PII, error correction steps down `Q → M → L` (recovery `~25% → ~15% → ~7%`) to keep the code within the fixed frame. The decoded URL is identical at every level; error correction is invisible to the scan service.
+3. If the PII is so long that even level `L` would render modules below the readable floor, `createBarcodeSvg` **throws** rather than emit an unscannable code. Shorten the PII fields.
+
+The result reports what happened, so you can monitor the long tail at scale:
+
+- `errorCorrectionLevel`: `"Q"` | `"M"` | `"L"`, the level actually used.
+- `modulePx`: rendered size of one QR module, in output pixels.
+- `degraded`: `true` when the ladder traded robustness to fit the payload (below `Q`, or below the ideal module size). `false` for essentially all real records. Log this to spot integrations that are pushing oversized PII.
 
 `scanBaseUrl` is available as an advanced override for local development against a custom scan URL origin. Most integrations should use `environment` instead:
 
@@ -159,7 +174,7 @@ const { svg } = createBarcodeSvg(parts, {
 When embedding the barcode in a payslip document:
 
 - Preserve the returned aspect ratio. Do not set width and height independently.
-- Place the barcode on a white or light document area. The SVG and PNG keep the QR quiet zone transparent instead of painting a separate white panel.
+- The badge paints its own white body, so the QR and its quiet zone stay readable on any document background. Only the rounded frame corners are transparent.
 - Do not crop, mask, rotate, skew, stretch, recolour, or add effects.
 - Do not compress or resample PNG output after generation.
 - For SVG, embed the returned SVG as-is. Do not rewrite path, rect, fill, stroke, or viewBox attributes.
@@ -179,7 +194,7 @@ import { createBarcodePng } from "verifiabl";
 const { png } = await createBarcodePng(parts, {}, 720); // 720px wide PNG buffer
 ```
 
-`png` is a `Buffer` containing PNG bytes. PNG output width must be at least `420` pixels.
+`png` is a `Buffer` containing PNG bytes. PNG output width must be at least `480` pixels.
 
 ## API client
 

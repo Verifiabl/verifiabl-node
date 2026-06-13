@@ -18,6 +18,6 @@ describe("createBarcodePng", () => {
 
   it("rejects invalid pixel widths", async () => {
     await expect(createBarcodePng(PARTS, {}, 0)).rejects.toThrow("pixelWidth");
-    await expect(createBarcodePng(PARTS, {}, 419)).rejects.toThrow("at least 420");
+    await expect(createBarcodePng(PARTS, {}, 479)).rejects.toThrow("at least 480");
   });
 });

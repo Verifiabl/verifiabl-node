@@ -22,9 +22,12 @@ export interface BarcodeSvgOptions {
    * selected environment's scan URL origin. Must use https.
    */
   scanBaseUrl?: string;
-  /** Total badge width in SVG user units / px (default: 420). */
+  /** Total badge width in SVG user units / px (default: 480, the minimum). */
   width?: number;
 }
+
+/** QR error-correction level chosen by the damage-first degradation ladder. */
+export type BarcodeErrorCorrectionLevel = "Q" | "M" | "L";
 
 export interface BarcodeSvgResult {
   /** Complete standalone SVG document. */
@@ -33,20 +36,52 @@ export interface BarcodeSvgResult {
   height: number;
   /** The exact string encoded in the QR code. */
   content: string;
+  /**
+   * Error-correction level actually used. Normally "Q"; drops to "M" or "L"
+   * only for unusually long PII so it still fits the fixed frame.
+   */
+  errorCorrectionLevel: BarcodeErrorCorrectionLevel;
+  /** Rendered size of one QR module, in output pixels. */
+  modulePx: number;
+  /**
+   * True when the ladder had to trade scan robustness to fit the payload
+   * (error correction below "Q", or modules below the ideal size). False for
+   * essentially all real records. Log this to observe the long tail at scale.
+   */
+  degraded: boolean;
 }
 
 const DEFAULT_NAVY = "#010A4F";
 const DEFAULT_QR = "#000000";
 const DEFAULT_TEXT = "#FFFFFF";
 const FRAME_BORDER = "#ADADAD";
+// White frame body so the QR quiet zone is always light, independent of the
+// host document. The fill follows the rounded border path (rx=7), so the four
+// corners outside that radius stay transparent.
+const FRAME_BACKGROUND = "#FFFFFF";
 const FRAME_VIEWBOX_WIDTH = 96;
 const FRAME_VIEWBOX_HEIGHT = 151;
 const FRAME_HEADER_HEIGHT = 47;
 const FRAME_QR_BOX_X = 8;
 const FRAME_QR_BOX_Y = 59;
 const FRAME_QR_BOX_SIZE = 80;
-const MIN_BADGE_WIDTH = 420;
+// At this width, a realistic fully-populated PII record renders QR modules at
+// or above IDEAL_MODULE_PX under "Q" error correction (the pristine tier).
+const MIN_BADGE_WIDTH = 480;
 const FINDER_SIZE = 7;
+// Damage-first degradation ladder. The branded frame's outer size is fixed, so
+// the only levers are error-correction level and module size inside the fixed
+// QR box. We keep the highest correction level (best damage recovery: Q ~25%,
+// M ~15%, L ~7%) whose modules still clear the floor, trading damage tolerance
+// for resolution only when forced, and never varying the frame. Error
+// correction is invisible to the scan service, which only reads the decoded URL.
+const ERROR_CORRECTION_LADDER = ["Q", "M", "L"] as const;
+// Pristine target: at or above this module size (px) with "Q" correction, the
+// code is not considered degraded.
+const IDEAL_MODULE_PX = 4;
+// Absolute floor: a module smaller than this (px) is unreliable for real-world
+// scans, so we hard-error rather than emit it. Evaluated at the badge's width.
+const MIN_MODULE_PX = 3;
 // The branded frame supplies the remaining light area around the QR.
 const INTERNAL_QR_INSET_MODULES = 1;
 
@@ -201,12 +236,14 @@ export function createBarcodeSvg(
   }
   const content = buildScanUrl(parts, scanOptions);
 
-  const qr = QRCode.create(content, { errorCorrectionLevel: "M" });
-  const size = qr.modules.size;
+  const { qr, errorCorrectionLevel, size, moduleSize, modulePx } = selectQrRendering(
+    content,
+    badgeWidth,
+  );
   const matrixData = qr.modules.data;
+  const degraded = errorCorrectionLevel !== "Q" || modulePx < IDEAL_MODULE_PX;
 
   const height = round2((badgeWidth * FRAME_VIEWBOX_HEIGHT) / FRAME_VIEWBOX_WIDTH);
-  const moduleSize = FRAME_QR_BOX_SIZE / (size + INTERNAL_QR_INSET_MODULES * 2);
   const qrPadding = INTERNAL_QR_INSET_MODULES * moduleSize;
 
   const headerBackground = `<path d="M0 8C0 3.58172 3.58172 0 8 0H88C92.4183 0 96 3.58172 96 8V${FRAME_HEADER_HEIGHT}H0V8Z" fill="${DEFAULT_NAVY}"/>`;
@@ -216,6 +253,7 @@ export function createBarcodeSvg(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${round2(badgeWidth)}" height="${round2(height)}" ` +
     `viewBox="0 0 ${FRAME_VIEWBOX_WIDTH} ${FRAME_VIEWBOX_HEIGHT}" role="img" ` +
     `aria-label="Secured by Verifiabl verification QR code">` +
+    `<rect x="1" y="1" width="94" height="149" rx="7" fill="${FRAME_BACKGROUND}"/>` +
     `<rect x="1" y="1" width="94" height="149" rx="7" stroke="${FRAME_BORDER}" stroke-width="2" fill="none"/>` +
     header +
     `<g transform="translate(${round2(FRAME_QR_BOX_X + qrPadding)} ${round2(FRAME_QR_BOX_Y + qrPadding)})">` +
@@ -225,7 +263,61 @@ export function createBarcodeSvg(
     renderFinders(size, moduleSize, DEFAULT_QR) +
     `</g></svg>`;
 
-  return { svg, width: badgeWidth, height: round2(height), content };
+  return {
+    svg,
+    width: badgeWidth,
+    height: round2(height),
+    content,
+    errorCorrectionLevel,
+    modulePx: round2(modulePx),
+    degraded,
+  };
+}
+
+interface SelectedQrRendering {
+  qr: ReturnType<typeof QRCode.create>;
+  errorCorrectionLevel: BarcodeErrorCorrectionLevel;
+  size: number;
+  moduleSize: number;
+  modulePx: number;
+}
+
+/**
+ * Walk the damage-first ladder and pick the rendering that fits the fixed
+ * frame: the highest error-correction level whose modules still clear
+ * MIN_MODULE_PX at this width. The frame's outer width and height never change.
+ * Hard-errors if even the lowest level cannot fit, so an over-long payload
+ * fails loudly at issuance instead of producing an unscannable code.
+ */
+function selectQrRendering(content: string, badgeWidth: number): SelectedQrRendering {
+  const scale = badgeWidth / FRAME_VIEWBOX_WIDTH;
+  let densestSize: number | null = null;
+  for (const errorCorrectionLevel of ERROR_CORRECTION_LADDER) {
+    let qr: ReturnType<typeof QRCode.create>;
+    try {
+      qr = QRCode.create(content, { errorCorrectionLevel });
+    } catch {
+      // Exceeds capacity at this level; a lower level holds more data.
+      continue;
+    }
+    const size = qr.modules.size;
+    const moduleSize = FRAME_QR_BOX_SIZE / (size + INTERNAL_QR_INSET_MODULES * 2);
+    const modulePx = moduleSize * scale;
+    if (modulePx >= MIN_MODULE_PX) {
+      return { qr, errorCorrectionLevel, size, moduleSize, modulePx };
+    }
+    densestSize = size;
+  }
+  if (densestSize === null) {
+    throw new Error(
+      `The encrypted PII is too large to encode in a QR code (${content.length} characters of QR ` +
+        `content). Shorten the PII fields and try again.`,
+    );
+  }
+  throw new Error(
+    `The PII is too long to render a scannable barcode in the branded frame at width ${badgeWidth}, ` +
+      `even at the lowest error correction. Shorten the PII fields and try again.`,
+  );
 }
 
 function validateBadgeWidth(value: number, name: string): number {
