@@ -6,7 +6,8 @@ Verifiabl lets payroll providers issue payslips with a scannable QR code. The no
 
 This SDK gives you everything needed to integrate:
 
-- **`createBarcodeSvg`**: branded "Secured by Verifiabl" QR badge as dependency-free SVG (PNG optional)
+- **`createBarcodeSvg`**: branded "Secured by Verifiabl" barcode as dependency-free SVG
+- **`createBarcodePng`**: optional PNG rasterization using `@resvg/resvg-js`
 - **`formatPii`**: formats employee PII into Verifiabl's compact barcode payload format
 - **`encryptPii`**: AES-256-GCM encryption producing exactly the ciphertext and metadata the API expects
 - **`VerifiablClient`**: typed, zero-dependency API client using native `fetch`
@@ -129,26 +130,40 @@ The QR code encodes `https://verify.verifiabl.io/v/<payload>` in production and 
 
 The ciphertext is additionally bound (via AES-GCM AAD) to `<provider-id>|<key_version>|<schema>`. Verifiabl reconstructs this from the registered record, so a ciphertext cannot be replayed against a different provider, key version, or schema. The practical rules: the `keyVersion` and `schema` you pass to `encryptPii` must exactly match the `encryption_metadata.key_version` and `schema` fields you register, and `buildPiiAad(keyVersion, schema)` is exported if you want to reproduce server-side decryption in your own round-trip tests.
 
-## Styled QR options
+## Barcode output
 
 ```ts
 const parts = { linkingToken: linking_token, encryptedPii: encrypted_pii };
 
 const { svg, width, height, content } = createBarcodeSvg(parts, {
-  width: 720,                  // badge width (default 360)
-  frame: false,                // bare styled QR, no card/header
-  encode: "payload",           // encode bare "1|lt|ct" instead of the scan URL
-  errorCorrectionLevel: "Q",   // L | M (default) | Q | H
-  environment: "sandbox",      // production (default) | sandbox
-  headerText: "Secured by",
-  colors: { navy: "#0B1547", panel: "#FFFFFF", text: "#FFFFFF" }, // safe SVG colours
-  logoSvg: "<g>...</g>",       // replace the built-in header artwork
+  width: 720,             // badge width, default 420
+  environment: "sandbox", // production (default) | sandbox
 });
 ```
 
-Rendered badges reserve the ISO/IEC 18004 quiet zone (4 modules) around the QR code, so they stay scannable after print and recapture.
+The SVG always uses the approved branded "Secured by Verifiabl" frame. Layout, colours, quiet zone, QR placement, and error correction are intentionally not configurable, so the badge remains consistent across customer documents. `width` only scales the complete badge uniformly and must be at least `420`. The returned `height` is always `width * 151 / 96`.
 
-`scanBaseUrl` is available as an advanced override for local development against a custom scan URL origin. Most integrations should use `environment` instead.
+The frame uses a fixed `viewBox="0 0 96 151"`. The header is navy `#010A4F`, the border is `#ADADAD`, and QR modules are black for maximum scanner contrast. The QR box is fixed at `x=8`, `y=59`, `width=80`, `height=80`. The QR matrix is sized inside that box with the required quiet zone, so payload length changes module size but never moves the frame or QR placement.
+
+`scanBaseUrl` is available as an advanced override for local development against a custom scan URL origin. Most integrations should use `environment` instead:
+
+```ts
+const { svg } = createBarcodeSvg(parts, {
+  environment: "sandbox",
+  scanBaseUrl: "https://verify.sandbox.verifiabl.io",
+});
+```
+
+### Placement rules
+
+When embedding the barcode in a payslip document:
+
+- Preserve the returned aspect ratio. Do not set width and height independently.
+- Place the barcode on a white or light document area. The SVG and PNG keep the QR quiet zone transparent instead of painting a separate white panel.
+- Do not crop, mask, rotate, skew, stretch, recolour, or add effects.
+- Do not compress or resample PNG output after generation.
+- For SVG, embed the returned SVG as-is. Do not rewrite path, rect, fill, stroke, or viewBox attributes.
+- Print at sufficient physical size for your document workflow. The SDK enforces a minimum digital width, but print DPI, PDF rasterization, paper quality, and scanner camera quality still affect readability.
 
 ### PNG output
 
@@ -163,6 +178,8 @@ import { createBarcodePng } from "verifiabl";
 
 const { png } = await createBarcodePng(parts, {}, 720); // 720px wide PNG buffer
 ```
+
+`png` is a `Buffer` containing PNG bytes. PNG output width must be at least `420` pixels.
 
 ## API client
 

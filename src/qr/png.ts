@@ -10,6 +10,8 @@ export interface BarcodePngResult {
   content: string;
 }
 
+const MIN_PIXEL_WIDTH = 420;
+
 /**
  * Render the branded Verifiabl QR badge as a PNG.
  *
@@ -29,6 +31,9 @@ export async function createBarcodePng(
 ): Promise<BarcodePngResult> {
   if (!Number.isInteger(pixelWidth) || pixelWidth <= 0) {
     throw new Error("pixelWidth must be a positive integer");
+  }
+  if (pixelWidth < MIN_PIXEL_WIDTH) {
+    throw new Error(`pixelWidth must be at least ${MIN_PIXEL_WIDTH}`);
   }
 
   let Resvg: typeof import("@resvg/resvg-js").Resvg;

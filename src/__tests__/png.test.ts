@@ -13,10 +13,11 @@ describe("createBarcodePng", () => {
       Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     );
     expect(width).toBe(480);
-    expect(height).toBeGreaterThan(width);
+    expect(height).toBe(Math.round((480 * 151) / 96));
   });
 
   it("rejects invalid pixel widths", async () => {
     await expect(createBarcodePng(PARTS, {}, 0)).rejects.toThrow("pixelWidth");
+    await expect(createBarcodePng(PARTS, {}, 419)).rejects.toThrow("at least 420");
   });
 });

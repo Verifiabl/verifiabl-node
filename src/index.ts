@@ -33,13 +33,7 @@ export {
 } from "./pii.js";
 
 export { type BarcodePngResult, createBarcodePng } from "./qr/png.js";
-export {
-  type BarcodeSvgColors,
-  type BarcodeSvgOptions,
-  type BarcodeSvgResult,
-  createBarcodeSvg,
-  type QrErrorCorrectionLevel,
-} from "./qr/styled.js";
+export { type BarcodeSvgOptions, type BarcodeSvgResult, createBarcodeSvg } from "./qr/styled.js";
 
 export {
   type BarcodeImage,
