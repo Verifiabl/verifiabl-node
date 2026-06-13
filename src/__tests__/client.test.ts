@@ -1,16 +1,19 @@
-import { VerifiablApiError, VerifiablClient } from "../client.js";
-import { buildScanUrl } from "../payload.js";
+import { VerifiablApiError, VerifiablAuthError, VerifiablClient } from "../client.js";
 import type { CreateBarcodeRequest, RegisterNonPiiRequest } from "../types.js";
 
 const LT = "AbCdEfGhIjKlMnOpQrStUv";
 const CT = "Zm9v";
-const PAYLOAD = `1|${LT}|${CT}`;
+const KEY_VERSION = "0f8fad5b-d9cb-469f-a165-70867728950e.1";
 
 const REQUEST: RegisterNonPiiRequest = {
   schema: "au.payslip.v1",
   issued_at: "2026-06-11T00:00:00Z",
   payslip_data: { period_start: "2026-05-01", period_end: "2026-05-31", gross: "9000.00" },
-  encryption_metadata: { iv: "AAAAAAAAAAAAAAAA", tag: "AAAAAAAAAAAAAAAAAAAAAA", key_version: "v1" },
+  encryption_metadata: {
+    iv: "AAAAAAAAAAAAAAAA",
+    tag: "AAAAAAAAAAAAAAAAAAAAAA",
+    key_version: KEY_VERSION,
+  },
 };
 
 const CREATE_BARCODE_REQUEST: CreateBarcodeRequest = {
@@ -18,13 +21,21 @@ const CREATE_BARCODE_REQUEST: CreateBarcodeRequest = {
   encrypted_pii: CT,
 };
 
-const VERIFY_RESPONSE = {
-  verified: true,
-  linking_token: LT,
-  payslip: {},
-  employee: { employee_name: "Jane A. Doe" },
-  decrypted_at: "2026-06-11T00:00:00Z",
-};
+const STATIC_AUTH = { auth: { apiKey: "k" } };
+
+function registerResponse(): Response {
+  return new Response(JSON.stringify({ id: "x", linking_token: LT }), { status: 201 });
+}
+
+function createBarcodeResponse(): Response {
+  return new Response(
+    JSON.stringify({
+      id: "barcode-record",
+      symbol: { format: "png", data: "iVBORw0KGgo=", width_px: 720, height_px: 720 },
+    }),
+    { status: 201 },
+  );
+}
 
 function mockFetch(status: number, body: unknown): jest.MockedFunction<typeof fetch> {
   return jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
@@ -40,47 +51,108 @@ function firstFetchCall(fetchMock: jest.MockedFunction<typeof fetch>): Parameter
   return call;
 }
 
-describe("VerifiablClient", () => {
-  it("requires an apiKey", () => {
-    expect(() => new VerifiablClient({ apiKey: "" })).toThrow("apiKey is required");
+function requestBody(call: Parameters<typeof fetch>): unknown {
+  const [, init] = call;
+  if (init === undefined) {
+    throw new Error("Expected fetch init options");
+  }
+  return JSON.parse(String(init.body));
+}
+
+describe("VerifiablClient construction", () => {
+  it("requires a non-empty apiKey for static auth", () => {
+    expect(() => new VerifiablClient({ auth: { apiKey: "" } })).toThrow("apiKey");
   });
 
-  it("rejects non-https base URLs except local http development", () => {
-    expect(() => new VerifiablClient({ apiKey: "k", issuerBaseUrl: "http://api.example" })).toThrow(
-      "https",
+  it("trims static bearer credentials from environment variables", async () => {
+    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const client = new VerifiablClient({ auth: { apiKey: " secret-key\n" }, fetch });
+
+    await client.registerNonPii(REQUEST);
+
+    const [, init] = firstFetchCall(fetch);
+    if (init === undefined) {
+      throw new Error("Expected fetch init options");
+    }
+    expect(new Headers(init.headers).get("authorization")).toBe("Bearer secret-key");
+  });
+
+  it("reports malformed static auth with a configuration error", () => {
+    expect(() => Reflect.construct(VerifiablClient, [{ auth: { apiKey: 42 } }])).toThrow(
+      "auth.apiKey must be a string",
     );
-    expect(
-      () => new VerifiablClient({ apiKey: "k", verifierBaseUrl: "file://localhost/tmp" }),
-    ).toThrow("https");
   });
 
-  it("allows http for loopback development", () => {
+  it("requires auth", () => {
+    expect(() => Reflect.construct(VerifiablClient, [{}])).toThrow("auth is required");
+  });
+
+  it("requires clientId and clientSecret for OAuth auth", () => {
+    expect(() => new VerifiablClient({ auth: { clientId: "", clientSecret: "s" } })).toThrow(
+      "clientId",
+    );
+    expect(() => new VerifiablClient({ auth: { clientId: "c", clientSecret: " " } })).toThrow(
+      "clientSecret",
+    );
+    expect(() => Reflect.construct(VerifiablClient, [{ auth: { clientId: "c" } }])).toThrow(
+      "auth must include",
+    );
+  });
+
+  it("rejects mixed auth modes and malformed OAuth options", () => {
+    expect(() =>
+      Reflect.construct(VerifiablClient, [
+        { auth: { apiKey: "k", clientId: "c", clientSecret: "s" } },
+      ]),
+    ).toThrow("not both");
+    expect(() =>
+      Reflect.construct(VerifiablClient, [
+        { auth: { clientId: "c", clientSecret: "s", tokenUrl: 42 } },
+      ]),
+    ).toThrow("auth.tokenUrl must be a string");
+    expect(() =>
+      Reflect.construct(VerifiablClient, [{ auth: { apiKey: "k", tokenUrl: "https://auth" } }]),
+    ).toThrow("auth.tokenUrl requires OAuth client credentials");
+    expect(() =>
+      Reflect.construct(VerifiablClient, [
+        { auth: { clientId: "c", clientSecret: "s", tokenUrl: "\n" } },
+      ]),
+    ).toThrow("auth.tokenUrl must not be empty");
     expect(
       () =>
         new VerifiablClient({
-          apiKey: "k",
-          issuerBaseUrl: "http://localhost:3001",
-          verifierBaseUrl: "http://localhost:3002",
+          auth: { clientId: "c", clientSecret: "s", tokenUrl: "https://example.com/oauth/token" },
         }),
+    ).toThrow("Verifiabl auth host");
+  });
+
+  it("rejects non-https issuer base URLs except local http development", () => {
+    expect(
+      () => new VerifiablClient({ ...STATIC_AUTH, issuerBaseUrl: "http://api.example" }),
+    ).toThrow("https");
+  });
+
+  it("allows http for loopback issuer development", () => {
+    expect(
+      () => new VerifiablClient({ ...STATIC_AUTH, issuerBaseUrl: "http://localhost:3001" }),
     ).not.toThrow();
     expect(
-      () => new VerifiablClient({ apiKey: "k", issuerBaseUrl: "http://127.0.0.1:3001" }),
+      () => new VerifiablClient({ ...STATIC_AUTH, issuerBaseUrl: "http://127.0.0.1:3001" }),
     ).not.toThrow();
     expect(
-      () => new VerifiablClient({ apiKey: "k", verifierBaseUrl: "http://[::1]:3002" }),
+      () => new VerifiablClient({ ...STATIC_AUTH, issuerBaseUrl: "http://[::1]:3001" }),
     ).not.toThrow();
   });
 
   it("rejects invalid timeouts", () => {
-    expect(() => new VerifiablClient({ apiKey: "k", timeoutMs: 0 })).toThrow("timeoutMs");
+    expect(() => new VerifiablClient({ ...STATIC_AUTH, timeoutMs: 0 })).toThrow("timeoutMs");
   });
+});
 
+describe("VerifiablClient with static auth", () => {
   it("sends registration to the production issuer origin with bearer auth", async () => {
     const fetch = mockFetch(201, { id: "x", linking_token: LT });
-    const client = new VerifiablClient({
-      apiKey: "secret-key",
-      fetch,
-    });
+    const client = new VerifiablClient({ auth: { apiKey: "secret-key" }, fetch });
 
     const result = await client.registerNonPii(REQUEST);
 
@@ -91,45 +163,24 @@ describe("VerifiablClient", () => {
     }
     expect(url).toBe("https://register.verifiabl.io/v1/registerNonPII");
     expect(new Headers(init.headers).get("authorization")).toBe("Bearer secret-key");
-    const parsedBody: unknown = JSON.parse(String(init.body));
-    expect(parsedBody).toEqual(REQUEST);
+    expect(requestBody(firstFetchCall(fetch))).toEqual(REQUEST);
   });
 
-  it("routes verification to the production verifier origin", async () => {
-    const fetch = mockFetch(200, VERIFY_RESPONSE);
-    const client = new VerifiablClient({ apiKey: "k", fetch });
-
-    const result = await client.verifyBarcode({ lt: LT, ct: CT });
-    expect(result.verified).toBe(true);
-    const [url] = firstFetchCall(fetch);
-    expect(url).toBe("https://verify.verifiabl.io/v1/verifications/payload");
-  });
-
-  it("routes to sandbox origins when environment is sandbox", async () => {
+  it("routes registration to the sandbox issuer origin", async () => {
     const fetch = mockFetch(201, { id: "x", linking_token: LT });
-    const client = new VerifiablClient({ apiKey: "k", environment: "sandbox", fetch });
+    const client = new VerifiablClient({ ...STATIC_AUTH, environment: "sandbox", fetch });
 
     await client.registerNonPii(REQUEST);
+
     expect(firstFetchCall(fetch)[0]).toBe(
       "https://register.sandbox.verifiabl.io/v1/registerNonPII",
     );
-
-    const verifyFetch = mockFetch(200, VERIFY_RESPONSE);
-    const verifyClient = new VerifiablClient({
-      apiKey: "k",
-      environment: "sandbox",
-      fetch: verifyFetch,
-    });
-    await verifyClient.verifyBarcode({ lt: LT, ct: CT });
-    expect(firstFetchCall(verifyFetch)[0]).toBe(
-      "https://verify.sandbox.verifiabl.io/v1/verifications/payload",
-    );
   });
 
-  it("lets explicit base URL overrides win over the environment", async () => {
+  it("lets explicit issuer base URL overrides win over the environment", async () => {
     const fetch = mockFetch(201, { id: "x", linking_token: LT });
     const client = new VerifiablClient({
-      apiKey: "k",
+      ...STATIC_AUTH,
       environment: "sandbox",
       issuerBaseUrl: "http://localhost:3001",
       fetch,
@@ -139,12 +190,27 @@ describe("VerifiablClient", () => {
     expect(firstFetchCall(fetch)[0]).toBe("http://localhost:3001/v1/registerNonPII");
   });
 
+  it("maps the API response to a barcode image for createBarcode", async () => {
+    const fetchMock = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
+      return createBarcodeResponse();
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch: fetchMock });
+
+    const result = await client.createBarcode(CREATE_BARCODE_REQUEST);
+
+    expect(result).toEqual({
+      id: "barcode-record",
+      barcode: { format: "png", data: "iVBORw0KGgo=", width_px: 720, height_px: 720 },
+    });
+    expect(firstFetchCall(fetchMock)[0]).toBe(
+      "https://register.verifiabl.io/v1/registerAndBuildSymbol",
+    );
+    expect(requestBody(firstFetchCall(fetchMock))).toEqual(CREATE_BARCODE_REQUEST);
+  });
+
   it("throws VerifiablApiError with the stable code on API errors", async () => {
     const fetch = mockFetch(401, { error: "Unauthorized", code: "UNAUTHORIZED" });
-    const client = new VerifiablClient({
-      apiKey: "bad-key",
-      fetch,
-    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
 
     await expect(client.registerNonPii(REQUEST)).rejects.toMatchObject({
       name: "VerifiablApiError",
@@ -153,85 +219,53 @@ describe("VerifiablClient", () => {
     });
   });
 
-  it("preserves the error code when the error body has fields this SDK does not know", async () => {
-    const fetch = mockFetch(404, {
-      error: "Not found",
-      code: "LINKING_TOKEN_NOT_FOUND",
-      request_id: "req_123",
+  it("includes request ids on API errors when the response has one", async () => {
+    const fetchMock: jest.MockedFunction<typeof globalThis.fetch> = jest.fn<
+      ReturnType<typeof globalThis.fetch>,
+      Parameters<typeof globalThis.fetch>
+    >(async () => {
+      return new Response(JSON.stringify({ error: "Forbidden", code: "FORBIDDEN" }), {
+        status: 403,
+        headers: { "x-request-id": "req_123" },
+      });
     });
-    const client = new VerifiablClient({ apiKey: "k", fetch });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch: fetchMock });
 
-    await expect(client.verifyBarcode({ lt: LT, ct: CT })).rejects.toMatchObject({
-      status: 404,
-      code: "LINKING_TOKEN_NOT_FOUND",
+    await expect(client.registerNonPii(REQUEST)).rejects.toMatchObject({
+      status: 403,
+      code: "FORBIDDEN",
+      requestId: "req_123",
     });
   });
 
   it("passes through error codes this SDK version does not know", async () => {
     const fetch = mockFetch(429, { error: "Slow down", code: "RATE_LIMITED" });
-    const client = new VerifiablClient({ apiKey: "k", fetch });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
 
-    await expect(client.verifyBarcode({ lt: LT, ct: CT })).rejects.toMatchObject({
+    await expect(client.registerNonPii(REQUEST)).rejects.toMatchObject({
       status: 429,
       code: "RATE_LIMITED",
     });
   });
 
   it("tolerates additive fields in success responses", async () => {
-    const fetch = mockFetch(200, { ...VERIFY_RESPONSE, audit_ref: "added-in-a-future-release" });
-    const client = new VerifiablClient({ apiKey: "k", fetch });
+    const fetch = mockFetch(201, { id: "x", linking_token: LT, audit_ref: "future-field" });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
 
-    const result = await client.verifyBarcode({ lt: LT, ct: CT });
-    expect(result.verified).toBe(true);
-  });
+    const result = await client.registerNonPii(REQUEST);
 
-  it("maps the API response to a barcode image for createBarcode", async () => {
-    const fetch = mockFetch(201, {
-      id: "barcode-record",
-      symbol: {
-        format: "png",
-        data: "iVBORw0KGgo=",
-        width_px: 720,
-        height_px: 720,
-      },
-    });
-    const client = new VerifiablClient({
-      apiKey: "k",
-      fetch,
-    });
-
-    const result = await client.createBarcode(CREATE_BARCODE_REQUEST);
-
-    expect(result).toEqual({
-      id: "barcode-record",
-      barcode: {
-        format: "png",
-        data: "iVBORw0KGgo=",
-        width_px: 720,
-        height_px: 720,
-      },
-    });
-    const [url, init] = firstFetchCall(fetch);
-    if (init === undefined) {
-      throw new Error("Expected fetch init options");
-    }
-    expect(url).toBe("https://register.verifiabl.io/v1/registerAndBuildSymbol");
-    const parsedBody: unknown = JSON.parse(String(init.body));
-    expect(parsedBody).toEqual(CREATE_BARCODE_REQUEST);
+    expect(result.linking_token).toBe(LT);
   });
 
   it("survives non-JSON error bodies", async () => {
     const fetchMock = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
       return new Response("not json", { status: 502 });
     });
-    const client = new VerifiablClient({
-      apiKey: "k",
-      fetch: fetchMock,
-    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch: fetchMock });
 
     let error: unknown;
     try {
-      await client.verifyBarcode({ barcode: PAYLOAD });
+      await client.registerNonPii(REQUEST);
     } catch (err) {
       error = err;
     }
@@ -241,77 +275,544 @@ describe("VerifiablClient", () => {
     expect(error.status).toBe(502);
   });
 
-  it("normalises scan URLs before verifying a barcode", async () => {
-    const fetch = mockFetch(200, VERIFY_RESPONSE);
-    const client = new VerifiablClient({ apiKey: "k", fetch });
+  it("rejects invalid per-request timeouts before sending", async () => {
+    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
 
-    await client.verifyBarcode({
-      barcode: ` ${buildScanUrl({ linkingToken: LT, encryptedPii: CT })} `,
-    });
-
-    const [, init] = firstFetchCall(fetch);
-    if (init === undefined) {
-      throw new Error("Expected fetch init options");
-    }
-    const parsedBody: unknown = JSON.parse(String(init.body));
-    expect(parsedBody).toEqual({ barcode: PAYLOAD });
-  });
-
-  it("passes non-URL barcode shapes through to the API untouched", async () => {
-    const fetch = mockFetch(200, VERIFY_RESPONSE);
-    const client = new VerifiablClient({ apiKey: "k", fetch });
-
-    const jsonBarcode = JSON.stringify({ v: 1, lt: LT, ct: CT });
-    await client.verifyBarcode({ barcode: jsonBarcode });
-
-    const [, init] = firstFetchCall(fetch);
-    if (init === undefined) {
-      throw new Error("Expected fetch init options");
-    }
-    const parsedBody: unknown = JSON.parse(String(init.body));
-    expect(parsedBody).toEqual({ barcode: jsonBarcode });
-  });
-
-  it("rejects whitespace-only barcodes locally", async () => {
-    const fetch = mockFetch(200, VERIFY_RESPONSE);
-    const client = new VerifiablClient({ apiKey: "k", fetch });
-
-    await expect(client.verifyBarcode({ barcode: "   " })).rejects.toThrow(
-      "barcode must not be empty",
-    );
+    await expect(client.registerNonPii(REQUEST, { timeoutMs: 0 })).rejects.toThrow("timeoutMs");
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("passes scan-URL-shaped but unextractable barcodes through to the API", async () => {
-    const fetch = mockFetch(200, VERIFY_RESPONSE);
-    const client = new VerifiablClient({ apiKey: "k", fetch });
+  it("reports malformed per-request options with configuration errors", async () => {
+    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
 
-    // Bad percent-encoding makes decodeURIComponent throw; the SDK must
-    // not fail locally — the API stays the authority on accepted formats.
-    const malformed = "https://verify.verifiabl.io/v/%E0%A4%A";
-    await client.verifyBarcode({ barcode: malformed });
+    // @ts-expect-error Exercise JavaScript runtime input validation.
+    await expect(client.registerNonPii(REQUEST, null)).rejects.toThrow("options must be an object");
+    await expect(
+      // @ts-expect-error Exercise JavaScript runtime input validation.
+      client.registerNonPii(REQUEST, { signal: { aborted: false } }),
+    ).rejects.toThrow("signal must be an AbortSignal");
+    expect(fetch).not.toHaveBeenCalled();
+  });
 
-    const [, init] = firstFetchCall(fetch);
-    if (init === undefined) {
-      throw new Error("Expected fetch init options");
+  it("accepts abort-signal-like objects with members on the prototype", async () => {
+    class PrototypeSignal {
+      aborted = false;
+      reason: unknown;
+      private readonly listeners: Array<() => void> = [];
+
+      addEventListener(type: "abort", listener: () => void): void {
+        if (type === "abort") {
+          this.listeners.push(listener);
+        }
+      }
+
+      removeEventListener(type: "abort", listener: () => void): void {
+        if (type !== "abort") {
+          return;
+        }
+        const index = this.listeners.indexOf(listener);
+        if (index >= 0) {
+          this.listeners.splice(index, 1);
+        }
+      }
+
+      abort(reason: unknown): void {
+        this.aborted = true;
+        this.reason = reason;
+        for (const listener of this.listeners) {
+          listener();
+        }
+      }
+
+      listenerCount(): number {
+        return this.listeners.length;
+      }
     }
-    const parsedBody: unknown = JSON.parse(String(init.body));
-    expect(parsedBody).toEqual({ barcode: malformed });
+
+    const successSignal = new PrototypeSignal();
+    let successFetchSignal: AbortSignal | undefined;
+    const successFetchMock: jest.MockedFunction<typeof globalThis.fetch> = jest.fn(
+      async (_input, init) => {
+        if (init?.signal instanceof AbortSignal) {
+          successFetchSignal = init.signal;
+        }
+        return registerResponse();
+      },
+    );
+    const successClient = new VerifiablClient({ ...STATIC_AUTH, fetch: successFetchMock });
+
+    // @ts-expect-error Exercise JavaScript runtime input validation.
+    await successClient.registerNonPii(REQUEST, { signal: successSignal });
+
+    expect(successFetchSignal).toBeInstanceOf(AbortSignal);
+    expect(successFetchSignal?.aborted).toBe(false);
+    expect(successSignal.listenerCount()).toBe(0);
+    successSignal.abort("late abort");
+    expect(successFetchSignal?.aborted).toBe(false);
+
+    const signal = new PrototypeSignal();
+    let fetchSignal: AbortSignal | undefined;
+    const fetchMock: jest.MockedFunction<typeof globalThis.fetch> = jest.fn(
+      async (_input, init) => {
+        if (init?.signal instanceof AbortSignal) {
+          fetchSignal = init.signal;
+        }
+        signal.abort("caller aborted");
+        return registerResponse();
+      },
+    );
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch: fetchMock });
+
+    // @ts-expect-error Exercise JavaScript runtime input validation.
+    await client.registerNonPii(REQUEST, { signal });
+
+    expect(fetchSignal).toBeInstanceOf(AbortSignal);
+    expect(fetchSignal?.aborted).toBe(true);
+    expect(fetchSignal?.reason).toMatchObject({ name: "AbortError", message: "caller aborted" });
+    expect(signal.listenerCount()).toBe(0);
+  });
+
+  it("emits request and response hooks without bodies", async () => {
+    const requests: unknown[] = [];
+    const responses: unknown[] = [];
+    const fetchMock: jest.MockedFunction<typeof globalThis.fetch> = jest.fn<
+      ReturnType<typeof globalThis.fetch>,
+      Parameters<typeof globalThis.fetch>
+    >(async () => {
+      return new Response(JSON.stringify({ id: "x", linking_token: LT }), {
+        status: 201,
+        headers: { "x-request-id": "req_hook" },
+      });
+    });
+    const client = new VerifiablClient({
+      ...STATIC_AUTH,
+      fetch: fetchMock,
+      onRequest: (event) => requests.push(event),
+      onResponse: (event) => responses.push(event),
+    });
+
+    await client.registerNonPii(REQUEST, { timeoutMs: 1_000 });
+
+    expect(requests).toEqual([
+      {
+        method: "POST",
+        url: "https://register.verifiabl.io/v1/registerNonPII",
+        path: "/v1/registerNonPII",
+      },
+    ]);
+    expect(responses).toHaveLength(1);
+    expect(responses[0]).toMatchObject({
+      method: "POST",
+      url: "https://register.verifiabl.io/v1/registerNonPII",
+      path: "/v1/registerNonPII",
+      status: 201,
+      requestId: "req_hook",
+    });
+    expect(responses[0]).toHaveProperty("elapsedMs");
+    expect(responses[0]).not.toHaveProperty("body");
+  });
+
+  it("does not let observability hook failures change request behavior", async () => {
+    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const client = new VerifiablClient({
+      ...STATIC_AUTH,
+      fetch,
+      onRequest: () => {
+        throw new Error("hook failed");
+      },
+      onResponse: () => {
+        throw new Error("hook failed");
+      },
+    });
+
+    const result = await client.registerNonPii(REQUEST);
+
+    expect(result.linking_token).toBe(LT);
+  });
+
+  it("does not let async observability hook failures change request behavior", async () => {
+    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const client = new VerifiablClient({
+      ...STATIC_AUTH,
+      fetch,
+      onRequest: async () => {
+        throw new Error("hook failed");
+      },
+      onResponse: async () => {
+        throw new Error("hook failed");
+      },
+    });
+
+    const result = await client.registerNonPii(REQUEST);
+
+    expect(result.linking_token).toBe(LT);
+  });
+
+  it("emits error hooks when issuer API fetch fails", async () => {
+    const requests: unknown[] = [];
+    const responses: unknown[] = [];
+    const errors: unknown[] = [];
+    const fetchError = new Error("network failed");
+    const fetchMock: jest.MockedFunction<typeof globalThis.fetch> = jest.fn<
+      ReturnType<typeof globalThis.fetch>,
+      Parameters<typeof globalThis.fetch>
+    >(async () => {
+      throw fetchError;
+    });
+    const client = new VerifiablClient({
+      ...STATIC_AUTH,
+      fetch: fetchMock,
+      onRequest: (event) => requests.push(event),
+      onResponse: (event) => responses.push(event),
+      onError: (event) => errors.push(event),
+    });
+
+    await expect(client.registerNonPii(REQUEST)).rejects.toBe(fetchError);
+
+    expect(requests).toHaveLength(1);
+    expect(responses).toEqual([]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatchObject({
+      method: "POST",
+      url: "https://register.verifiabl.io/v1/registerNonPII",
+      path: "/v1/registerNonPII",
+      error: fetchError,
+    });
+    expect(errors[0]).toHaveProperty("elapsedMs");
   });
 
   it("validates request bodies before sending", async () => {
     const fetch = mockFetch(201, { id: "x", linking_token: LT });
-    const client = new VerifiablClient({ apiKey: "k", fetch });
-    await expect(client.verifyBarcode({ lt: "too-short", ct: "Zm9v" })).rejects.toThrow();
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    await expect(
+      client.registerNonPii({
+        ...REQUEST,
+        encryption_metadata: { ...REQUEST.encryption_metadata, iv: "short" },
+      }),
+    ).rejects.toThrow();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects key versions outside the deployed contract before sending", async () => {
+    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    await expect(
+      client.registerNonPii({
+        ...REQUEST,
+        encryption_metadata: { ...REQUEST.encryption_metadata, key_version: "v1" },
+      }),
+    ).rejects.toThrow("provider-id");
     expect(fetch).not.toHaveBeenCalled();
   });
 
   it("rejects issued_at with a UTC offset, matching the API", async () => {
     const fetch = mockFetch(201, { id: "x", linking_token: LT });
-    const client = new VerifiablClient({ apiKey: "k", fetch });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
     await expect(
       client.registerNonPii({ ...REQUEST, issued_at: "2026-06-11T10:00:00+10:00" }),
     ).rejects.toThrow("UTC");
     expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("VerifiablClient with OAuth client credentials", () => {
+  const OAUTH = { clientId: "demo-client", clientSecret: "demo-secret" };
+
+  function tokenResponse(token: string, expiresIn = 3600): Response {
+    return new Response(
+      JSON.stringify({ access_token: token, token_type: "Bearer", expires_in: expiresIn }),
+      { status: 200 },
+    );
+  }
+
+  function oauthFetch(handlers: {
+    token?: (body: unknown) => Response;
+    api?: (url: string, authorization: string | null) => Response;
+  }): jest.MockedFunction<typeof fetch> {
+    return jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async (input, init) => {
+      const url = String(input);
+      if (url.includes("/oauth/token")) {
+        const body: unknown = JSON.parse(String(init?.body));
+        return handlers.token?.(body) ?? tokenResponse("tok");
+      }
+      const authorization = new Headers(init?.headers).get("authorization");
+      return handlers.api?.(url, authorization) ?? registerResponse();
+    });
+  }
+
+  it("fetches a token with the issuer audience and scope for registration", async () => {
+    const tokenBodies: unknown[] = [];
+    const fetch = oauthFetch({
+      token: (body) => {
+        tokenBodies.push(body);
+        return tokenResponse("issuer-token");
+      },
+      api: (_url, authorization) => {
+        expect(authorization).toBe("Bearer issuer-token");
+        return registerResponse();
+      },
+    });
+    const client = new VerifiablClient({ auth: OAUTH, environment: "sandbox", fetch });
+
+    await client.registerNonPii(REQUEST);
+
+    expect(tokenBodies).toEqual([
+      {
+        grant_type: "client_credentials",
+        client_id: "demo-client",
+        client_secret: "demo-secret",
+        audience: "https://register.sandbox.verifiabl.io",
+        scope: "verifiabl:issuer",
+      },
+    ]);
+    expect(firstFetchCall(fetch)[0]).toBe("https://auth.sandbox.verifiabl.io/oauth/token");
+  });
+
+  it("trims OAuth credentials before requesting a token", async () => {
+    const tokenBodies: unknown[] = [];
+    const fetch = oauthFetch({
+      token: (body) => {
+        tokenBodies.push(body);
+        return tokenResponse("issuer-token");
+      },
+    });
+    const client = new VerifiablClient({
+      auth: { clientId: " demo-client\n", clientSecret: " demo-secret\n" },
+      fetch,
+    });
+
+    await client.registerNonPii(REQUEST);
+
+    expect(tokenBodies).toEqual([
+      expect.objectContaining({ client_id: "demo-client", client_secret: "demo-secret" }),
+    ]);
+  });
+
+  it("trims OAuth token URL overrides before parsing", async () => {
+    const fetch = oauthFetch({});
+    const client = new VerifiablClient({
+      auth: {
+        clientId: "demo-client",
+        clientSecret: "demo-secret",
+        tokenUrl: " http://localhost:3001/oauth/token\n",
+      },
+      fetch,
+    });
+
+    await client.registerNonPii(REQUEST);
+
+    expect(firstFetchCall(fetch)[0]).toBe("http://localhost:3001/oauth/token");
+  });
+
+  it("caches the token across issuer calls", async () => {
+    let tokenRequests = 0;
+    const fetch = oauthFetch({
+      token: () => {
+        tokenRequests += 1;
+        return tokenResponse(`tok-${tokenRequests}`);
+      },
+      api: (url) =>
+        url.includes("registerAndBuildSymbol") ? createBarcodeResponse() : registerResponse(),
+    });
+    const client = new VerifiablClient({ auth: OAUTH, fetch });
+
+    await client.registerNonPii(REQUEST);
+    await client.createBarcode(CREATE_BARCODE_REQUEST);
+
+    expect(tokenRequests).toBe(1);
+  });
+
+  it("reuses short-lived tokens before they enter their refresh window", async () => {
+    let tokenRequests = 0;
+    const fetch = oauthFetch({
+      token: () => {
+        tokenRequests += 1;
+        return tokenResponse(`tok-${tokenRequests}`, 30);
+      },
+      api: (url) =>
+        url.includes("registerAndBuildSymbol") ? createBarcodeResponse() : registerResponse(),
+    });
+    const client = new VerifiablClient({ auth: OAUTH, fetch });
+
+    await client.registerNonPii(REQUEST);
+    await client.createBarcode(CREATE_BARCODE_REQUEST);
+
+    expect(tokenRequests).toBe(1);
+  });
+
+  it("deduplicates concurrent issuer token requests", async () => {
+    let tokenRequests = 0;
+    const fetch = oauthFetch({
+      token: () => {
+        tokenRequests += 1;
+        return tokenResponse("shared-token");
+      },
+      api: (_url, authorization) => {
+        expect(authorization).toBe("Bearer shared-token");
+        return registerResponse();
+      },
+    });
+    const client = new VerifiablClient({ auth: OAUTH, fetch });
+
+    await Promise.all([client.registerNonPii(REQUEST), client.registerNonPii(REQUEST)]);
+
+    expect(tokenRequests).toBe(1);
+  });
+
+  it("refreshes the token and retries once on a 401", async () => {
+    let tokenRequests = 0;
+    let apiCalls = 0;
+    const fetch = oauthFetch({
+      token: () => {
+        tokenRequests += 1;
+        return tokenResponse(`tok-${tokenRequests}`);
+      },
+      api: (_url, authorization) => {
+        apiCalls += 1;
+        if (apiCalls === 1) {
+          return new Response(JSON.stringify({ error: "Unauthorized", code: "UNAUTHORIZED" }), {
+            status: 401,
+          });
+        }
+        expect(authorization).toBe("Bearer tok-2");
+        return registerResponse();
+      },
+    });
+    const client = new VerifiablClient({ auth: OAUTH, fetch });
+
+    const result = await client.registerNonPii(REQUEST);
+
+    expect(result.linking_token).toBe(LT);
+    expect(tokenRequests).toBe(2);
+    expect(apiCalls).toBe(2);
+  });
+
+  it("applies timeoutMs across token fetch, API call, and 401 retry", async () => {
+    let nowMs = 0;
+    const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => nowMs);
+    const timeoutWindows: number[] = [];
+    const timeoutSpy = jest.spyOn(AbortSignal, "timeout").mockImplementation((timeoutMs) => {
+      timeoutWindows.push(timeoutMs);
+      return new AbortController().signal;
+    });
+    try {
+      let tokenRequests = 0;
+      let apiCalls = 0;
+      const fetch = oauthFetch({
+        token: () => {
+          tokenRequests += 1;
+          nowMs += tokenRequests === 1 ? 300 : 150;
+          return tokenResponse(`tok-${tokenRequests}`);
+        },
+        api: () => {
+          apiCalls += 1;
+          if (apiCalls === 1) {
+            nowMs += 500;
+            return new Response(JSON.stringify({ error: "Unauthorized", code: "UNAUTHORIZED" }), {
+              status: 401,
+            });
+          }
+          return registerResponse();
+        },
+      });
+      const client = new VerifiablClient({ auth: OAUTH, fetch });
+
+      await client.registerNonPii(REQUEST, { timeoutMs: 1_000 });
+
+      expect(timeoutWindows).toEqual([1_000, 700, 200, 50]);
+      expect(tokenRequests).toBe(2);
+      expect(apiCalls).toBe(2);
+    } finally {
+      nowSpy.mockRestore();
+      timeoutSpy.mockRestore();
+    }
+  });
+
+  it("surfaces a persistent 401 as VerifiablApiError after one retry", async () => {
+    let apiCalls = 0;
+    const fetch = oauthFetch({
+      api: () => {
+        apiCalls += 1;
+        return new Response(JSON.stringify({ error: "Unauthorized", code: "UNAUTHORIZED" }), {
+          status: 401,
+        });
+      },
+    });
+    const client = new VerifiablClient({ auth: OAUTH, fetch });
+
+    await expect(client.registerNonPii(REQUEST)).rejects.toMatchObject({
+      name: "VerifiablApiError",
+      status: 401,
+    });
+    expect(apiCalls).toBe(2);
+  });
+
+  it("throws VerifiablAuthError when the token endpoint fails", async () => {
+    const fetch = oauthFetch({
+      token: () => new Response("denied", { status: 403 }),
+    });
+    const client = new VerifiablClient({ auth: OAUTH, fetch });
+
+    await expect(client.registerNonPii(REQUEST)).rejects.toMatchObject({
+      name: "VerifiablAuthError",
+      status: 403,
+    });
+  });
+
+  it("preserves abort errors from OAuth token requests", async () => {
+    const abortError = new DOMException("The operation was aborted", "AbortError");
+    const fetchMock = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
+      throw abortError;
+    });
+    const client = new VerifiablClient({ auth: OAUTH, fetch: fetchMock });
+
+    await expect(client.registerNonPii(REQUEST)).rejects.toBe(abortError);
+  });
+
+  it("preserves caller aborts from OAuth token requests", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const abortError = new Error("caller aborted");
+    const fetchMock = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
+      throw abortError;
+    });
+    const client = new VerifiablClient({ auth: OAUTH, fetch: fetchMock });
+
+    await expect(client.registerNonPii(REQUEST, { signal: controller.signal })).rejects.toBe(
+      abortError,
+    );
+  });
+
+  it("throws VerifiablAuthError on a malformed token response", async () => {
+    const fetch = oauthFetch({
+      token: () => new Response(JSON.stringify({ access_token: "", token_type: "Bearer" })),
+    });
+    const client = new VerifiablClient({ auth: OAUTH, fetch });
+
+    await expect(client.registerNonPii(REQUEST)).rejects.toBeInstanceOf(VerifiablAuthError);
+  });
+
+  it("requests a fresh token once the cached one nears expiry", async () => {
+    jest.useFakeTimers();
+    try {
+      let tokenRequests = 0;
+      const fetch = oauthFetch({
+        token: () => {
+          tokenRequests += 1;
+          return tokenResponse(`tok-${tokenRequests}`, 120);
+        },
+      });
+      const client = new VerifiablClient({ auth: OAUTH, fetch });
+
+      await client.registerNonPii(REQUEST);
+      jest.advanceTimersByTime(90_000);
+      await client.registerNonPii(REQUEST);
+
+      expect(tokenRequests).toBe(2);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

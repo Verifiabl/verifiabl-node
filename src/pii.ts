@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+function tuple<const T extends readonly string[]>(value: T): T {
+  return value;
+}
+
 /**
  * Verifiabl's compact PII wire format is a pipe-delimited plaintext string.
  * It is encrypted before being embedded in the barcode and is never sent to
@@ -13,11 +17,11 @@ import { z } from "zod";
  *
  *   P1|Jane A. Doe|Senior Developer|Engineering|12-345-678-901|062-000|12345678|Jane A Doe
  *
- * Omitted fields are encoded as empty segments and skipped by the verifier.
+ * Omitted fields are encoded as empty segments and skipped by Verifiabl.
  */
 
 /** Field order is the wire contract. Never reorder. */
-export const PII_FIELD_ORDER = [
+export const PII_FIELD_ORDER = tuple([
   "employee_name",
   "position",
   "department",
@@ -25,7 +29,7 @@ export const PII_FIELD_ORDER = [
   "bsb",
   "account_number",
   "account_name",
-] as const;
+]);
 
 export type PiiFieldName = (typeof PII_FIELD_ORDER)[number];
 
@@ -73,7 +77,7 @@ export function formatPii(fields: PiiFields): string {
 
 /**
  * Parse Verifiabl's compact PII wire format back into named fields. Empty segments are
- * omitted from the result, mirroring the Verifiabl verifier's behaviour.
+ * omitted from the result, mirroring Verifiabl's scan-time behaviour.
  *
  * Useful for round-trip testing your integration; not needed in the
  * normal issuance flow.

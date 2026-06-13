@@ -1,12 +1,12 @@
 # verifiabl
 
-Official Node.js SDK for [Verifiabl](https://verifiabl.io) payslip verification.
+Official Node.js SDK for issuing Verifiabl payslip QR codes.
 
-Verifiabl lets payroll providers issue payslips with a scannable verification code. The non-PII payslip data is registered with the Verifiabl API; the employee's PII is encrypted **on your infrastructure** and embedded only in the barcode on the document. It is never stored by Verifiabl.
+Verifiabl lets payroll providers issue payslips with a scannable QR code. The non-PII payslip data is registered with the Verifiabl API; the employee's PII is encrypted **on your infrastructure** and embedded only in the barcode on the document. It is never stored by Verifiabl.
 
 This SDK gives you everything needed to integrate:
 
-- **`renderQrSvg`**: branded "Secured by Verifiabl" QR badge as dependency-free SVG (PNG optional)
+- **`createBarcodeSvg`**: branded "Secured by Verifiabl" QR badge as dependency-free SVG (PNG optional)
 - **`formatPii`**: formats employee PII into Verifiabl's compact barcode payload format
 - **`encryptPii`**: AES-256-GCM encryption producing exactly the ciphertext and metadata the API expects
 - **`VerifiablClient`**: typed, zero-dependency API client using native `fetch`
@@ -19,18 +19,34 @@ npm install verifiabl
 
 ## Environments
 
-Verifiabl runs registration and verification as separate services on separate domains. The client routes each call automatically:
+Use `environment` to select production or sandbox. The SDK chooses the right Verifiabl origin automatically:
 
-| | Registration (issuer) | Verification (verifier) |
+| | Issuer API | QR scan URL |
 |---|---|---|
 | `production` (default) | `register.verifiabl.io` | `verify.verifiabl.io` |
 | `sandbox` | `register.sandbox.verifiabl.io` | `verify.sandbox.verifiabl.io` |
 
 ```ts
-const client = new VerifiablClient({ apiKey, environment: "sandbox" });
+const client = new VerifiablClient({ auth, environment: "sandbox" });
 ```
 
-`issuerBaseUrl` / `verifierBaseUrl` override individual origins (e.g. for local development).
+Most integrations only need `environment`. `issuerBaseUrl` is an advanced local-development override for custom issuer API stacks.
+
+## Authentication
+
+Deployed Verifiabl environments use OAuth2 client credentials. Pass the client id and secret issued during onboarding. The SDK fetches, caches, and refreshes issuer access tokens automatically:
+
+```ts
+const client = new VerifiablClient({
+  environment: "sandbox",
+  auth: {
+    clientId: process.env.VERIFIABL_CLIENT_ID,
+    clientSecret: process.env.VERIFIABL_CLIENT_SECRET, // from your secrets manager
+  },
+});
+```
+
+Tokens come from the environment's auth service (`auth.verifiabl.io` / `auth.sandbox.verifiabl.io`); a stale token is refreshed and the request retried once on 401. Token failures throw `VerifiablAuthError`. For local development against a stack that accepts a fixed bearer token, use `auth: { apiKey }` instead.
 
 ## Quick start (self-managed flow)
 
@@ -39,20 +55,26 @@ import {
   VerifiablClient,
   formatPii,
   encryptPii,
-  renderQrSvg,
+  createBarcodeSvg,
 } from "verifiabl";
 
-const apiKey = process.env.VERIFIABL_API_KEY;
+const clientId = process.env.VERIFIABL_CLIENT_ID;
+const clientSecret = process.env.VERIFIABL_CLIENT_SECRET;
 const encryptionKeyBase64 = process.env.VERIFIABL_ENCRYPTION_KEY_BASE64;
-// Your key version, assigned by Verifiabl during onboarding — see "Key versions" below
+// Your key version, assigned by Verifiabl during onboarding. See "Key versions & tamper-binding".
 const keyVersion = process.env.VERIFIABL_KEY_VERSION;
+const environment = "sandbox";
+// The payslip schema this record is registered under. It is authenticated
+// into the ciphertext, so define it once and use it in both calls below.
+const schema = "au.payslip.v1";
 
-if (!apiKey || !encryptionKeyBase64 || !keyVersion) {
+if (!clientId || !clientSecret || !encryptionKeyBase64 || !keyVersion) {
   throw new Error("Missing Verifiabl credentials");
 }
 
 const client = new VerifiablClient({
-  apiKey,
+  environment,
+  auth: { clientId, clientSecret },
 });
 
 // 1. Format the employee PII into Verifiabl's compact plaintext format
@@ -67,13 +89,19 @@ const formattedPii = formatPii({
 });
 // => "P1|Jane A. Doe|Senior Developer|Engineering|12-345-678-901|062-000|12345678|Jane A Doe"
 
-// 2. Encrypt it with your key (32 bytes, from your KMS or secrets manager)
+// 2. Encrypt it with your key (32 bytes, from your KMS or secrets manager).
+//    The key version and schema are bound into the ciphertext (AAD).
 const providerKey = Buffer.from(encryptionKeyBase64, "base64");
-const { encrypted_pii, encryption_metadata } = encryptPii(formattedPii, providerKey, keyVersion);
+const { encrypted_pii, encryption_metadata } = encryptPii(
+  formattedPii,
+  providerKey,
+  keyVersion,
+  schema,
+);
 
 // 3. Register the non-PII payslip data and decryption metadata
 const { linking_token } = await client.registerNonPii({
-  schema: "au.payslip.v1",
+  schema,
   issued_at: new Date().toISOString(), // must be UTC ("Z"); offsets are rejected
   payslip_data: {
     period_start: "2026-05-01",
@@ -84,36 +112,43 @@ const { linking_token } = await client.registerNonPii({
 });
 
 // 4. Render the branded QR badge and embed it in your payslip PDF
-const { svg } = renderQrSvg({
-  linkingToken: linking_token,
-  encryptedPii: encrypted_pii,
-});
+const { svg } = createBarcodeSvg(
+  {
+    linkingToken: linking_token,
+    encryptedPii: encrypted_pii,
+  },
+  { environment },
+);
 ```
 
-The QR code encodes `https://verify.verifiabl.io/v/<payload>`: lenders' scanning integrations verify it against the Verifiabl API, while a casual phone scan lands on a friendly explainer page. For sandbox documents pass `baseUrl: "https://verify.sandbox.verifiabl.io"` so the printed URL matches the environment the record was registered in — the URL cannot be changed after the document is issued.
+The QR code encodes `https://verify.verifiabl.io/v/<payload>` in production and `https://verify.sandbox.verifiabl.io/v/<payload>` in sandbox. A scan is sent to Verifiabl instead of showing raw ciphertext in a phone camera preview. Pass the same `environment` to the client and barcode renderer so the printed URL matches the environment the record was registered in. The URL cannot be changed after the document is issued.
 
-## Key versions
+## Key versions & tamper-binding
 
-`encryptPii` takes a `keyVersion` so Verifiabl can select the matching key at verification time. Use the value assigned during onboarding: `<provider-id>.<n>`, where `provider-id` is your client UUID and `n` starts at `1` and increments each time you rotate your encryption key (e.g. `"0f8fad5b-d9cb-469f-a165-70867728950e.1"`). Verification fails closed on unknown key versions, so records registered with a made-up version cannot be verified later.
+`encryptPii` takes a `keyVersion` so Verifiabl can select the matching key when the payslip is scanned. Use the value assigned during onboarding: `<provider-id>.<n>`, where `provider-id` is your client UUID and `n` starts at `1` and increments each time you rotate your encryption key (e.g. `"0f8fad5b-d9cb-469f-a165-70867728950e.1"`). Unknown key versions fail closed, so records registered with a made-up version cannot be validated later.
+
+The ciphertext is additionally bound (via AES-GCM AAD) to `<provider-id>|<key_version>|<schema>`. Verifiabl reconstructs this from the registered record, so a ciphertext cannot be replayed against a different provider, key version, or schema. The practical rules: the `keyVersion` and `schema` you pass to `encryptPii` must exactly match the `encryption_metadata.key_version` and `schema` fields you register, and `buildPiiAad(keyVersion, schema)` is exported if you want to reproduce server-side decryption in your own round-trip tests.
 
 ## Styled QR options
 
 ```ts
 const parts = { linkingToken: linking_token, encryptedPii: encrypted_pii };
 
-const { svg, width, height, content } = renderQrSvg(parts, {
+const { svg, width, height, content } = createBarcodeSvg(parts, {
   width: 720,                  // badge width (default 360)
   frame: false,                // bare styled QR, no card/header
   encode: "payload",           // encode bare "1|lt|ct" instead of the scan URL
   errorCorrectionLevel: "Q",   // L | M (default) | Q | H
-  baseUrl: "https://verify.sandbox.verifiabl.io",
+  environment: "sandbox",      // production (default) | sandbox
   headerText: "Secured by",
   colors: { navy: "#0B1547", panel: "#FFFFFF", text: "#FFFFFF" }, // safe SVG colours
   logoSvg: "<g>...</g>",       // replace the built-in header artwork
 });
 ```
 
-Rendered badges reserve the ISO/IEC 18004 quiet zone (4 modules) around the symbol, so they stay scannable after print and recapture.
+Rendered badges reserve the ISO/IEC 18004 quiet zone (4 modules) around the QR code, so they stay scannable after print and recapture.
+
+`scanBaseUrl` is available as an advanced override for local development against a custom scan URL origin. Most integrations should use `environment` instead.
 
 ### PNG output
 
@@ -124,22 +159,30 @@ npm install @resvg/resvg-js
 ```
 
 ```ts
-import { renderQrPng } from "verifiabl";
+import { createBarcodePng } from "verifiabl";
 
-const { png } = await renderQrPng(parts, {}, 720); // 720px wide PNG buffer
+const { png } = await createBarcodePng(parts, {}, 720); // 720px wide PNG buffer
 ```
 
 ## API client
 
-All three endpoints are fully typed:
+Both issuer API methods are fully typed:
 
 ```ts
-await client.registerNonPii(request);          // self-managed flow: { id, linking_token }
-await client.createBarcode(request);           // API-managed flow: { id, barcode }
-await client.verifyBarcode({ barcode: "1|..." }); // lender-side verification
+await client.registerNonPii(request); // self-managed flow: { id, linking_token }
+await client.createBarcode(request);  // API-managed flow: { id, barcode }
 ```
 
-`verifyBarcode({ barcode })` accepts the full QR scan URL, the bare `1|...` payload, or any other format the API supports — scan URLs are unwrapped locally, everything else is passed through as scanned.
+Each API method accepts optional per-request controls:
+
+```ts
+const abortController = new AbortController();
+
+const result = await client.registerNonPii(
+  request,
+  { timeoutMs: 10_000, signal: abortController.signal },
+);
+```
 
 Errors throw `VerifiablApiError` with a stable `code` to match on:
 
@@ -147,10 +190,10 @@ Errors throw `VerifiablApiError` with a stable `code` to match on:
 import { VerifiablApiError } from "verifiabl";
 
 try {
-  await client.verifyBarcode({ barcode: scanned });
+  await client.registerNonPii(request);
 } catch (err) {
-  if (err instanceof VerifiablApiError && err.code === "LINKING_TOKEN_NOT_FOUND") {
-    // not a Verifiabl-issued document
+  if (err instanceof VerifiablApiError && err.code === "VALIDATION_FAILED") {
+    console.log(err.requestId); // useful when contacting Verifiabl support
   }
 }
 ```
@@ -159,14 +202,53 @@ try {
 
 Request validation is strict (unknown fields are rejected locally before any network call); response parsing is tolerant (fields added by future API releases are ignored), so an additive API change never breaks a pinned SDK version.
 
+### Observability
+
+Pass hooks when constructing the client to observe API traffic without exposing request or response bodies:
+
+```ts
+const client = new VerifiablClient({
+  auth,
+  onRequest: ({ method, path }) => logger.info({ method, path }, "Verifiabl request"),
+  onResponse: ({ method, path, status, requestId, elapsedMs }) => {
+    logger.info({ method, path, status, requestId, elapsedMs }, "Verifiabl response");
+  },
+  onError: ({ method, path, elapsedMs, error }) => {
+    logger.error({ method, path, elapsedMs, error }, "Verifiabl request failed");
+  },
+});
+```
+
+`onError` is emitted when an issuer API request fails before a response is received. Hooks are best-effort observability. If a hook throws, the SDK still completes the API request.
+
+### TypeScript
+
+The package exports request and response types for integration code:
+
+```ts
+import type { CreateBarcodeResponse, RegisterNonPiiRequest } from "verifiabl";
+
+const request: RegisterNonPiiRequest = {
+  schema: "au.payslip.v1",
+  issued_at: new Date().toISOString(),
+  payslip_data: { period_start: "2026-05-01", period_end: "2026-05-31" },
+  encryption_metadata,
+};
+
+const response: CreateBarcodeResponse = await client.createBarcode({
+  ...request,
+  encrypted_pii,
+});
+```
+
 ## Security model
 
 - **PII never leaves your infrastructure in plaintext.** The formatted PII string is encrypted locally with your key; Verifiabl stores only non-PII data plus the IV/tag/key-version needed to verify later.
 - **Keep your encryption key in a KMS or secrets manager.** Never commit it, log it, or send it anywhere. The same applies to the formatted PII plaintext: hold it in memory only. Never write it to logs or disk.
-- **API keys are personal to your organisation.** Load them from a secrets manager or environment variable.
+- **OAuth client secrets are personal to your organisation.** Load them from a secrets manager or environment variable.
 - All SDK inputs are validated with strict allow-lists (Zod) before use.
 
-## Verifying scannability
+## Scannability tests
 
 The test suite rasterises rendered badges and decodes them with an independent QR reader, so styling can never silently break machine readability. Run it with `npm test`.
 

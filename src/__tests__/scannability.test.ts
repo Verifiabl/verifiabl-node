@@ -2,8 +2,7 @@ import { Resvg } from "@resvg/resvg-js";
 
 import jsQR = require("jsqr");
 
-import { extractPayloadFromScan } from "../payload.js";
-import { type RenderQrOptions, renderQrSvg } from "../qr/styled.js";
+import { type BarcodeSvgOptions, createBarcodeSvg } from "../qr/styled.js";
 
 /**
  * End-to-end scannability: rasterise the styled SVG and decode it with an
@@ -17,8 +16,8 @@ const PARTS = {
     "Zm9vYmFyYmF6cXV4XzEyMzQ1Njc4OTBhYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ekFCQ0RFRkdISUpLTE1OT1A",
 };
 
-function decode(parts: typeof PARTS, options: RenderQrOptions = {}, rasterWidth = 900): string {
-  const { svg } = renderQrSvg(parts, options);
+function decode(parts: typeof PARTS, options: BarcodeSvgOptions = {}, rasterWidth = 900): string {
+  const { svg } = createBarcodeSvg(parts, options);
   const rendered = new Resvg(svg, { fitTo: { mode: "width", value: rasterWidth } }).render();
   const result = jsQR.default(
     new Uint8ClampedArray(rendered.pixels),
@@ -31,16 +30,16 @@ function decode(parts: typeof PARTS, options: RenderQrOptions = {}, rasterWidth 
 
 describe("styled QR scannability", () => {
   it("decodes the framed badge back to the scan URL", () => {
-    expect(decode(PARTS)).toBe(renderQrSvg(PARTS).content);
+    expect(decode(PARTS)).toBe(createBarcodeSvg(PARTS).content);
   });
 
-  it("decoded URL round-trips to the original payload", () => {
-    const payload = extractPayloadFromScan(decode(PARTS));
-    expect(payload).toBe(`1|${PARTS.linkingToken}|${PARTS.encryptedPii}`);
+  it("decoded URL contains the encoded barcode payload", () => {
+    const decoded = decode(PARTS);
+    expect(decoded).toContain(encodeURIComponent(`1|${PARTS.linkingToken}|${PARTS.encryptedPii}`));
   });
 
   it("decodes the frameless variant", () => {
-    expect(decode(PARTS, { frame: false })).toBe(renderQrSvg(PARTS, { frame: false }).content);
+    expect(decode(PARTS, { frame: false })).toBe(createBarcodeSvg(PARTS, { frame: false }).content);
   });
 
   it("decodes bare-payload encoding", () => {
@@ -50,7 +49,7 @@ describe("styled QR scannability", () => {
   });
 
   it("decodes the framed badge across raster scales", () => {
-    const { content } = renderQrSvg(PARTS);
+    const { content } = createBarcodeSvg(PARTS);
     for (const rasterWidth of [500, 900, 1600]) {
       expect(decode(PARTS, {}, rasterWidth)).toBe(content);
     }
@@ -62,7 +61,7 @@ describe("styled QR scannability", () => {
       encryptedPii: "A".repeat(600),
     };
     expect(decode(longParts, { errorCorrectionLevel: "H" })).toBe(
-      renderQrSvg(longParts, { errorCorrectionLevel: "H" }).content,
+      createBarcodeSvg(longParts, { errorCorrectionLevel: "H" }).content,
     );
   });
 });
