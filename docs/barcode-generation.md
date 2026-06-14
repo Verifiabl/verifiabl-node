@@ -90,6 +90,13 @@ badge. Only the four rounded corners outside the `rx=7` radius stay transparent.
 This is verified by a test that decodes the badge composited over a hostile
 full-bleed background.
 
+The quiet zone is also kept at the QR spec's >= 4 light modules. The fixed white
+gutter between the QR box and the border already covers this for dense symbols;
+small/sparse symbols have large modules, so `quietZoneInsetModules()` pads them
+with a larger internal inset until the total light margin reaches 4 modules.
+Because this only fires for sparse symbols (which sit far above the scannability
+floor), it never affects the degradation thresholds in §5.
+
 ---
 
 ## 5. Scannability: the damage-first degradation ladder

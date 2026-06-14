@@ -82,8 +82,33 @@ const IDEAL_MODULE_PX = 4;
 // Absolute floor: a module smaller than this (px) is unreliable for real-world
 // scans, so we hard-error rather than emit it. Evaluated at the badge's width.
 const MIN_MODULE_PX = 3;
-// The branded frame supplies the remaining light area around the QR.
-const INTERNAL_QR_INSET_MODULES = 1;
+// QR spec quiet zone: at least this many light modules around the symbol.
+const QUIET_ZONE_MODULES = 4;
+// Smallest internal inset (in modules) padded inside the fixed QR box.
+const MIN_QR_INSET_MODULES = 1;
+// Light gutter (viewBox units) on the tightest side: from the QR box edge to
+// the inner edge of the frame border (border path at x=1, ~1u half-stroke).
+// The frame body inside this gutter is white, so it counts toward the quiet
+// zone. The top/bottom gutters are larger, so this side is the binding one.
+const FRAME_QR_GUTTER = FRAME_QR_BOX_X - 2;
+
+/**
+ * Internal inset (in modules) needed so the total light margin around the QR -
+ * the fixed white gutter plus the inset - is at least QUIET_ZONE_MODULES. Dense
+ * symbols (small modules) already clear it from the gutter alone and keep the
+ * minimum inset; only small/sparse symbols, which have large modules and huge
+ * scannability headroom, need a larger inset. So this never affects the
+ * degradation thresholds, which bite for dense payloads.
+ */
+function quietZoneInsetModules(size: number): number {
+  for (let inset = MIN_QR_INSET_MODULES; inset < QUIET_ZONE_MODULES; inset++) {
+    const moduleSize = FRAME_QR_BOX_SIZE / (size + inset * 2);
+    if (FRAME_QR_GUTTER / moduleSize + inset >= QUIET_ZONE_MODULES) {
+      return inset;
+    }
+  }
+  return QUIET_ZONE_MODULES;
+}
 
 function renderModules(
   matrixData: Uint8Array,
@@ -236,7 +261,7 @@ export function createBarcodeSvg(
   }
   const content = buildScanUrl(parts, scanOptions);
 
-  const { qr, errorCorrectionLevel, size, moduleSize, modulePx } = selectQrRendering(
+  const { qr, errorCorrectionLevel, size, moduleSize, modulePx, insetModules } = selectQrRendering(
     content,
     badgeWidth,
   );
@@ -244,7 +269,7 @@ export function createBarcodeSvg(
   const degraded = errorCorrectionLevel !== "Q" || modulePx < IDEAL_MODULE_PX;
 
   const height = round2((badgeWidth * FRAME_VIEWBOX_HEIGHT) / FRAME_VIEWBOX_WIDTH);
-  const qrPadding = INTERNAL_QR_INSET_MODULES * moduleSize;
+  const qrPadding = insetModules * moduleSize;
 
   const headerBackground = `<path d="M0 8C0 3.58172 3.58172 0 8 0H88C92.4183 0 96 3.58172 96 8V${FRAME_HEADER_HEIGHT}H0V8Z" fill="${DEFAULT_NAVY}"/>`;
   const header = headerBackground + renderDefaultHeader(DEFAULT_TEXT);
@@ -280,6 +305,7 @@ interface SelectedQrRendering {
   size: number;
   moduleSize: number;
   modulePx: number;
+  insetModules: number;
 }
 
 /**
@@ -301,10 +327,11 @@ function selectQrRendering(content: string, badgeWidth: number): SelectedQrRende
       continue;
     }
     const size = qr.modules.size;
-    const moduleSize = FRAME_QR_BOX_SIZE / (size + INTERNAL_QR_INSET_MODULES * 2);
+    const insetModules = quietZoneInsetModules(size);
+    const moduleSize = FRAME_QR_BOX_SIZE / (size + insetModules * 2);
     const modulePx = moduleSize * scale;
     if (modulePx >= MIN_MODULE_PX) {
-      return { qr, errorCorrectionLevel, size, moduleSize, modulePx };
+      return { qr, errorCorrectionLevel, size, moduleSize, modulePx, insetModules };
     }
     densestSize = size;
   }

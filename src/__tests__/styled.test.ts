@@ -106,6 +106,25 @@ describe("createBarcodeSvg", () => {
     expect(result.modulePx).toBeGreaterThanOrEqual(4);
   });
 
+  // Quiet zone: the white margin from the inner frame border to the QR matrix
+  // must be >= 4 modules. The fixed white gutter covers it for dense symbols;
+  // small/sparse symbols (large modules) get a larger internal inset. "AA" is
+  // a tiny payload that exercises the inset path.
+  it.each([
+    "AA",
+    CT,
+    "a".repeat(600),
+  ])("keeps the QR quiet zone at >= 4 modules (payload length %#)", (encryptedPii) => {
+    const { svg } = createBarcodeSvg({ ...PARTS, encryptedPii });
+    const moduleSize = Number(/width="([\d.]+)" height="\1" fill="#000000"/.exec(svg)?.[1]);
+    const qrTranslateX = Number(
+      /translate\(([\d.]+) [\d.]+\)"><g shape-rendering="crispEdges"/.exec(svg)?.[1],
+    );
+    // Inner edge of the 2px border (path at x=1) sits at x=2; body is white from there.
+    const quietZoneModules = (qrTranslateX - 2) / moduleSize;
+    expect(quietZoneModules).toBeGreaterThanOrEqual(4 - 1e-6);
+  });
+
   // The damage-first ladder keeps the highest error correction whose modules
   // still clear the floor, never varying the fixed frame. Lowercase base64url
   // ("a") forces byte mode like real encrypted PII. Thresholds are at width 480.
