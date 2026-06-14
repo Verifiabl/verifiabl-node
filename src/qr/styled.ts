@@ -322,9 +322,14 @@ function selectQrRendering(content: string, badgeWidth: number): SelectedQrRende
     let qr: ReturnType<typeof QRCode.create>;
     try {
       qr = QRCode.create(content, { errorCorrectionLevel });
-    } catch {
-      // Exceeds capacity at this level; a lower level holds more data.
-      continue;
+    } catch (error) {
+      // The qrcode library throws "...too big to be stored..." when the content
+      // exceeds capacity at this level; a lower level holds more, so try it.
+      // Surface any other (unexpected) failure instead of masking it.
+      if (error instanceof Error && error.message.includes("too big")) {
+        continue;
+      }
+      throw error;
     }
     const size = qr.modules.size;
     const insetModules = quietZoneInsetModules(size);
@@ -337,8 +342,8 @@ function selectQrRendering(content: string, badgeWidth: number): SelectedQrRende
   }
   if (densestSize === null) {
     throw new Error(
-      `The encrypted PII is too large to encode in a QR code (${content.length} characters of QR ` +
-        `content). Shorten the PII fields and try again.`,
+      `The QR content (scan URL) is too large to encode in a QR code at any error-correction ` +
+        `level (${content.length} characters). Shorten the PII fields and try again.`,
     );
   }
   throw new Error(
