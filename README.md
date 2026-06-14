@@ -7,7 +7,7 @@ Verifiabl lets payroll providers issue payslips with a scannable QR code. The no
 This SDK gives you everything needed to integrate:
 
 - **`createBarcodeSvg`**: branded "Secured by Verifiabl" barcode as dependency-free SVG
-- **`createBarcodePng`**: optional PNG rasterization using `@resvg/resvg-js`
+- **`createBarcodePng`**: optional PNG rasterisation using `@resvg/resvg-js`
 - **`formatPii`**: formats employee PII into Verifiabl's compact barcode payload format
 - **`encryptPii`**: AES-256-GCM encryption producing exactly the ciphertext and metadata the API expects
 - **`VerifiablClient`**: typed, zero-dependency API client using native `fetch`
@@ -178,7 +178,7 @@ When embedding the barcode in a payslip document:
 - Do not crop, mask, rotate, skew, stretch, recolour, or add effects.
 - Do not compress or resample PNG output after generation.
 - For SVG, embed the returned SVG as-is. Do not rewrite path, rect, fill, stroke, or viewBox attributes.
-- Print at sufficient physical size for your document workflow. The SDK enforces a minimum digital width, but print DPI, PDF rasterization, paper quality, and scanner camera quality still affect readability.
+- Print at sufficient physical size for your document workflow. The SDK enforces a minimum digital width, but print DPI, PDF rasterisation, paper quality, and scanner camera quality still affect readability.
 
 ### PNG output
 
