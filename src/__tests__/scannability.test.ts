@@ -1,4 +1,4 @@
-import { createCipheriv } from "node:crypto";
+import { createCipheriv, createHash } from "node:crypto";
 import { Resvg } from "@resvg/resvg-js";
 
 import jsQR = require("jsqr");
@@ -15,7 +15,6 @@ import { type BarcodeSvgOptions, createBarcodeSvg } from "../qr/styled.js";
 
 const LINKING_TOKEN = "AbCdEfGhIjKlMnOpQrStUv";
 const FIXTURE_KEY = Buffer.alloc(32, 7);
-const FIXTURE_IV = Buffer.alloc(12, 3);
 const MIN_TESTED_RASTER_WIDTH = 480;
 // Geometry pixel-sampling renders at a fixed raster size independent of the
 // badge width; the sampled coordinates below assume this 420px raster.
@@ -147,7 +146,11 @@ const DIVERSE_RECORDS: ReadonlyArray<{ label: string; fields: PiiFields }> = [
 ] as const;
 
 function encryptFixture(plaintext: string): string {
-  const cipher = createCipheriv("aes-256-gcm", FIXTURE_KEY, FIXTURE_IV);
+  // Derive a unique IV per plaintext so distinct fixtures never reuse an
+  // IV under the same key (the real AES-GCM footgun), while staying
+  // deterministic for reproducible tests. Production uses a random IV.
+  const iv = createHash("sha256").update(plaintext).digest().subarray(0, 12);
+  const cipher = createCipheriv("aes-256-gcm", FIXTURE_KEY, iv);
   return Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]).toString("base64url");
 }
 

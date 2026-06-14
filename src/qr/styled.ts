@@ -252,7 +252,7 @@ export function createBarcodeSvg(
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${round2(badgeWidth)}" height="${round2(height)}" ` +
     `viewBox="0 0 ${FRAME_VIEWBOX_WIDTH} ${FRAME_VIEWBOX_HEIGHT}" role="img" ` +
-    `aria-label="Secured by Verifiabl verification QR code">` +
+    `aria-label="Secured by Verifiabl verification barcode">` +
     `<rect x="1" y="1" width="94" height="149" rx="7" fill="${FRAME_BACKGROUND}"/>` +
     `<rect x="1" y="1" width="94" height="149" rx="7" stroke="${FRAME_BORDER}" stroke-width="2" fill="none"/>` +
     header +
