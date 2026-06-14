@@ -414,7 +414,7 @@ describe("VerifiablClient with static auth", () => {
     expect(responses[0]).not.toHaveProperty("body");
   });
 
-  it("does not let observability hook failures change request behavior", async () => {
+  it("does not let observability hook failures change request behaviour", async () => {
     const fetch = mockFetch(201, { id: "x", linking_token: LT });
     const client = new VerifiablClient({
       ...STATIC_AUTH,
@@ -432,7 +432,7 @@ describe("VerifiablClient with static auth", () => {
     expect(result.linking_token).toBe(LT);
   });
 
-  it("does not let async observability hook failures change request behavior", async () => {
+  it("does not let async observability hook failures change request behaviour", async () => {
     const fetch = mockFetch(201, { id: "x", linking_token: LT });
     const client = new VerifiablClient({
       ...STATIC_AUTH,

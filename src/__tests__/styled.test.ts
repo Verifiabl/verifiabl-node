@@ -5,6 +5,22 @@ import { createBarcodeSvg } from "../qr/styled.js";
 const LT = "AbCdEfGhIjKlMnOpQrStUv";
 const CT = "Zm9vYmFyYmF6cXV4XzEyMzQ1Njc4OTBhYmNkZWZnaGlqa2xtbm9w";
 const PARTS = { linkingToken: LT, encryptedPii: CT };
+const FRAME_GEOMETRY = [
+  'viewBox="0 0 96 151"',
+  'width="94" height="149" rx="7" stroke="#ADADAD" stroke-width="2" fill="none"',
+  "M0 8C0 3.58172 3.58172 0 8 0H88",
+  'transform="translate(8 23) scale(1)"',
+];
+
+function expectedQrTransform(content: string): string {
+  const qr = QRCode.create(content, { errorCorrectionLevel: "Q" });
+  const moduleSize = 80 / (qr.modules.size + 2);
+  return `transform="translate(${round2(8 + moduleSize)} ${round2(59 + moduleSize)})"`;
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
 
 describe("createBarcodeSvg", () => {
   it("encodes the /v/ scan URL by default", () => {
@@ -12,68 +28,64 @@ describe("createBarcodeSvg", () => {
     expect(content).toBe(buildScanUrl(PARTS));
   });
 
-  it("can encode the bare payload", () => {
-    const { content } = createBarcodeSvg(PARTS, { encode: "payload" });
-    expect(content).toBe(`1|${LT}|${CT}`);
-  });
-
   it("uses the sandbox scan URL when environment is sandbox", () => {
     const { content } = createBarcodeSvg(PARTS, { environment: "sandbox" });
-    expect(content.startsWith("https://verify.sandbox.verifiabl.io/v/")).toBe(true);
+    expect(content).toBe(buildScanUrl(PARTS, { environment: "sandbox" }));
   });
 
-  it("renders one dot per dark non-finder module", () => {
+  it("renders square data modules and rounded finder sections", () => {
     const { svg, content } = createBarcodeSvg(PARTS);
-    const qr = QRCode.create(content, { errorCorrectionLevel: "M" });
+    const qr = QRCode.create(content, { errorCorrectionLevel: "Q" });
     const size = qr.modules.size;
 
-    let darkOutsideFinders = 0;
+    let darkDataModules = 0;
     for (let row = 0; row < size; row++) {
       for (let col = 0; col < size; col++) {
-        const inFinder =
-          (row < 7 && col < 7) || (row < 7 && col >= size - 7) || (row >= size - 7 && col < 7);
-        if (!inFinder && qr.modules.data[row * size + col]) darkOutsideFinders++;
+        if (isFinderModule(row, col, size)) continue;
+        if (qr.modules.data[row * size + col]) darkDataModules++;
       }
     }
 
-    // Per finder: 1 ring rect + 1 inner rect. Plus card + panel rects and one rect per dot.
     const rectCount = (svg.match(/<rect /g) ?? []).length;
-    expect(rectCount).toBe(darkOutsideFinders + 6 + 2);
-  });
-
-  it("renders the branded frame with header by default", () => {
-    const { svg, width, height } = createBarcodeSvg(PARTS);
-    expect(svg).toContain("Secured by");
-    expect(svg).toContain("Verifiabl");
-    expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"');
-    expect(width).toBe(360);
-    expect(height).toBeGreaterThan(width); // header band adds height
-  });
-
-  it("omits frame and header when frame=false", () => {
-    const { svg, width, height } = createBarcodeSvg(PARTS, { frame: false });
-    expect(svg).not.toContain("Secured by");
-    expect(width).toBe(height);
-  });
-
-  it("escapes XML in custom header text", () => {
-    const { svg } = createBarcodeSvg(PARTS, { headerText: 'Powered by <"&>' });
-    expect(svg).toContain("Powered by &lt;&quot;&amp;&gt;");
-    expect(svg).not.toContain('by <"&>');
-  });
-
-  it("applies custom colours", () => {
-    const { svg } = createBarcodeSvg(PARTS, { colors: { navy: "#123456" } });
-    expect(svg).toContain("#123456");
-  });
-
-  it("rejects unsafe colour attributes", () => {
-    expect(() => createBarcodeSvg(PARTS, { colors: { navy: '" onload="alert(1)' } })).toThrow(
-      "colors.navy",
+    const finderDotCount = 3;
+    const frameBorderCount = 1;
+    const frameBackgroundCount = 1;
+    expect(rectCount).toBe(
+      darkDataModules + finderDotCount + frameBorderCount + frameBackgroundCount,
     );
-    expect(() =>
-      createBarcodeSvg(PARTS, { colors: { panel: "url(javascript:alert(1))" } }),
-    ).toThrow("colors.panel");
+    expect(svg).toContain('fill-rule="evenodd"');
+  });
+
+  it("renders the supplied branded frame geometry by default", () => {
+    const { svg, width, height, content } = createBarcodeSvg(PARTS);
+    for (const expected of FRAME_GEOMETRY) {
+      expect(svg).toContain(expected);
+    }
+    expect(svg).toContain('fill="#000000"');
+    expect(svg).toContain('shape-rendering="crispEdges"');
+    // White, rounded-rect frame body so the QR quiet zone is always light.
+    expect(svg).toContain('width="94" height="149" rx="7" fill="#FFFFFF"');
+    expect(svg).not.toContain('stroke="#000000"');
+    expect(svg).not.toContain('width="94" height="149" rx="7" fill="#000000"');
+    expect(svg).not.toContain('x="16" y="59" width="80" height="80" fill="#FFFFFF"');
+    expect(svg).toContain(expectedQrTransform(content));
+    expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"');
+    expect(width).toBe(480);
+    expect(height).toBe(755);
+  });
+
+  it("keeps frame and QR placement fixed as payload size changes", () => {
+    const short = createBarcodeSvg(PARTS);
+    const long = createBarcodeSvg({ ...PARTS, encryptedPii: "A".repeat(300) });
+
+    for (const expected of FRAME_GEOMETRY) {
+      expect(short.svg).toContain(expected);
+      expect(long.svg).toContain(expected);
+    }
+    expect(short.svg).toContain(expectedQrTransform(short.content));
+    expect(long.svg).toContain(expectedQrTransform(long.content));
+    expect(short.height).toBe(long.height);
+    expect(short.content).not.toBe(long.content);
   });
 
   it("respects custom width", () => {
@@ -84,13 +96,73 @@ describe("createBarcodeSvg", () => {
 
   it("rejects invalid widths", () => {
     expect(() => createBarcodeSvg(PARTS, { width: 0 })).toThrow("width");
+    expect(() => createBarcodeSvg(PARTS, { width: 479 })).toThrow("at least 480");
   });
 
-  it("uses higher ECC levels on request", () => {
-    const m = createBarcodeSvg(PARTS, { errorCorrectionLevel: "M" });
-    const h = createBarcodeSvg(PARTS, { errorCorrectionLevel: "H" });
-    const mSize = QRCode.create(m.content, { errorCorrectionLevel: "M" }).modules.size;
-    const hSize = QRCode.create(h.content, { errorCorrectionLevel: "H" }).modules.size;
-    expect(hSize).toBeGreaterThanOrEqual(mSize);
+  it("renders the common case pristine: Q error correction, not degraded", () => {
+    const result = createBarcodeSvg(PARTS);
+    expect(result.errorCorrectionLevel).toBe("Q");
+    expect(result.degraded).toBe(false);
+    expect(result.modulePx).toBeGreaterThanOrEqual(4);
+  });
+
+  // Quiet zone: the white margin from the inner frame border to the QR matrix
+  // must be >= 4 modules. The fixed white gutter covers it for dense symbols;
+  // small/sparse symbols (large modules) get a larger internal inset. "AA" is
+  // a tiny payload that exercises the inset path.
+  it.each([
+    "AA",
+    CT,
+    "a".repeat(600),
+  ])("keeps the QR quiet zone at >= 4 modules (payload length %#)", (encryptedPii) => {
+    const { svg } = createBarcodeSvg({ ...PARTS, encryptedPii });
+    const moduleSize = Number(/width="([\d.]+)" height="\1" fill="#000000"/.exec(svg)?.[1]);
+    const qrTranslateX = Number(
+      /translate\(([\d.]+) [\d.]+\)"><g shape-rendering="crispEdges"/.exec(svg)?.[1],
+    );
+    // Inner edge of the 2px border (path at x=1) sits at x=2; body is white from there.
+    const quietZoneModules = (qrTranslateX - 2) / moduleSize;
+    expect(quietZoneModules).toBeGreaterThanOrEqual(4 - 1e-6);
+  });
+
+  // The damage-first ladder keeps the highest error correction whose modules
+  // still clear the floor, never varying the fixed frame. Lowercase base64url
+  // ("a") forces byte mode like real encrypted PII. Thresholds are at width 480.
+  it.each([
+    { label: "long: degraded Q", ct: "a".repeat(600), ec: "Q" },
+    { label: "longer: drops to M", ct: "a".repeat(1000), ec: "M" },
+    { label: "longest fittable: drops to L", ct: "a".repeat(1300), ec: "L" },
+  ])("degrades error correction in order for $label", ({ ct, ec }) => {
+    const result = createBarcodeSvg({ ...PARTS, encryptedPii: ct });
+    expect(result.errorCorrectionLevel).toBe(ec);
+    expect(result.degraded).toBe(true);
+    expect(result.modulePx).toBeGreaterThanOrEqual(3);
+    // Frame dimensions are unchanged regardless of degradation.
+    expect(result.width).toBe(480);
+    expect(result.height).toBe(755);
+  });
+
+  it("hard-errors when PII cannot fit the fixed frame even at the lowest level", () => {
+    // Too dense to clear the floor even at L, but still within QR capacity.
+    expect(() => createBarcodeSvg({ ...PARTS, encryptedPii: "a".repeat(1600) })).toThrow(
+      /too long to render a scannable barcode in the branded frame/,
+    );
+  });
+
+  it("throws a clear error when PII exceeds QR code capacity entirely", () => {
+    // Beyond what any QR version can hold at any level: the qrcode library
+    // would otherwise throw a cryptic 'data too big' error deep in the renderer.
+    expect(() => createBarcodeSvg({ ...PARTS, encryptedPii: "a".repeat(3000) })).toThrow(
+      /too large to encode in a QR code/,
+    );
   });
 });
+
+function isFinderModule(row: number, col: number, size: number): boolean {
+  const finderSize = 7;
+  const inTop = row < finderSize;
+  const inLeft = col < finderSize;
+  const inRight = col >= size - finderSize;
+  const inBottom = row >= size - finderSize;
+  return (inTop && inLeft) || (inTop && inRight) || (inBottom && inLeft);
+}

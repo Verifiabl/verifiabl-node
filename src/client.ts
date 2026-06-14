@@ -592,7 +592,7 @@ function abortController(controller: AbortController, reason: unknown): void {
   if (controller.signal.aborted) {
     return;
   }
-  controller.abort(normalizeAbortReason(reason));
+  controller.abort(normaliseAbortReason(reason));
 }
 
 async function waitForToken(
@@ -624,10 +624,10 @@ async function waitForToken(
 }
 
 function abortReason(signal: AbortSignalLike): Error {
-  return normalizeAbortReason(Reflect.get(signal, "reason"));
+  return normaliseAbortReason(Reflect.get(signal, "reason"));
 }
 
-function normalizeAbortReason(reason: unknown): Error {
+function normaliseAbortReason(reason: unknown): Error {
   if (typeof DOMException !== "undefined" && reason instanceof DOMException) {
     return reason;
   }
@@ -659,10 +659,10 @@ function callHook<T>(hook: ((event: T) => unknown) | undefined, event: T): void 
   try {
     const result = hook?.(event);
     void Promise.resolve(result).catch(() => {
-      // Observability hooks must not change API request behavior.
+      // Observability hooks must not change API request behaviour.
     });
   } catch {
-    // Observability hooks must not change API request behavior.
+    // Observability hooks must not change API request behaviour.
   }
 }
 

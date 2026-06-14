@@ -34,11 +34,10 @@ export {
 
 export { type BarcodePngResult, createBarcodePng } from "./qr/png.js";
 export {
-  type BarcodeSvgColors,
+  type BarcodeErrorCorrectionLevel,
   type BarcodeSvgOptions,
   type BarcodeSvgResult,
   createBarcodeSvg,
-  type QrErrorCorrectionLevel,
 } from "./qr/styled.js";
 
 export {
