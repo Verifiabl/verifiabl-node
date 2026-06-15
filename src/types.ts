@@ -8,10 +8,11 @@ const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Deployed key_version contract: `<provider-id>.<n>` where provider-id is
- * your lowercase client UUID and n increments on key rotation. The
- * Verifiabl derives your provider id from this value when reconstructing
- * the AAD, so no other format can decrypt.
+ * Key version contract: `<provider-id>.<n>` where provider-id is your
+ * lowercase provider ID and n increments on each key rotation, starting at
+ * 1. Verifiabl looks up the matching encryption key by this value at
+ * verification time. Note this provider ID is distinct from your OAuth
+ * `clientId`.
  */
 export const KEY_VERSION_RE =
   /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.[1-9][0-9]{0,5}$/;
@@ -19,7 +20,7 @@ export const KEY_VERSION_RE =
 export const SCHEMA_RE = /^[a-z]{2}\.[a-z]+\.v\d+$/;
 
 export const keyVersionSchema = z.string().regex(KEY_VERSION_RE, {
-  error: "keyVersion must be '<provider-id>.<n>' (lowercase client UUID, rotation counter from 1)",
+  error: "keyVersion must be '<provider-id>.<n>' (lowercase provider ID, rotation counter from 1)",
 });
 
 export const payslipSchemaIdSchema = z.string().regex(SCHEMA_RE, {
