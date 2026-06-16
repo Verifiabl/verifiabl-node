@@ -9,10 +9,16 @@ Verifiabl is for accredited payroll providers. You receive sandbox credentials a
 ## Installation
 
 ```bash
-npm install verifiabl @resvg/resvg-js
+npm install verifiabl
 ```
 
-Requires Node.js 20+. `@resvg/resvg-js` is only needed for PNG output; omit it if you render SVG.
+Requires Node.js 20+. The example below renders a PNG, which needs the optional renderer:
+
+```bash
+npm install @resvg/resvg-js
+```
+
+If you render SVG instead (with `createBarcodeSvg`), you don't need it.
 
 ## Getting started
 
