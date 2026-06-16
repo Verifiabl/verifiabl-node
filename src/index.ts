@@ -10,7 +10,7 @@ export {
   type VerifiablRequestOptions,
   type VerifiablResponseEvent,
 } from "./client.js";
-export { buildPiiAad, type EncryptedPii, encryptPii } from "./crypto.js";
+export { type EncryptedPii, encryptPii } from "./crypto.js";
 export {
   type BarcodeParts,
   buildBarcodePayload,
