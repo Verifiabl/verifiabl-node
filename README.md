@@ -24,7 +24,7 @@ Use `environment` to select production or sandbox. The SDK chooses the right Ver
 
 | | Issuer API | QR scan URL |
 |---|---|---|
-| `production` (default) | `register.verifiabl.io` | `verify.verifiabl.io` |
+| `production` (default) | `register.verifiabl.io` | `www.verifiabl.io` |
 | `sandbox` | `register.sandbox.verifiabl.io` | `verify.sandbox.verifiabl.io` |
 
 ```ts
@@ -122,7 +122,7 @@ const { svg } = createBarcodeSvg(
 );
 ```
 
-The QR code encodes `https://verify.verifiabl.io/v/<payload>` in production and `https://verify.sandbox.verifiabl.io/v/<payload>` in sandbox. A scan is sent to Verifiabl instead of showing raw ciphertext in a phone camera preview. Pass the same `environment` to the client and barcode renderer so the printed URL matches the environment the record was registered in. The URL cannot be changed after the document is issued.
+The QR code encodes `https://www.verifiabl.io/v/<payload>` in production and `https://verify.sandbox.verifiabl.io/v/<payload>` in sandbox. A scan is sent to Verifiabl instead of showing raw ciphertext in a phone camera preview. Pass the same `environment` to the client and barcode renderer so the printed URL matches the environment the record was registered in. The URL cannot be changed after the document is issued.
 
 ## Key versions & tamper-binding
 

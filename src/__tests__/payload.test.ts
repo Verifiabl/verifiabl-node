@@ -25,6 +25,7 @@ describe("buildScanUrl", () => {
   it("wraps the payload in the production /v/ URL with URL encoding", () => {
     const url = buildScanUrl({ linkingToken: LT, encryptedPii: CT });
     expect(url).toBe(`${DEFAULT_SCAN_BASE_URL}/v/${encodeURIComponent(`1|${LT}|${CT}`)}`);
+    expect(url.startsWith("https://www.verifiabl.io/v/")).toBe(true);
     expect(url).toContain("%7C"); // pipes must be encoded
   });
 

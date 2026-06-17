@@ -32,7 +32,7 @@ export interface BarcodeParts {
  * Default production origins used by issuing integrations.
  */
 export const DEFAULT_ISSUER_BASE_URL = "https://register.verifiabl.io";
-export const DEFAULT_SCAN_BASE_URL = "https://verify.verifiabl.io";
+export const DEFAULT_SCAN_BASE_URL = "https://www.verifiabl.io";
 
 /** Sandbox origins, selected via `environment: "sandbox"` on the client. */
 export const SANDBOX_ISSUER_BASE_URL = "https://register.sandbox.verifiabl.io";
@@ -69,7 +69,7 @@ export interface ScanUrlOptions {
 /**
  * Build the URL encoded into Verifiabl QR codes:
  *
- *   https://verify.verifiabl.io/v/<urlencoded "1|lt|ct">
+ *   https://www.verifiabl.io/v/<urlencoded "1|lt|ct">
  *
  * The scan URL sends scanners to Verifiabl instead of exposing raw
  * ciphertext in a phone camera preview.

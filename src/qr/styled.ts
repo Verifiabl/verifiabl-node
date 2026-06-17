@@ -85,7 +85,7 @@ const MIN_MODULE_PX = 3;
 // QR spec quiet zone: at least this many light modules around the symbol.
 const QUIET_ZONE_MODULES = 4;
 // Smallest internal inset (in modules) padded inside the fixed QR box.
-const MIN_QR_INSET_MODULES = 1;
+const MIN_QR_INSET_MODULES = 2;
 // Light gutter (viewBox units) on the tightest side: from the QR box edge to
 // the inner edge of the frame border (border path at x=1, ~1u half-stroke).
 // The frame body inside this gutter is white, so it counts toward the quiet

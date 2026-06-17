@@ -14,8 +14,11 @@ const FRAME_GEOMETRY = [
 
 function expectedQrTransform(content: string): string {
   const qr = QRCode.create(content, { errorCorrectionLevel: "Q" });
-  const moduleSize = 80 / (qr.modules.size + 2);
-  return `transform="translate(${round2(8 + moduleSize)} ${round2(59 + moduleSize)})"`;
+  const insetModules = 2;
+  const moduleSize = 80 / (qr.modules.size + insetModules * 2);
+  return `transform="translate(${round2(8 + moduleSize * insetModules)} ${round2(
+    59 + moduleSize * insetModules,
+  )})"`;
 }
 
 function round2(n: number): number {
