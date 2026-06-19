@@ -70,11 +70,16 @@ export function buildBarcodePayload({ linkingToken, encryptedPii }: BarcodeParts
  * verifier extracts this value when the QR cannot be read and POSTs it to
  * `/v1/verifications/payload` (no API change).
  *
- *   XMP namespace: https://verifiabl.io/ns/1.0/  (prefix `verifiabl`)
- *   XMP property:  verifiabl:payload  =  "1|<linkingToken>|<ciphertext>"
+ *   XMP namespace: https://verifiabl.io/ns/   (property `payload`)
+ *   value: "1|<linkingToken>|<ciphertext>"
+ *
+ * The namespace is intentionally **unversioned and permanent**: it is baked
+ * into every issued PDF, so it must never change (a bump would force lenders to
+ * match multiple namespaces forever). Payload-format evolution rides the `1|`
+ * version prefix inside the value, and behavioural changes ship as a new SDK
+ * version — not by changing this string.
  */
-export const PDF_PAYLOAD_XMP_NAMESPACE = "https://verifiabl.io/ns/1.0/";
-export const PDF_PAYLOAD_XMP_PREFIX = "verifiabl";
+export const PDF_PAYLOAD_XMP_NAMESPACE = "https://verifiabl.io/ns/";
 export const PDF_PAYLOAD_XMP_PROPERTY = "payload";
 
 export interface ScanUrlOptions {
