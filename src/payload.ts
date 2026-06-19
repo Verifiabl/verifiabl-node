@@ -55,6 +55,28 @@ export function buildBarcodePayload({ linkingToken, encryptedPii }: BarcodeParts
   return `1|${lt}|${ct}`;
 }
 
+/**
+ * PDF metadata failsafe.
+ *
+ * Alongside the QR code, write the barcode payload (`buildBarcodePayload`) into
+ * the payslip PDF's XMP metadata as a second copy, so the payslip stays
+ * verifiable if the QR is cropped, garbled, or removed. The QR is primary; the
+ * metadata copy is a best-effort backup (re-rendering / flattening strips it).
+ *
+ * Store the single payload string under the XMP property below. It is the
+ * encrypted `1|lt|ct` value, NEVER plaintext PII (PDF metadata is not
+ * encrypted). Write it with your own PDF toolchain; every PDF library can set a
+ * custom XMP property, and the SDK deliberately does not depend on one. A
+ * verifier extracts this value when the QR cannot be read and POSTs it to
+ * `/v1/verifications/payload` (no API change).
+ *
+ *   XMP namespace: https://verifiabl.io/ns/1.0/  (prefix `verifiabl`)
+ *   XMP property:  verifiabl:payload  =  "1|<linkingToken>|<ciphertext>"
+ */
+export const PDF_PAYLOAD_XMP_NAMESPACE = "https://verifiabl.io/ns/1.0/";
+export const PDF_PAYLOAD_XMP_PREFIX = "verifiabl";
+export const PDF_PAYLOAD_XMP_PROPERTY = "payload";
+
 export interface ScanUrlOptions {
   /** API environment for the public QR scan URL. Defaults to "production". */
   environment?: VerifiablEnvironment;
