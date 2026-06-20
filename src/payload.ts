@@ -65,19 +65,15 @@ export function buildBarcodePayload({ linkingToken, encryptedPii }: BarcodeParts
  *
  * Store the single payload string under the XMP property below. It is the
  * encrypted `1|lt|ct` value, NEVER plaintext PII (PDF metadata is not
- * encrypted). Write it with your own PDF toolchain; every PDF library can set a
- * custom XMP property, and the SDK deliberately does not depend on one. A
- * verifier extracts this value when the QR cannot be read and POSTs it to
- * `/v1/verifications/payload` (no API change).
+ * encrypted). Write it with any PDF toolchain that can set a custom XMP
+ * property; the SDK only provides the keys. A verifier extracts this value when
+ * the QR cannot be read and POSTs it to `/v1/verifications/payload`.
  *
  *   XMP namespace: https://verifiabl.io/ns/   (property `payload`)
  *   value: "1|<linkingToken>|<ciphertext>"
  *
- * The namespace is intentionally **unversioned and permanent**: it is baked
- * into every issued PDF, so it must never change (a bump would force lenders to
- * match multiple namespaces forever). Payload-format evolution rides the `1|`
- * version prefix inside the value, and behavioural changes ship as a new SDK
- * version — not by changing this string.
+ * The namespace is permanent: it is embedded in already-issued PDFs, so it
+ * must not change.
  */
 export const PDF_PAYLOAD_XMP_NAMESPACE = "https://verifiabl.io/ns/";
 export const PDF_PAYLOAD_XMP_PROPERTY = "payload";
