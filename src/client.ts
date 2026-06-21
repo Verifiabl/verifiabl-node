@@ -6,12 +6,14 @@ import {
 import {
   type CreateBarcodeRequest,
   type CreateBarcodeResponse,
-  createBarcodeApiResponseSchema,
+  createBarcodeFromWire,
   createBarcodeRequestSchema,
+  createBarcodeToWire,
   type RegisterNonPiiRequest,
   type RegisterNonPiiResponse,
   registerNonPiiRequestSchema,
-  registerNonPiiResponseSchema,
+  registrationFromWire,
+  registrationToWire,
   type VerifiablErrorBody,
   type VerifiablErrorCode,
   verifiablErrorBodySchema,
@@ -232,10 +234,8 @@ export class VerifiablClient {
     request: RegisterNonPiiRequest,
     options: VerifiablRequestOptions = {},
   ): Promise<RegisterNonPiiResponse> {
-    const body = registerNonPiiRequestSchema.parse(request);
-    return this.post("/v1/registerNonPII", body, options, (value) =>
-      registerNonPiiResponseSchema.parse(value),
-    );
+    const body = registrationToWire(registerNonPiiRequestSchema.parse(request));
+    return this.post("/v1/registerNonPII", body, options, registrationFromWire);
   }
 
   /**
@@ -246,11 +246,8 @@ export class VerifiablClient {
     request: CreateBarcodeRequest,
     options: VerifiablRequestOptions = {},
   ): Promise<CreateBarcodeResponse> {
-    const body = createBarcodeRequestSchema.parse(request);
-    return this.post("/v1/registerAndBuildSymbol", body, options, (value) => {
-      const response = createBarcodeApiResponseSchema.parse(value);
-      return { id: response.id, barcode: response.symbol };
-    });
+    const body = createBarcodeToWire(createBarcodeRequestSchema.parse(request));
+    return this.post("/v1/registerAndBuildSymbol", body, options, createBarcodeFromWire);
   }
 
   private async post<T>(

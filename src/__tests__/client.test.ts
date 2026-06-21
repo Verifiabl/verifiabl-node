@@ -7,6 +7,25 @@ const KEY_VERSION = "0f8fad5b-d9cb-469f-a165-70867728950e.1";
 
 const REQUEST: RegisterNonPiiRequest = {
   schema: "au.payslip.v1",
+  issuedAt: "2026-06-11T00:00:00Z",
+  payslipData: { periodStart: "2026-05-01", periodEnd: "2026-05-31", gross: "9000.00" },
+  encryptionMetadata: {
+    iv: "AAAAAAAAAAAAAAAA",
+    tag: "AAAAAAAAAAAAAAAAAAAAAA",
+    keyVersion: KEY_VERSION,
+  },
+};
+
+const CREATE_BARCODE_REQUEST: CreateBarcodeRequest = {
+  ...REQUEST,
+  encryptedPii: CT,
+};
+
+// The snake_case bodies the SDK is expected to put on the wire after
+// translating the camelCase requests above. Provider-specific payslip
+// fields (e.g. `gross`) pass through verbatim.
+const WIRE_REQUEST = {
+  schema: "au.payslip.v1",
   issued_at: "2026-06-11T00:00:00Z",
   payslip_data: { period_start: "2026-05-01", period_end: "2026-05-31", gross: "9000.00" },
   encryption_metadata: {
@@ -16,8 +35,8 @@ const REQUEST: RegisterNonPiiRequest = {
   },
 };
 
-const CREATE_BARCODE_REQUEST: CreateBarcodeRequest = {
-  ...REQUEST,
+const WIRE_CREATE_BARCODE_REQUEST = {
+  ...WIRE_REQUEST,
   encrypted_pii: CT,
 };
 
@@ -156,14 +175,14 @@ describe("VerifiablClient with static auth", () => {
 
     const result = await client.registerNonPii(REQUEST);
 
-    expect(result.linking_token).toBe(LT);
+    expect(result.linkingToken).toBe(LT);
     const [url, init] = firstFetchCall(fetch);
     if (init === undefined) {
       throw new Error("Expected fetch init options");
     }
     expect(url).toBe("https://register.verifiabl.io/v1/registerNonPII");
     expect(new Headers(init.headers).get("authorization")).toBe("Bearer secret-key");
-    expect(requestBody(firstFetchCall(fetch))).toEqual(REQUEST);
+    expect(requestBody(firstFetchCall(fetch))).toEqual(WIRE_REQUEST);
   });
 
   it("routes registration to the sandbox issuer origin", async () => {
@@ -200,12 +219,12 @@ describe("VerifiablClient with static auth", () => {
 
     expect(result).toEqual({
       id: "barcode-record",
-      barcode: { format: "png", data: "iVBORw0KGgo=", width_px: 720, height_px: 720 },
+      barcode: { format: "png", data: "iVBORw0KGgo=", widthPx: 720, heightPx: 720 },
     });
     expect(firstFetchCall(fetchMock)[0]).toBe(
       "https://register.verifiabl.io/v1/registerAndBuildSymbol",
     );
-    expect(requestBody(firstFetchCall(fetchMock))).toEqual(CREATE_BARCODE_REQUEST);
+    expect(requestBody(firstFetchCall(fetchMock))).toEqual(WIRE_CREATE_BARCODE_REQUEST);
   });
 
   it("throws VerifiablApiError with the stable code on API errors", async () => {
@@ -254,7 +273,7 @@ describe("VerifiablClient with static auth", () => {
 
     const result = await client.registerNonPii(REQUEST);
 
-    expect(result.linking_token).toBe(LT);
+    expect(result.linkingToken).toBe(LT);
   });
 
   it("survives non-JSON error bodies", async () => {
@@ -429,7 +448,7 @@ describe("VerifiablClient with static auth", () => {
 
     const result = await client.registerNonPii(REQUEST);
 
-    expect(result.linking_token).toBe(LT);
+    expect(result.linkingToken).toBe(LT);
   });
 
   it("does not let async observability hook failures change request behaviour", async () => {
@@ -447,7 +466,7 @@ describe("VerifiablClient with static auth", () => {
 
     const result = await client.registerNonPii(REQUEST);
 
-    expect(result.linking_token).toBe(LT);
+    expect(result.linkingToken).toBe(LT);
   });
 
   it("emits error hooks when issuer API fetch fails", async () => {
@@ -489,7 +508,7 @@ describe("VerifiablClient with static auth", () => {
     await expect(
       client.registerNonPii({
         ...REQUEST,
-        encryption_metadata: { ...REQUEST.encryption_metadata, iv: "short" },
+        encryptionMetadata: { ...REQUEST.encryptionMetadata, iv: "short" },
       }),
     ).rejects.toThrow();
     expect(fetch).not.toHaveBeenCalled();
@@ -501,17 +520,17 @@ describe("VerifiablClient with static auth", () => {
     await expect(
       client.registerNonPii({
         ...REQUEST,
-        encryption_metadata: { ...REQUEST.encryption_metadata, key_version: "v1" },
+        encryptionMetadata: { ...REQUEST.encryptionMetadata, keyVersion: "v1" },
       }),
     ).rejects.toThrow("provider-id");
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("rejects issued_at with a UTC offset, matching the API", async () => {
+  it("rejects issuedAt with a UTC offset, matching the API", async () => {
     const fetch = mockFetch(201, { id: "x", linking_token: LT });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
     await expect(
-      client.registerNonPii({ ...REQUEST, issued_at: "2026-06-11T10:00:00+10:00" }),
+      client.registerNonPii({ ...REQUEST, issuedAt: "2026-06-11T10:00:00+10:00" }),
     ).rejects.toThrow("UTC");
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -684,7 +703,7 @@ describe("VerifiablClient with OAuth client credentials", () => {
 
     const result = await client.registerNonPii(REQUEST);
 
-    expect(result.linking_token).toBe(LT);
+    expect(result.linkingToken).toBe(LT);
     expect(tokenRequests).toBe(2);
     expect(apiCalls).toBe(2);
   });

@@ -11,24 +11,24 @@ function tuple<const T extends readonly string[]>(value: T): T {
  *
  * Layout (8 segments, "P1" prefix + 7 fields, in this exact order):
  *
- *   P1|employee_name|position|department|employer_abn|bsb|account_number|account_name
+ *   P1|employeeName|position|department|employerAbn|bsb|accountNumber|accountName
  *
  * Example:
  *
- *   P1|Jane A. Doe|Senior Developer|Engineering|12-345-678-901|062-000|12345678|Jane A Doe
+ *   P1|Jane A. Doe|Senior Developer|Engineering|12345678901|062-000|12345678|Jane A Doe
  *
  * Omitted fields are encoded as empty segments and skipped by Verifiabl.
  */
 
 /** Field order is the wire contract. Never reorder. */
 export const PII_FIELD_ORDER = tuple([
-  "employee_name",
+  "employeeName",
   "position",
   "department",
-  "employer_abn",
+  "employerAbn",
   "bsb",
-  "account_number",
-  "account_name",
+  "accountNumber",
+  "accountName",
 ]);
 
 export type PiiFieldName = (typeof PII_FIELD_ORDER)[number];
@@ -50,13 +50,13 @@ const piiFieldSchema = z
 
 export const piiFieldsSchema = z
   .object({
-    employee_name: piiFieldSchema.optional(),
+    employeeName: piiFieldSchema.optional(),
     position: piiFieldSchema.optional(),
     department: piiFieldSchema.optional(),
-    employer_abn: piiFieldSchema.optional(),
+    employerAbn: piiFieldSchema.optional(),
     bsb: piiFieldSchema.optional(),
-    account_number: piiFieldSchema.optional(),
-    account_name: piiFieldSchema.optional(),
+    accountNumber: piiFieldSchema.optional(),
+    accountName: piiFieldSchema.optional(),
   })
   .strict();
 
