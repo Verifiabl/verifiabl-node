@@ -155,7 +155,10 @@ function encryptionMetadataToWire(metadata: EncryptionMetadata): Record<string, 
 
 function payslipDataToWire(data: PayslipData): Record<string, unknown> {
   const { periodStart, periodEnd, ...rest } = data;
-  return { period_start: periodStart, period_end: periodEnd, ...rest };
+  // Spread provider-specific passthrough fields first so the SDK-mapped
+  // period_start/period_end always win, even if a caller put a stray
+  // snake_case "period_start"/"period_end" in payslipData.
+  return { ...rest, period_start: periodStart, period_end: periodEnd };
 }
 
 /** Map a validated registration request to the snake_case wire body. */

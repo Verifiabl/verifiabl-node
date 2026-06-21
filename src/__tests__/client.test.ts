@@ -196,6 +196,29 @@ describe("VerifiablClient with static auth", () => {
     );
   });
 
+  it("does not let passthrough payslipData keys override the mapped period dates", async () => {
+    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await client.registerNonPii({
+      ...REQUEST,
+      payslipData: {
+        periodStart: "2026-05-01",
+        periodEnd: "2026-05-31",
+        // A stray snake_case key in the provider passthrough must not win.
+        period_start: "1999-01-01",
+        gross: "9000.00",
+      },
+    });
+
+    const body = requestBody(firstFetchCall(fetch)) as {
+      payslip_data: { period_start: string; period_end: string; gross: string };
+    };
+    expect(body.payslip_data.period_start).toBe("2026-05-01");
+    expect(body.payslip_data.period_end).toBe("2026-05-31");
+    expect(body.payslip_data.gross).toBe("9000.00");
+  });
+
   it("lets explicit issuer base URL overrides win over the environment", async () => {
     const fetch = mockFetch(201, { id: "x", linking_token: LT });
     const client = new VerifiablClient({
