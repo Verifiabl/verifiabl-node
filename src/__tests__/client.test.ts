@@ -275,6 +275,17 @@ describe("VerifiablClient with static auth", () => {
     });
   });
 
+  it("omits fieldErrors from the error body when the API sends none", async () => {
+    const fetch = mockFetch(401, { error: "Unauthorized", code: "UNAUTHORIZED" });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const err: unknown = await client.registerNonPii(REQUEST).catch((e: unknown) => e);
+    if (!(err instanceof VerifiablApiError) || err.body === undefined) {
+      throw new Error("expected a VerifiablApiError with a body");
+    }
+    expect("fieldErrors" in err.body).toBe(false);
+  });
+
   it("includes request ids on API errors when the response has one", async () => {
     const fetchMock: jest.MockedFunction<typeof globalThis.fetch> = jest.fn<
       ReturnType<typeof globalThis.fetch>,
