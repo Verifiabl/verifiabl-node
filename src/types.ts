@@ -245,12 +245,29 @@ export const verifiablErrorDetailSchema = z.object({
 
 export type VerifiablErrorDetail = z.infer<typeof verifiablErrorDetailSchema>;
 
-/** Body shape of every non-2xx JSON response. */
-export const verifiablErrorBodySchema = z.object({
-  error: z.string(),
-  code: z.string(),
-  detail: z.string().optional(),
-  details: z.array(verifiablErrorDetailSchema).optional(),
-});
+/**
+ * Body shape of every non-2xx JSON response.
+ *
+ * The API returns per-field validation errors under the snake_case wire key
+ * `field_errors`; the SDK surfaces them camelCase as `fieldErrors`, consistent
+ * with the rest of the public surface. `fieldErrors` is omitted entirely when
+ * the response carries none, so it is absent (not present-but-undefined) on
+ * non-validation errors.
+ */
+export const verifiablErrorBodySchema = z.preprocess(
+  // Rename the wire key `field_errors` to camelCase `fieldErrors`, dropping it
+  // entirely when absent so the validated body has no present-but-undefined key.
+  (value) => {
+    if (typeof value !== "object" || value === null) return value;
+    const { field_errors: fieldErrors, ...rest } = value as Record<string, unknown>;
+    return fieldErrors === undefined ? rest : { ...rest, fieldErrors };
+  },
+  z.object({
+    error: z.string(),
+    code: z.string(),
+    detail: z.string().optional(),
+    fieldErrors: z.array(verifiablErrorDetailSchema).optional(),
+  }),
+);
 
-export type VerifiablErrorBody = z.infer<typeof verifiablErrorBodySchema>;
+export type VerifiablErrorBody = z.output<typeof verifiablErrorBodySchema>;
