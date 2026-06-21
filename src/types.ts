@@ -245,12 +245,20 @@ export const verifiablErrorDetailSchema = z.object({
 
 export type VerifiablErrorDetail = z.infer<typeof verifiablErrorDetailSchema>;
 
-/** Body shape of every non-2xx JSON response. */
-export const verifiablErrorBodySchema = z.object({
-  error: z.string(),
-  code: z.string(),
-  detail: z.string().optional(),
-  details: z.array(verifiablErrorDetailSchema).optional(),
-});
+/**
+ * Body shape of every non-2xx JSON response.
+ *
+ * The API returns per-field validation errors under the snake_case wire key
+ * `field_errors`; the SDK surfaces them camelCase as `fieldErrors`, consistent
+ * with the rest of the public surface.
+ */
+export const verifiablErrorBodySchema = z
+  .object({
+    error: z.string(),
+    code: z.string(),
+    detail: z.string().optional(),
+    field_errors: z.array(verifiablErrorDetailSchema).optional(),
+  })
+  .transform(({ field_errors: fieldErrors, ...rest }) => ({ ...rest, fieldErrors }));
 
 export type VerifiablErrorBody = z.infer<typeof verifiablErrorBodySchema>;

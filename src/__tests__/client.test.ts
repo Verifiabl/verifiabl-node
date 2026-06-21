@@ -261,6 +261,20 @@ describe("VerifiablClient with static auth", () => {
     });
   });
 
+  it("surfaces wire field_errors as camelCase fieldErrors on the error body", async () => {
+    const fetch = mockFetch(400, {
+      error: "Validation failed",
+      code: "VALIDATION_FAILED",
+      field_errors: [{ path: "records.0", message: "Unrecognized key" }],
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await expect(client.registerNonPii(REQUEST)).rejects.toMatchObject({
+      code: "VALIDATION_FAILED",
+      body: { fieldErrors: [{ path: "records.0", message: "Unrecognized key" }] },
+    });
+  });
+
   it("includes request ids on API errors when the response has one", async () => {
     const fetchMock: jest.MockedFunction<typeof globalThis.fetch> = jest.fn<
       ReturnType<typeof globalThis.fetch>,
