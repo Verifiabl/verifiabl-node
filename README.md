@@ -44,7 +44,7 @@ const pii = formatPii({
   employee_name: "Jane A. Doe",
   position: "Senior Developer",
   department: "Engineering",
-  employer_abn: "12-345-678-901",
+  employer_abn: "12345678901",
   bsb: "062-000",
   account_number: "12345678",
   account_name: "Jane A Doe",

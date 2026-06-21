@@ -15,7 +15,7 @@ function tuple<const T extends readonly string[]>(value: T): T {
  *
  * Example:
  *
- *   P1|Jane A. Doe|Senior Developer|Engineering|12-345-678-901|062-000|12345678|Jane A Doe
+ *   P1|Jane A. Doe|Senior Developer|Engineering|12345678901|062-000|12345678|Jane A Doe
  *
  * Omitted fields are encoded as empty segments and skipped by Verifiabl.
  */
