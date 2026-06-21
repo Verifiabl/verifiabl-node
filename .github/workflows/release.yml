@@ -18,13 +18,12 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      # Check out the released tag explicitly. On `release` events, older
-      # actions/checkout left HEAD detached at the bare commit, dropping the
-      # tag ref and producing a provenance cert with no SourceRepositoryRef,
-      # which npm rejects (npm/cli#8699; checkout fix landed in 6.0.2).
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.release.tag_name }}
+      # Default checkout (no `ref:`). On `release` events actions/checkout
+      # >=6.0.2 keeps the tag ref so npm provenance gets a SourceRepositoryRef.
+      # Passing an explicit `ref:` forces a detached checkout at the bare SHA,
+      # which drops that ref again and makes npm reject the bundle with
+      # "Missing SourceRepositoryRef" (npm/cli#8699). Pinned >=6.0.2 here.
+      - uses: actions/checkout@v6 # >=6.0.2 required for the release-ref fix
       - uses: actions/setup-node@v4
         with:
           node-version: 22
