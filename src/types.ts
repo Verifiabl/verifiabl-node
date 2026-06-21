@@ -28,8 +28,12 @@ export const payslipSchemaIdSchema = z.string().regex(SCHEMA_RE, {
 });
 
 /**
- * Request and response schemas for the Verifiabl API. Field names are the
- * wire contract, while client method names use the SDK's domain language.
+ * Request and response types for the Verifiabl API.
+ *
+ * The SDK surface is camelCase throughout. The HTTP API speaks snake_case
+ * (`issued_at`, `payslip_data`, `linking_token`, ...); the SDK translates
+ * to and from that wire format at the network boundary (see the `*ToWire`
+ * and `*FromWire` helpers below), so you never handle snake_case yourself.
  *
  * Request schemas are strict: they reject unknown fields so integration
  * mistakes fail fast and locally. Response schemas are deliberately
@@ -46,17 +50,24 @@ export const encryptionMetadataSchema = z
     /** 128-bit GCM auth tag, exactly 22 base64url characters. */
     tag: z.string().length(22).regex(BASE64URL_RE),
     /** Provider key version identifier in deployed `<provider-id>.<n>` format. */
-    key_version: keyVersionSchema,
+    keyVersion: keyVersionSchema,
   })
   .strict();
 
 export type EncryptionMetadata = z.infer<typeof encryptionMetadataSchema>;
 
-/** Non-PII payslip data. `period_start`/`period_end` are required (YYYY-MM-DD); other fields are schema-defined. */
+/**
+ * Non-PII payslip data. `periodStart`/`periodEnd` are required (YYYY-MM-DD).
+ *
+ * Any other fields are passed through to the API verbatim, under the exact
+ * keys you supply: only `periodStart`/`periodEnd` are SDK-defined and
+ * translated. Provider-specific fields (e.g. line items) use whatever names
+ * your payslip schema specifies, which are typically snake_case on the wire.
+ */
 export const payslipDataSchema = z
   .object({
-    period_start: z.string().regex(ISO_DATE_RE),
-    period_end: z.string().regex(ISO_DATE_RE),
+    periodStart: z.string().regex(ISO_DATE_RE),
+    periodEnd: z.string().regex(ISO_DATE_RE),
   })
   .catchall(z.unknown());
 
@@ -71,12 +82,12 @@ const basePayslipRegistrationSchema = z
      * UTC ("Z") timestamps; convert local times first, e.g. with
      * `new Date().toISOString()`.
      */
-    issued_at: z.iso.datetime({
+    issuedAt: z.iso.datetime({
       error:
-        "issued_at must be an ISO 8601 UTC datetime ending in 'Z' (use new Date().toISOString())",
+        "issuedAt must be an ISO 8601 UTC datetime ending in 'Z' (use new Date().toISOString())",
     }),
-    payslip_data: payslipDataSchema,
-    encryption_metadata: encryptionMetadataSchema,
+    payslipData: payslipDataSchema,
+    encryptionMetadata: encryptionMetadataSchema,
   })
   .strict();
 
@@ -93,7 +104,7 @@ export const registerNonPiiResponseSchema = z.object({
   /** Server record id (UUID). */
   id: z.string().min(1),
   /** 22-char base64url linking token to embed in the barcode. */
-  linking_token: z.string().length(22).regex(BASE64URL_RE),
+  linkingToken: z.string().length(22).regex(BASE64URL_RE),
 });
 
 export type RegisterNonPiiResponse = z.infer<typeof registerNonPiiResponseSchema>;
@@ -106,7 +117,7 @@ export type RegisterNonPiiResponse = z.infer<typeof registerNonPiiResponseSchema
 export const createBarcodeRequestSchema = basePayslipRegistrationSchema
   .extend({
     /** Base64url AES-256-GCM ciphertext of the formatted PII plaintext. */
-    encrypted_pii: z.string().min(1).max(10_000).regex(BASE64URL_RE),
+    encryptedPii: z.string().min(1).max(10_000).regex(BASE64URL_RE),
   })
   .strict();
 
@@ -116,16 +127,11 @@ export const barcodeImageSchema = z.object({
   format: z.literal("png"),
   /** Base64-encoded PNG. */
   data: z.string().min(1),
-  width_px: z.number().int().positive(),
-  height_px: z.number().int().positive(),
+  widthPx: z.number().int().positive(),
+  heightPx: z.number().int().positive(),
 });
 
 export type BarcodeImage = z.infer<typeof barcodeImageSchema>;
-
-export const createBarcodeApiResponseSchema = z.object({
-  id: z.string().min(1),
-  symbol: barcodeImageSchema,
-});
 
 export const createBarcodeResponseSchema = z.object({
   id: z.string().min(1),
@@ -133,6 +139,79 @@ export const createBarcodeResponseSchema = z.object({
 });
 
 export type CreateBarcodeResponse = z.infer<typeof createBarcodeResponseSchema>;
+
+/* ------------------------------------------------------------------ *
+ * Wire translation                                                    *
+ *                                                                     *
+ * The HTTP API uses snake_case. These helpers convert the camelCase   *
+ * SDK types to and from that wire shape at the network boundary, so   *
+ * the public surface never exposes snake_case. Only SDK-defined keys  *
+ * are renamed; provider-specific payslip fields pass through verbatim. *
+ * ------------------------------------------------------------------ */
+
+function encryptionMetadataToWire(metadata: EncryptionMetadata): Record<string, unknown> {
+  return { iv: metadata.iv, tag: metadata.tag, key_version: metadata.keyVersion };
+}
+
+function payslipDataToWire(data: PayslipData): Record<string, unknown> {
+  const { periodStart, periodEnd, ...rest } = data;
+  // Spread provider-specific passthrough fields first so the SDK-mapped
+  // period_start/period_end always win, even if a caller put a stray
+  // snake_case "period_start"/"period_end" in payslipData.
+  return { ...rest, period_start: periodStart, period_end: periodEnd };
+}
+
+/** Map a validated registration request to the snake_case wire body. */
+export function registrationToWire(request: RegisterNonPiiRequest): Record<string, unknown> {
+  return {
+    schema: request.schema,
+    issued_at: request.issuedAt,
+    payslip_data: payslipDataToWire(request.payslipData),
+    encryption_metadata: encryptionMetadataToWire(request.encryptionMetadata),
+  };
+}
+
+/** Map a validated create-barcode request to the snake_case wire body. */
+export function createBarcodeToWire(request: CreateBarcodeRequest): Record<string, unknown> {
+  return { ...registrationToWire(request), encrypted_pii: request.encryptedPii };
+}
+
+const registerNonPiiWireResponseSchema = z.object({
+  id: z.string().min(1),
+  linking_token: z.string().length(22).regex(BASE64URL_RE),
+});
+
+/** Parse and map a registration response from the snake_case wire shape. */
+export function registrationFromWire(value: unknown): RegisterNonPiiResponse {
+  const wire = registerNonPiiWireResponseSchema.parse(value);
+  return { id: wire.id, linkingToken: wire.linking_token };
+}
+
+const barcodeImageWireSchema = z.object({
+  format: z.literal("png"),
+  data: z.string().min(1),
+  width_px: z.number().int().positive(),
+  height_px: z.number().int().positive(),
+});
+
+const createBarcodeApiWireResponseSchema = z.object({
+  id: z.string().min(1),
+  symbol: barcodeImageWireSchema,
+});
+
+/** Parse and map a create-barcode response from the snake_case wire shape. */
+export function createBarcodeFromWire(value: unknown): CreateBarcodeResponse {
+  const wire = createBarcodeApiWireResponseSchema.parse(value);
+  return {
+    id: wire.id,
+    barcode: {
+      format: wire.symbol.format,
+      data: wire.symbol.data,
+      widthPx: wire.symbol.width_px,
+      heightPx: wire.symbol.height_px,
+    },
+  };
+}
 
 /**
  * Error codes the API is known to return today. The API may add codes

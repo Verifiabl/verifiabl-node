@@ -41,27 +41,27 @@ const keyVersion = process.env.VERIFIABL_KEY_VERSION!; // e.g. "0f8fad5b-...e.1"
 
 // 1. Format and encrypt the employee's details locally.
 const pii = formatPii({
-  employee_name: "Jane A. Doe",
+  employeeName: "Jane A. Doe",
   position: "Senior Developer",
   department: "Engineering",
-  employer_abn: "12-345-678-901",
+  employerAbn: "12345678901",
   bsb: "062-000",
-  account_number: "12345678",
-  account_name: "Jane A Doe",
+  accountNumber: "12345678",
+  accountName: "Jane A Doe",
 });
-const { encrypted_pii, encryption_metadata } = encryptPii(pii, key, keyVersion);
+const { encryptedPii, encryptionMetadata } = encryptPii(pii, key, keyVersion);
 
 // 2. Register the non-PII data. Verifiabl returns a linking token.
-const { linking_token } = await client.registerNonPii({
+const { linkingToken } = await client.registerNonPii({
   schema: "au.payslip.v1",
-  issued_at: new Date().toISOString(),
-  payslip_data: { period_start: "2026-05-01", period_end: "2026-05-31" },
-  encryption_metadata,
+  issuedAt: new Date().toISOString(),
+  payslipData: { periodStart: "2026-05-01", periodEnd: "2026-05-31" },
+  encryptionMetadata,
 });
 
 // 3. Render the QR badge and embed the PNG in your payslip PDF.
 const { png } = await createBarcodePng(
-  { linkingToken: linking_token, encryptedPii: encrypted_pii },
+  { linkingToken, encryptedPii },
   { environment: "sandbox" },
   720,
 );

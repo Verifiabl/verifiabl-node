@@ -28,69 +28,69 @@ describe("encryptPii", () => {
 
   it("produces ciphertext the Verifiabl decrypt logic can read", () => {
     const plaintext = formatPii({
-      employee_name: "Jane A. Doe",
+      employeeName: "Jane A. Doe",
       position: "Senior Developer",
       department: "Engineering",
-      employer_abn: "12-345-678-901",
+      employerAbn: "12-345-678-901",
       bsb: "062-000",
-      account_number: "12345678",
-      account_name: "Jane A Doe",
+      accountNumber: "12345678",
+      accountName: "Jane A Doe",
     });
 
-    const { encrypted_pii, encryption_metadata } = encryptPii(plaintext, key, KEY_VERSION);
+    const { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key, KEY_VERSION);
     const decrypted = decryptLikeVerifiabl(
-      encrypted_pii,
-      encryption_metadata.iv,
-      encryption_metadata.tag,
+      encryptedPii,
+      encryptionMetadata.iv,
+      encryptionMetadata.tag,
       key,
     );
 
     expect(decrypted).toBe(plaintext);
-    expect(parsePii(decrypted)).toMatchObject({ employee_name: "Jane A. Doe" });
+    expect(parsePii(decrypted)).toMatchObject({ employeeName: "Jane A. Doe" });
   });
 
   it("detects tampering: a flipped ciphertext byte fails the auth tag", () => {
-    const { encrypted_pii, encryption_metadata } = encryptPii("P1|a||||||", key, KEY_VERSION);
-    const corrupted = Buffer.from(encrypted_pii, "base64url");
+    const { encryptedPii, encryptionMetadata } = encryptPii("P1|a||||||", key, KEY_VERSION);
+    const corrupted = Buffer.from(encryptedPii, "base64url");
     corrupted.writeUInt8(corrupted.readUInt8(0) ^ 0x01, 0);
     expect(() =>
       decryptLikeVerifiabl(
         corrupted.toString("base64url"),
-        encryption_metadata.iv,
-        encryption_metadata.tag,
+        encryptionMetadata.iv,
+        encryptionMetadata.tag,
         key,
       ),
     ).toThrow();
   });
 
   it("only decrypts with the issuing provider's key", () => {
-    const { encrypted_pii, encryption_metadata } = encryptPii("P1|a||||||", key, KEY_VERSION);
+    const { encryptedPii, encryptionMetadata } = encryptPii("P1|a||||||", key, KEY_VERSION);
     const otherProviderKey = randomBytes(32);
     expect(() =>
       decryptLikeVerifiabl(
-        encrypted_pii,
-        encryption_metadata.iv,
-        encryption_metadata.tag,
+        encryptedPii,
+        encryptionMetadata.iv,
+        encryptionMetadata.tag,
         otherProviderKey,
       ),
     ).toThrow();
   });
 
   it("emits metadata in the exact wire sizes the API validates", () => {
-    const { encrypted_pii, encryption_metadata } = encryptPii("P1|a||||||", key, KEY_VERSION);
-    expect(encryption_metadata.iv).toHaveLength(16); // 96-bit IV
-    expect(encryption_metadata.tag).toHaveLength(22); // 128-bit tag
-    expect(encryption_metadata.iv).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(encryption_metadata.tag).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(encrypted_pii).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(encryption_metadata.key_version).toBe(KEY_VERSION);
+    const { encryptedPii, encryptionMetadata } = encryptPii("P1|a||||||", key, KEY_VERSION);
+    expect(encryptionMetadata.iv).toHaveLength(16); // 96-bit IV
+    expect(encryptionMetadata.tag).toHaveLength(22); // 128-bit tag
+    expect(encryptionMetadata.iv).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(encryptionMetadata.tag).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(encryptedPii).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(encryptionMetadata.keyVersion).toBe(KEY_VERSION);
   });
 
   it("uses a fresh IV per call", () => {
     const a = encryptPii("P1|a||||||", key, KEY_VERSION);
     const b = encryptPii("P1|a||||||", key, KEY_VERSION);
-    expect(a.encryption_metadata.iv).not.toBe(b.encryption_metadata.iv);
-    expect(a.encrypted_pii).not.toBe(b.encrypted_pii);
+    expect(a.encryptionMetadata.iv).not.toBe(b.encryptionMetadata.iv);
+    expect(a.encryptedPii).not.toBe(b.encryptedPii);
   });
 
   it("rejects keys that are not 32 bytes", () => {

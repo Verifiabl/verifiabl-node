@@ -25,12 +25,12 @@ const KEY_BYTES = 32; // AES-256
 
 export interface EncryptedPii {
   /** Base64url ciphertext to embed in the barcode or send to createBarcode. */
-  encrypted_pii: string;
+  encryptedPii: string;
   /** Server-side decryption metadata for registration endpoints. */
-  encryption_metadata: {
+  encryptionMetadata: {
     iv: string;
     tag: string;
-    key_version: string;
+    keyVersion: string;
   };
 }
 
@@ -68,11 +68,11 @@ export function encryptPii(plaintext: string, key: Buffer, keyVersion: string): 
   const tag = cipher.getAuthTag();
 
   return {
-    encrypted_pii: base64Url(ciphertext),
-    encryption_metadata: {
+    encryptedPii: base64Url(ciphertext),
+    encryptionMetadata: {
       iv: base64Url(iv),
       tag: base64Url(tag),
-      key_version: keyVersion,
+      keyVersion,
     },
   };
 }
