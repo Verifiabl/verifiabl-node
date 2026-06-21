@@ -254,21 +254,20 @@ export type VerifiablErrorDetail = z.infer<typeof verifiablErrorDetailSchema>;
  * the response carries none, so it is absent (not present-but-undefined) on
  * non-validation errors.
  */
-export interface VerifiablErrorBody {
-  error: string;
-  code: string;
-  detail?: string | undefined;
-  fieldErrors?: VerifiablErrorDetail[] | undefined;
-}
-
-export const verifiablErrorBodySchema = z
-  .object({
+export const verifiablErrorBodySchema = z.preprocess(
+  // Rename the wire key `field_errors` to camelCase `fieldErrors`, dropping it
+  // entirely when absent so the validated body has no present-but-undefined key.
+  (value) => {
+    if (typeof value !== "object" || value === null) return value;
+    const { field_errors: fieldErrors, ...rest } = value as Record<string, unknown>;
+    return fieldErrors === undefined ? rest : { ...rest, fieldErrors };
+  },
+  z.object({
     error: z.string(),
     code: z.string(),
     detail: z.string().optional(),
-    field_errors: z.array(verifiablErrorDetailSchema).optional(),
-  })
-  .transform(
-    ({ field_errors: fieldErrors, ...rest }): VerifiablErrorBody =>
-      fieldErrors === undefined ? rest : { ...rest, fieldErrors },
-  );
+    fieldErrors: z.array(verifiablErrorDetailSchema).optional(),
+  }),
+);
+
+export type VerifiablErrorBody = z.output<typeof verifiablErrorBodySchema>;
