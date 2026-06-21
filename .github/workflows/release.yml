@@ -18,7 +18,13 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Check out the released tag explicitly. On `release` events, older
+      # actions/checkout left HEAD detached at the bare commit, dropping the
+      # tag ref and producing a provenance cert with no SourceRepositoryRef,
+      # which npm rejects (npm/cli#8699; checkout fix landed in 6.0.2).
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
