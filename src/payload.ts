@@ -5,14 +5,14 @@ const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
 export type VerifiablEnvironment = "production" | "sandbox";
 
 /**
- * Verifiabl ID wire format: exactly 22 base64url characters. This is a
- * system-wide Verifiabl contract. Verifiabl IDs are issued by the API and must
+ * Linking token wire format: exactly 22 base64url characters. This is a
+ * system-wide Verifiabl contract. Tokens are issued by the API and must
  * be embedded verbatim.
  */
-export const verifiablIdSchema = z
+export const linkingTokenSchema = z
   .string()
-  .length(22, "Verifiabl ID must be exactly 22 base64url characters")
-  .regex(BASE64URL_RE, "Verifiabl ID must be base64url encoded");
+  .length(22, "Linking token must be exactly 22 base64url characters")
+  .regex(BASE64URL_RE, "Linking token must be base64url encoded");
 
 /** Encrypted PII ciphertext: base64url, as produced by `encryptPii`. */
 export const ciphertextSchema = z
@@ -22,8 +22,8 @@ export const ciphertextSchema = z
   .regex(BASE64URL_RE, "Ciphertext must be base64url encoded");
 
 export interface BarcodeParts {
-  /** Verifiabl ID returned by `client.registerNonPii`. */
-  verifiablId: string;
+  /** Linking token returned by `client.registerNonPii`. */
+  linkingToken: string;
   /** Encrypted PII ciphertext (base64url). */
   encryptedPii: string;
 }
@@ -43,16 +43,16 @@ function scanBaseUrlForEnvironment(environment: VerifiablEnvironment): string {
 }
 
 /**
- * Build the v1 barcode payload: `1|<verifiablId>|<ciphertext>`.
+ * Build the v1 barcode payload: `1|<linkingToken>|<ciphertext>`.
  *
  * This is the bare wire format. For QR codes intended to be scanned by
  * phones, prefer `buildScanUrl`, which wraps this payload in the public
  * scan-redirect URL.
  */
-export function buildBarcodePayload({ verifiablId, encryptedPii }: BarcodeParts): string {
-  const id = verifiablIdSchema.parse(verifiablId);
-  const ciphertext = ciphertextSchema.parse(encryptedPii);
-  return `1|${id}|${ciphertext}`;
+export function buildBarcodePayload({ linkingToken, encryptedPii }: BarcodeParts): string {
+  const lt = linkingTokenSchema.parse(linkingToken);
+  const ct = ciphertextSchema.parse(encryptedPii);
+  return `1|${lt}|${ct}`;
 }
 
 /**
@@ -60,7 +60,7 @@ export function buildBarcodePayload({ verifiablId, encryptedPii }: BarcodeParts)
  *
  * Write the barcode payload (`buildBarcodePayload`) into the payslip PDF's XMP
  * metadata in addition to the QR code, so the payload is carried in two places.
- * Both hold the identical encrypted `1|verifiablId|ciphertext` value, NEVER plaintext PII (PDF
+ * Both hold the identical encrypted `1|lt|ct` value, NEVER plaintext PII (PDF
  * metadata is not encrypted). They differ only in durability: the QR is page
  * content, while the metadata copy can be removed by re-rendering, flattening,
  * or print-to-PDF.
@@ -71,7 +71,7 @@ export function buildBarcodePayload({ verifiablId, encryptedPii }: BarcodeParts)
  * `/v1/verifications/payload`.
  *
  *   XMP namespace: https://verifiabl.io/ns/   (property `payload`)
- *   value: "1|<verifiablId>|<ciphertext>"
+ *   value: "1|<linkingToken>|<ciphertext>"
  *
  * The namespace is permanent: it is embedded in already-issued PDFs, so it
  * must not change.
@@ -93,7 +93,7 @@ export interface ScanUrlOptions {
 /**
  * Build the URL encoded into Verifiabl QR codes:
  *
- *   https://verify.verifiabl.io/v/<urlencoded "1|verifiablId|ciphertext">
+ *   https://verify.verifiabl.io/v/<urlencoded "1|lt|ct">
  *
  * The scan URL sends scanners to Verifiabl instead of exposing raw
  * ciphertext in a phone camera preview.

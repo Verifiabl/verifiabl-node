@@ -18,12 +18,12 @@ export {
   ciphertextSchema,
   DEFAULT_ISSUER_BASE_URL,
   DEFAULT_SCAN_BASE_URL,
+  linkingTokenSchema,
   PDF_PAYLOAD_XMP_NAMESPACE,
   PDF_PAYLOAD_XMP_PROPERTY,
   SANDBOX_ISSUER_BASE_URL,
   SANDBOX_SCAN_BASE_URL,
   type ScanUrlOptions,
-  verifiablIdSchema,
 } from "./payload.js";
 export {
   formatPii,

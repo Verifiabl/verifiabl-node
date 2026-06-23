@@ -2,9 +2,9 @@ import QRCode from "qrcode";
 import { buildScanUrl } from "../payload.js";
 import { createBarcodeSvg } from "../qr/styled.js";
 
-const VERIFIABL_ID = "AbCdEfGhIjKlMnOpQrStUv";
-const CIPHERTEXT = "Zm9vYmFyYmF6cXV4XzEyMzQ1Njc4OTBhYmNkZWZnaGlqa2xtbm9w";
-const PARTS = { verifiablId: VERIFIABL_ID, encryptedPii: CIPHERTEXT };
+const LT = "AbCdEfGhIjKlMnOpQrStUv";
+const CT = "Zm9vYmFyYmF6cXV4XzEyMzQ1Njc4OTBhYmNkZWZnaGlqa2xtbm9w";
+const PARTS = { linkingToken: LT, encryptedPii: CT };
 const FRAME_GEOMETRY = [
   'viewBox="0 0 96 151"',
   'width="94" height="149" rx="7" stroke="#ADADAD" stroke-width="2" fill="none"',
@@ -112,7 +112,7 @@ describe("createBarcodeSvg", () => {
   // a tiny payload that exercises the inset path.
   it.each([
     "AA",
-    CIPHERTEXT,
+    CT,
     "a".repeat(600),
   ])("keeps the QR quiet zone at >= 4 modules (payload length %#)", (encryptedPii) => {
     const { svg } = createBarcodeSvg({ ...PARTS, encryptedPii });
@@ -129,11 +129,11 @@ describe("createBarcodeSvg", () => {
   // still clear the floor, never varying the fixed frame. Lowercase base64url
   // ("a") forces byte mode like real encrypted PII. Thresholds are at width 480.
   it.each([
-    { label: "long: degraded Q", ciphertext: "a".repeat(600), ec: "Q" },
-    { label: "longer: drops to M", ciphertext: "a".repeat(1000), ec: "M" },
-    { label: "longest fittable: drops to L", ciphertext: "a".repeat(1300), ec: "L" },
-  ])("degrades error correction in order for $label", ({ ciphertext, ec }) => {
-    const result = createBarcodeSvg({ ...PARTS, encryptedPii: ciphertext });
+    { label: "long: degraded Q", ct: "a".repeat(600), ec: "Q" },
+    { label: "longer: drops to M", ct: "a".repeat(1000), ec: "M" },
+    { label: "longest fittable: drops to L", ct: "a".repeat(1300), ec: "L" },
+  ])("degrades error correction in order for $label", ({ ct, ec }) => {
+    const result = createBarcodeSvg({ ...PARTS, encryptedPii: ct });
     expect(result.errorCorrectionLevel).toBe(ec);
     expect(result.degraded).toBe(true);
     expect(result.modulePx).toBeGreaterThanOrEqual(3);
