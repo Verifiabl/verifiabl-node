@@ -1,7 +1,7 @@
 import { createBarcodePng } from "../qr/png.js";
 
 const PARTS = {
-  linkingToken: "AbCdEfGhIjKlMnOpQrStUv",
+  verifiablId: "AbCdEfGhIjKlMnOpQrStUv",
   encryptedPii: "Zm9vYmFyYmF6cXV4",
 };
 

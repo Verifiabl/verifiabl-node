@@ -51,8 +51,8 @@ const pii = formatPii({
 });
 const { encryptedPii, encryptionMetadata } = encryptPii(pii, key, keyVersion);
 
-// 2. Register the non-PII data. Verifiabl returns a linking token.
-const { linkingToken } = await client.registerNonPii({
+// 2. Register the non-PII data. Verifiabl returns a Verifiabl ID.
+const { verifiablId } = await client.registerNonPii({
   schema: "au.payslip.v1",
   issuedAt: new Date().toISOString(),
   payslipData: { periodStart: "2026-05-01", periodEnd: "2026-05-31" },
@@ -61,7 +61,7 @@ const { linkingToken } = await client.registerNonPii({
 
 // 3. Render the QR badge and embed the PNG in your payslip PDF.
 const { png } = await createBarcodePng(
-  { linkingToken, encryptedPii },
+  { verifiablId, encryptedPii },
   { environment: "sandbox" },
   720,
 );
