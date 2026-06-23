@@ -31,7 +31,7 @@ export const payslipSchemaIdSchema = z.string().regex(SCHEMA_RE, {
  * Request and response types for the Verifiabl API.
  *
  * The SDK surface is camelCase throughout. The HTTP API speaks snake_case
- * (`issued_at`, `payslip_data`, `linking_token`, ...); the SDK translates
+ * (`issued_at`, `payslip_data`, `verifiabl_id`, ...); the SDK translates
  * to and from that wire format at the network boundary (see the `*ToWire`
  * and `*FromWire` helpers below), so you never handle snake_case yourself.
  *
@@ -101,10 +101,8 @@ export const registerNonPiiRequestSchema = basePayslipRegistrationSchema;
 export type RegisterNonPiiRequest = z.infer<typeof registerNonPiiRequestSchema>;
 
 export const registerNonPiiResponseSchema = z.object({
-  /** Server record id (UUID). */
-  id: z.string().min(1),
-  /** 22-char base64url linking token to embed in the barcode. */
-  linkingToken: z.string().length(22).regex(BASE64URL_RE),
+  /** 22-char base64url Verifiabl ID to embed in the barcode. */
+  verifiablId: z.string().length(22).regex(BASE64URL_RE),
 });
 
 export type RegisterNonPiiResponse = z.infer<typeof registerNonPiiResponseSchema>;
@@ -177,14 +175,13 @@ export function createBarcodeToWire(request: CreateBarcodeRequest): Record<strin
 }
 
 const registerNonPiiWireResponseSchema = z.object({
-  id: z.string().min(1),
-  linking_token: z.string().length(22).regex(BASE64URL_RE),
+  verifiabl_id: z.string().length(22).regex(BASE64URL_RE),
 });
 
 /** Parse and map a registration response from the snake_case wire shape. */
 export function registrationFromWire(value: unknown): RegisterNonPiiResponse {
   const wire = registerNonPiiWireResponseSchema.parse(value);
-  return { id: wire.id, linkingToken: wire.linking_token };
+  return { verifiablId: wire.verifiabl_id };
 }
 
 const barcodeImageWireSchema = z.object({

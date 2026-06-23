@@ -1,8 +1,8 @@
 import { VerifiablApiError, VerifiablAuthError, VerifiablClient } from "../client.js";
 import type { CreateBarcodeRequest, RegisterNonPiiRequest } from "../types.js";
 
-const LT = "AbCdEfGhIjKlMnOpQrStUv";
-const CT = "Zm9v";
+const VERIFIABL_ID = "AbCdEfGhIjKlMnOpQrStUv";
+const CIPHERTEXT = "Zm9v";
 const KEY_VERSION = "0f8fad5b-d9cb-469f-a165-70867728950e.1";
 
 const REQUEST: RegisterNonPiiRequest = {
@@ -18,7 +18,7 @@ const REQUEST: RegisterNonPiiRequest = {
 
 const CREATE_BARCODE_REQUEST: CreateBarcodeRequest = {
   ...REQUEST,
-  encryptedPii: CT,
+  encryptedPii: CIPHERTEXT,
 };
 
 // The snake_case bodies the SDK is expected to put on the wire after
@@ -37,13 +37,13 @@ const WIRE_REQUEST = {
 
 const WIRE_CREATE_BARCODE_REQUEST = {
   ...WIRE_REQUEST,
-  encrypted_pii: CT,
+  encrypted_pii: CIPHERTEXT,
 };
 
 const STATIC_AUTH = { auth: { apiKey: "k" } };
 
 function registerResponse(): Response {
-  return new Response(JSON.stringify({ id: "x", linking_token: LT }), { status: 201 });
+  return new Response(JSON.stringify({ verifiabl_id: VERIFIABL_ID }), { status: 201 });
 }
 
 function createBarcodeResponse(): Response {
@@ -84,7 +84,7 @@ describe("VerifiablClient construction", () => {
   });
 
   it("trims static bearer credentials from environment variables", async () => {
-    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const fetch = mockFetch(201, { verifiabl_id: VERIFIABL_ID });
     const client = new VerifiablClient({ auth: { apiKey: " secret-key\n" }, fetch });
 
     await client.registerNonPii(REQUEST);
@@ -170,12 +170,12 @@ describe("VerifiablClient construction", () => {
 
 describe("VerifiablClient with static auth", () => {
   it("sends registration to the production issuer origin with bearer auth", async () => {
-    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const fetch = mockFetch(201, { verifiabl_id: VERIFIABL_ID });
     const client = new VerifiablClient({ auth: { apiKey: "secret-key" }, fetch });
 
     const result = await client.registerNonPii(REQUEST);
 
-    expect(result.linkingToken).toBe(LT);
+    expect(result.verifiablId).toBe(VERIFIABL_ID);
     const [url, init] = firstFetchCall(fetch);
     if (init === undefined) {
       throw new Error("Expected fetch init options");
@@ -186,7 +186,7 @@ describe("VerifiablClient with static auth", () => {
   });
 
   it("routes registration to the sandbox issuer origin", async () => {
-    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const fetch = mockFetch(201, { verifiabl_id: VERIFIABL_ID });
     const client = new VerifiablClient({ ...STATIC_AUTH, environment: "sandbox", fetch });
 
     await client.registerNonPii(REQUEST);
@@ -197,7 +197,7 @@ describe("VerifiablClient with static auth", () => {
   });
 
   it("does not let passthrough payslipData keys override the mapped period dates", async () => {
-    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const fetch = mockFetch(201, { verifiabl_id: VERIFIABL_ID });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
 
     await client.registerNonPii({
@@ -220,7 +220,7 @@ describe("VerifiablClient with static auth", () => {
   });
 
   it("lets explicit issuer base URL overrides win over the environment", async () => {
-    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const fetch = mockFetch(201, { verifiabl_id: VERIFIABL_ID });
     const client = new VerifiablClient({
       ...STATIC_AUTH,
       environment: "sandbox",
@@ -316,12 +316,12 @@ describe("VerifiablClient with static auth", () => {
   });
 
   it("tolerates additive fields in success responses", async () => {
-    const fetch = mockFetch(201, { id: "x", linking_token: LT, audit_ref: "future-field" });
+    const fetch = mockFetch(201, { verifiabl_id: VERIFIABL_ID, audit_ref: "future-field" });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
 
     const result = await client.registerNonPii(REQUEST);
 
-    expect(result.linkingToken).toBe(LT);
+    expect(result.verifiablId).toBe(VERIFIABL_ID);
   });
 
   it("survives non-JSON error bodies", async () => {
@@ -343,7 +343,7 @@ describe("VerifiablClient with static auth", () => {
   });
 
   it("rejects invalid per-request timeouts before sending", async () => {
-    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const fetch = mockFetch(201, { verifiabl_id: VERIFIABL_ID });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
 
     await expect(client.registerNonPii(REQUEST, { timeoutMs: 0 })).rejects.toThrow("timeoutMs");
@@ -351,7 +351,7 @@ describe("VerifiablClient with static auth", () => {
   });
 
   it("reports malformed per-request options with configuration errors", async () => {
-    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const fetch = mockFetch(201, { verifiabl_id: VERIFIABL_ID });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
 
     // @ts-expect-error Exercise JavaScript runtime input validation.
@@ -448,7 +448,7 @@ describe("VerifiablClient with static auth", () => {
       ReturnType<typeof globalThis.fetch>,
       Parameters<typeof globalThis.fetch>
     >(async () => {
-      return new Response(JSON.stringify({ id: "x", linking_token: LT }), {
+      return new Response(JSON.stringify({ verifiabl_id: VERIFIABL_ID }), {
         status: 201,
         headers: { "x-request-id": "req_hook" },
       });
@@ -482,7 +482,7 @@ describe("VerifiablClient with static auth", () => {
   });
 
   it("does not let observability hook failures change request behaviour", async () => {
-    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const fetch = mockFetch(201, { verifiabl_id: VERIFIABL_ID });
     const client = new VerifiablClient({
       ...STATIC_AUTH,
       fetch,
@@ -496,11 +496,11 @@ describe("VerifiablClient with static auth", () => {
 
     const result = await client.registerNonPii(REQUEST);
 
-    expect(result.linkingToken).toBe(LT);
+    expect(result.verifiablId).toBe(VERIFIABL_ID);
   });
 
   it("does not let async observability hook failures change request behaviour", async () => {
-    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const fetch = mockFetch(201, { verifiabl_id: VERIFIABL_ID });
     const client = new VerifiablClient({
       ...STATIC_AUTH,
       fetch,
@@ -514,7 +514,7 @@ describe("VerifiablClient with static auth", () => {
 
     const result = await client.registerNonPii(REQUEST);
 
-    expect(result.linkingToken).toBe(LT);
+    expect(result.verifiablId).toBe(VERIFIABL_ID);
   });
 
   it("emits error hooks when issuer API fetch fails", async () => {
@@ -551,7 +551,7 @@ describe("VerifiablClient with static auth", () => {
   });
 
   it("validates request bodies before sending", async () => {
-    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const fetch = mockFetch(201, { verifiabl_id: VERIFIABL_ID });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
     await expect(
       client.registerNonPii({
@@ -563,7 +563,7 @@ describe("VerifiablClient with static auth", () => {
   });
 
   it("rejects key versions outside the deployed contract before sending", async () => {
-    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const fetch = mockFetch(201, { verifiabl_id: VERIFIABL_ID });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
     await expect(
       client.registerNonPii({
@@ -575,7 +575,7 @@ describe("VerifiablClient with static auth", () => {
   });
 
   it("rejects issuedAt with a UTC offset, matching the API", async () => {
-    const fetch = mockFetch(201, { id: "x", linking_token: LT });
+    const fetch = mockFetch(201, { verifiabl_id: VERIFIABL_ID });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
     await expect(
       client.registerNonPii({ ...REQUEST, issuedAt: "2026-06-11T10:00:00+10:00" }),
@@ -751,7 +751,7 @@ describe("VerifiablClient with OAuth client credentials", () => {
 
     const result = await client.registerNonPii(REQUEST);
 
-    expect(result.linkingToken).toBe(LT);
+    expect(result.verifiablId).toBe(VERIFIABL_ID);
     expect(tokenRequests).toBe(2);
     expect(apiCalls).toBe(2);
   });

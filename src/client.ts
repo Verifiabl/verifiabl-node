@@ -228,7 +228,7 @@ export class VerifiablClient {
 
   /**
    * Register non-PII payslip data and decryption metadata. Returns the
-   * linking token to embed in a locally generated barcode.
+   * Verifiabl ID to embed in a locally generated barcode.
    */
   async registerNonPii(
     request: RegisterNonPiiRequest,

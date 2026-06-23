@@ -1,6 +1,6 @@
 {
   "name": "verifiabl",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Official Verifiabl Node.js SDK for issuing payslip QR codes, formatting PII, AES-256-GCM encryption helpers, and typed issuer API calls.",
   "license": "MIT",
   "repository": {
@@ -27,7 +27,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "publishConfig": {
     "access": "public"
