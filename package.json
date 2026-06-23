@@ -27,8 +27,7 @@
     }
   },
   "files": [
-    "dist",
-    "CHANGELOG.md"
+    "dist"
   ],
   "publishConfig": {
     "access": "public"
