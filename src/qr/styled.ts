@@ -80,22 +80,35 @@ const FRAME_QR_BOX_SIZE = 80;
 // or above IDEAL_MODULE_PX at the default "M" ceiling (the pristine tier).
 const MIN_BADGE_WIDTH = 480;
 const FINDER_SIZE = 7;
-// Degradation ladder, densest-last. The branded frame's outer size is fixed, so
-// the only levers are error-correction level and module size inside the fixed
-// QR box. Starting from the caller's ceiling (`maxErrorCorrection`, default
-// "M"), we keep the highest correction level (best damage recovery: Q ~25%,
-// M ~15%, L ~7%) whose modules still clear the floor, stepping down only when
-// forced, and never varying the frame. A higher ceiling means more modules
-// (a denser code) for the same payload; "M" is the visually cleaner default,
-// "Q" trades density for damage tolerance. Error correction is invisible to
-// the scan service, which only reads the decoded URL.
+// Degradation ladder, highest-ECC-first (Q -> M -> L; Q is the densest, most
+// damage-tolerant level). The branded frame's outer size is fixed, so the only
+// levers are error-correction level and module size inside the fixed QR box.
+// Starting from the caller's ceiling (`maxErrorCorrection`, default "M"), we
+// keep the highest correction level (best damage recovery: Q ~25%, M ~15%,
+// L ~7%) whose modules still clear the floor, stepping down only when forced,
+// and never varying the frame. A higher ceiling means more modules (a denser
+// code) for the same payload; "M" is the visually cleaner default, "Q" trades
+// density for damage tolerance. Error correction is invisible to the scan
+// service, which only reads the decoded URL.
 const FULL_ERROR_CORRECTION_LADDER = ["Q", "M", "L"] as const;
 const DEFAULT_MAX_ERROR_CORRECTION = "M" as const;
 
-/** The ladder from `ceiling` down to "L", e.g. "M" yields ["M", "L"]. */
+/**
+ * The ladder from `ceiling` down to "L", e.g. "M" yields ["M", "L"].
+ *
+ * Guards the ceiling at runtime: `maxErrorCorrection` is a public option, so an
+ * untyped (JS) caller could pass an unexpected value. Without this, `indexOf`
+ * would return -1 and `slice(-1)` would silently force ["L"], the weakest
+ * level. Fail loudly instead.
+ */
 function errorCorrectionLadder(ceiling: "Q" | "M"): readonly BarcodeErrorCorrectionLevel[] {
-  const start = FULL_ERROR_CORRECTION_LADDER.indexOf(ceiling);
-  return FULL_ERROR_CORRECTION_LADDER.slice(start);
+  // Validate against the allowed ceilings, not just membership in the full
+  // ladder: "L" is a real ladder entry but not a valid ceiling, and would
+  // otherwise pass through as an L-only (weakest) ladder.
+  if (ceiling !== "Q" && ceiling !== "M") {
+    throw new Error(`maxErrorCorrection must be "Q" or "M" (received ${JSON.stringify(ceiling)})`);
+  }
+  return FULL_ERROR_CORRECTION_LADDER.slice(FULL_ERROR_CORRECTION_LADDER.indexOf(ceiling));
 }
 
 // Pristine target: at or above this module size (px) at the chosen ceiling, the

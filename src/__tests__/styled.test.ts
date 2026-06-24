@@ -115,6 +115,16 @@ describe("createBarcodeSvg", () => {
     expect(result.modulePx).toBeLessThan(createBarcodeSvg(PARTS).modulePx);
   });
 
+  it("rejects an invalid maxErrorCorrection instead of silently forcing L", () => {
+    // An untyped (JS) caller could pass a value outside "Q" | "M"; the ladder
+    // must fail loudly rather than slice down to the weakest level.
+    expect(() =>
+      createBarcodeSvg(PARTS, {
+        maxErrorCorrection: "L" as unknown as "Q" | "M",
+      }),
+    ).toThrow(/maxErrorCorrection must be "Q" or "M"/);
+  });
+
   // Quiet zone: the white margin from the inner frame border to the QR matrix
   // must be >= 4 modules. The fixed white gutter covers it for dense symbols;
   // small/sparse symbols (large modules) get a larger internal inset. "AA" is
