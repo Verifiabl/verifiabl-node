@@ -24,6 +24,15 @@ export interface BarcodeSvgOptions {
   scanBaseUrl?: string;
   /** Total badge width in SVG user units / px (default: 480, the minimum). */
   width?: number;
+  /**
+   * Highest QR error-correction level to use. The renderer still steps below
+   * this only when the payload would not otherwise fit the fixed frame.
+   *
+   * Default "M" (~15% damage recovery) keeps the modules large and the symbol
+   * visually clean. Choose "Q" (~25% recovery) for documents expected to take
+   * heavy print wear, accepting a denser code (one or two QR versions larger).
+   */
+  maxErrorCorrection?: "Q" | "M";
 }
 
 /** QR error-correction level chosen by the damage-first degradation ladder. */
@@ -37,16 +46,18 @@ export interface BarcodeSvgResult {
   /** The exact string encoded in the QR code. */
   content: string;
   /**
-   * Error-correction level actually used. Normally "Q"; drops to "M" or "L"
-   * only for unusually long PII so it still fits the fixed frame.
+   * Error-correction level actually used. Normally the configured ceiling
+   * (`maxErrorCorrection`, default "M"); drops below it only for unusually
+   * long PII so the code still fits the fixed frame.
    */
   errorCorrectionLevel: BarcodeErrorCorrectionLevel;
   /** Rendered size of one QR module, in output pixels. */
   modulePx: number;
   /**
    * True when the ladder had to trade scan robustness to fit the payload
-   * (error correction below "Q", or modules below the ideal size). False for
-   * essentially all real records. Log this to observe the long tail at scale.
+   * (error correction below the configured ceiling, or modules below the ideal
+   * size). False for essentially all real records. Log this to observe the
+   * long tail at scale.
    */
   degraded: boolean;
 }
@@ -66,17 +77,28 @@ const FRAME_QR_BOX_X = 8;
 const FRAME_QR_BOX_Y = 59;
 const FRAME_QR_BOX_SIZE = 80;
 // At this width, a realistic fully-populated PII record renders QR modules at
-// or above IDEAL_MODULE_PX under "Q" error correction (the pristine tier).
+// or above IDEAL_MODULE_PX at the default "M" ceiling (the pristine tier).
 const MIN_BADGE_WIDTH = 480;
 const FINDER_SIZE = 7;
-// Damage-first degradation ladder. The branded frame's outer size is fixed, so
+// Degradation ladder, densest-last. The branded frame's outer size is fixed, so
 // the only levers are error-correction level and module size inside the fixed
-// QR box. We keep the highest correction level (best damage recovery: Q ~25%,
-// M ~15%, L ~7%) whose modules still clear the floor, trading damage tolerance
-// for resolution only when forced, and never varying the frame. Error
-// correction is invisible to the scan service, which only reads the decoded URL.
-const ERROR_CORRECTION_LADDER = ["Q", "M", "L"] as const;
-// Pristine target: at or above this module size (px) with "Q" correction, the
+// QR box. Starting from the caller's ceiling (`maxErrorCorrection`, default
+// "M"), we keep the highest correction level (best damage recovery: Q ~25%,
+// M ~15%, L ~7%) whose modules still clear the floor, stepping down only when
+// forced, and never varying the frame. A higher ceiling means more modules
+// (a denser code) for the same payload; "M" is the visually cleaner default,
+// "Q" trades density for damage tolerance. Error correction is invisible to
+// the scan service, which only reads the decoded URL.
+const FULL_ERROR_CORRECTION_LADDER = ["Q", "M", "L"] as const;
+const DEFAULT_MAX_ERROR_CORRECTION = "M" as const;
+
+/** The ladder from `ceiling` down to "L", e.g. "M" yields ["M", "L"]. */
+function errorCorrectionLadder(ceiling: "Q" | "M"): readonly BarcodeErrorCorrectionLevel[] {
+  const start = FULL_ERROR_CORRECTION_LADDER.indexOf(ceiling);
+  return FULL_ERROR_CORRECTION_LADDER.slice(start);
+}
+
+// Pristine target: at or above this module size (px) at the chosen ceiling, the
 // code is not considered degraded.
 const IDEAL_MODULE_PX = 4;
 // Absolute floor: a module smaller than this (px) is unreliable for real-world
@@ -261,12 +283,14 @@ export function createBarcodeSvg(
   }
   const content = buildScanUrl(parts, scanOptions);
 
+  const ladder = errorCorrectionLadder(options.maxErrorCorrection ?? DEFAULT_MAX_ERROR_CORRECTION);
   const { qr, errorCorrectionLevel, size, moduleSize, modulePx, insetModules } = selectQrRendering(
     content,
     badgeWidth,
+    ladder,
   );
   const matrixData = qr.modules.data;
-  const degraded = errorCorrectionLevel !== "Q" || modulePx < IDEAL_MODULE_PX;
+  const degraded = errorCorrectionLevel !== ladder[0] || modulePx < IDEAL_MODULE_PX;
 
   const height = round2((badgeWidth * FRAME_VIEWBOX_HEIGHT) / FRAME_VIEWBOX_WIDTH);
   const qrPadding = insetModules * moduleSize;
@@ -309,16 +333,21 @@ interface SelectedQrRendering {
 }
 
 /**
- * Walk the damage-first ladder and pick the rendering that fits the fixed
- * frame: the highest error-correction level whose modules still clear
- * MIN_MODULE_PX at this width. The frame's outer width and height never change.
- * Hard-errors if even the lowest level cannot fit, so an over-long payload
- * fails loudly at issuance instead of producing an unscannable code.
+ * Walk the degradation ladder and pick the rendering that fits the fixed
+ * frame: the highest error-correction level (starting from the caller's
+ * ceiling) whose modules still clear MIN_MODULE_PX at this width. The frame's
+ * outer width and height never change. Hard-errors if even the lowest level
+ * cannot fit, so an over-long payload fails loudly at issuance instead of
+ * producing an unscannable code.
  */
-function selectQrRendering(content: string, badgeWidth: number): SelectedQrRendering {
+function selectQrRendering(
+  content: string,
+  badgeWidth: number,
+  ladder: readonly BarcodeErrorCorrectionLevel[],
+): SelectedQrRendering {
   const scale = badgeWidth / FRAME_VIEWBOX_WIDTH;
   let densestSize: number | null = null;
-  for (const errorCorrectionLevel of ERROR_CORRECTION_LADDER) {
+  for (const errorCorrectionLevel of ladder) {
     let qr: ReturnType<typeof QRCode.create>;
     try {
       qr = QRCode.create(content, { errorCorrectionLevel });
