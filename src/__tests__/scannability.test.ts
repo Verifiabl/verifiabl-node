@@ -13,7 +13,7 @@ import { type BarcodeSvgOptions, createBarcodeSvg } from "../qr/styled.js";
  * never break machine readability.
  */
 
-const VERIFIABL_ID = "AbCdEfGhIjKlMnOpQrStUv";
+const VERIFIABL_REF = "AbCdEfGhIjKlMnOpQrStUv";
 const FIXTURE_KEY = Buffer.alloc(32, 7);
 const MIN_TESTED_RASTER_WIDTH = 480;
 // Geometry pixel-sampling renders at a fixed raster size independent of the
@@ -158,7 +158,7 @@ function partsFromPii(fields: PiiFields): { parts: BarcodeParts; plaintext: stri
   const plaintext = formatPii(fields);
   return {
     parts: {
-      verifiablId: VERIFIABL_ID,
+      verifiablReference: VERIFIABL_REF,
       encryptedPii: encryptFixture(plaintext),
     },
     plaintext,
@@ -315,7 +315,7 @@ describe("styled QR scannability", () => {
     { label: "drops to L", plaintext: `P1|${"A".repeat(1000)}`, ec: "L" },
   ])("decodes a $label record at the fixed frame and flags it degraded", ({ plaintext, ec }) => {
     const parts: BarcodeParts = {
-      verifiablId: VERIFIABL_ID,
+      verifiablReference: VERIFIABL_REF,
       encryptedPii: encryptFixture(plaintext),
     };
     const result = createBarcodeSvg(parts);
@@ -327,7 +327,7 @@ describe("styled QR scannability", () => {
 
   it("hard-errors when PII cannot fit the fixed frame even degraded to L", () => {
     const parts: BarcodeParts = {
-      verifiablId: VERIFIABL_ID,
+      verifiablReference: VERIFIABL_REF,
       encryptedPii: encryptFixture(`P1|${"A".repeat(1200)}`),
     };
     expect(() => createBarcodeSvg(parts)).toThrow(

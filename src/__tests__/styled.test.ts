@@ -2,9 +2,9 @@ import QRCode from "qrcode";
 import { buildScanUrl } from "../payload.js";
 import { createBarcodeSvg } from "../qr/styled.js";
 
-const VERIFIABL_ID = "AbCdEfGhIjKlMnOpQrStUv";
+const VERIFIABL_REF = "AbCdEfGhIjKlMnOpQrStUv";
 const CIPHERTEXT = "Zm9vYmFyYmF6cXV4XzEyMzQ1Njc4OTBhYmNkZWZnaGlqa2xtbm9w";
-const PARTS = { verifiablId: VERIFIABL_ID, encryptedPii: CIPHERTEXT };
+const PARTS = { verifiablReference: VERIFIABL_REF, encryptedPii: CIPHERTEXT };
 const FRAME_GEOMETRY = [
   'viewBox="0 0 96 151"',
   'width="94" height="149" rx="7" stroke="#ADADAD" stroke-width="2" fill="none"',

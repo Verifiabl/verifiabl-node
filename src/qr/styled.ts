@@ -241,7 +241,7 @@ function renderDefaultHeader(textColor: string): string {
 /**
  * Render the branded Verifiabl barcode as SVG.
  *
- * Takes the Verifiabl ID from `client.registerNonPii` and the encrypted PII
+ * Takes the Verifiabl reference from `client.registerNonPii` and the encrypted PII
  * ciphertext from `encryptPii`, then returns a standalone SVG suitable for
  * embedding in a payslip PDF.
  */
