@@ -303,15 +303,39 @@ describe("styled QR scannability", () => {
     expect(decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(createBarcodeSvg(parts).content);
   });
 
-  // The damage-first ladder degrades error correction (not the frame) for
-  // unusually long PII. The degraded code keeps the fixed frame size and stays
-  // scannable when rendered at a realistic resolution. (Decoding at exactly 1:1
-  // is a pixel-grid aliasing artifact, not a real-world scan condition, so we
-  // rasterise at 2x to represent any normal-DPI render or camera capture.)
+  it("defaults to error-correction M and renders a clean (non-degraded) code", () => {
+    // The default ceiling is M, not Q: a realistic record is one or two QR
+    // versions smaller (larger modules) than under Q, and not flagged degraded.
+    const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
+    const result = createBarcodeSvg(parts);
+    expect(result.errorCorrectionLevel).toBe("M");
+    expect(result.degraded).toBe(false);
+  });
+
+  it("maxErrorCorrection 'Q' stays available and yields a denser code", () => {
+    // Opting back into Q packs the same payload into more (smaller) modules for
+    // extra damage recovery; both encodings remain scannable and non-degraded.
+    const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
+    const defaultResult = createBarcodeSvg(parts);
+    const qResult = createBarcodeSvg(parts, { maxErrorCorrection: "Q" });
+    expect(qResult.errorCorrectionLevel).toBe("Q");
+    expect(qResult.degraded).toBe(false);
+    // Denser: Q's modules are smaller than the default M's at the same width.
+    expect(qResult.modulePx).toBeLessThan(defaultResult.modulePx);
+    expect(decode(parts, { maxErrorCorrection: "Q" })).toBe(qResult.content);
+  });
+
+  // The ladder degrades error correction (not the frame) for unusually long
+  // PII. The degraded code keeps the fixed frame size and stays scannable when
+  // rendered at a realistic resolution. (Decoding at exactly 1:1 is a pixel-grid
+  // aliasing artifact, not a real-world scan condition, so we rasterise at 2x to
+  // represent any normal-DPI render or camera capture.) Expectations follow the
+  // default "M" ceiling: the code stays at M (sub-ideal modules flag degraded)
+  // until even M won't fit, then drops to L.
   const REALISTIC_SCAN_RASTER = MIN_TESTED_RASTER_WIDTH * 2;
   it.each([
-    { label: "degraded Q", plaintext: `P1|${"A".repeat(500)}`, ec: "Q" },
-    { label: "drops to M", plaintext: `P1|${"A".repeat(800)}`, ec: "M" },
+    { label: "stays M, sub-ideal modules", plaintext: `P1|${"A".repeat(500)}`, ec: "M" },
+    { label: "stays M near the floor", plaintext: `P1|${"A".repeat(800)}`, ec: "M" },
     { label: "drops to L", plaintext: `P1|${"A".repeat(1000)}`, ec: "L" },
   ])("decodes a $label record at the fixed frame and flags it degraded", ({ plaintext, ec }) => {
     const parts: BarcodeParts = {
