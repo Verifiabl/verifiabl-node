@@ -13,7 +13,8 @@ const FRAME_GEOMETRY = [
 ];
 
 function expectedQrTransform(content: string): string {
-  const qr = QRCode.create(content, { errorCorrectionLevel: "Q" });
+  // Mirror the default render, which uses the "M" error-correction ceiling.
+  const qr = QRCode.create(content, { errorCorrectionLevel: "M" });
   const moduleSize = 80 / (qr.modules.size + 2);
   return `transform="translate(${round2(8 + moduleSize)} ${round2(59 + moduleSize)})"`;
 }
@@ -35,7 +36,7 @@ describe("createBarcodeSvg", () => {
 
   it("renders square data modules and rounded finder sections", () => {
     const { svg, content } = createBarcodeSvg(PARTS);
-    const qr = QRCode.create(content, { errorCorrectionLevel: "Q" });
+    const qr = QRCode.create(content, { errorCorrectionLevel: "M" });
     const size = qr.modules.size;
 
     let darkDataModules = 0;
@@ -99,11 +100,29 @@ describe("createBarcodeSvg", () => {
     expect(() => createBarcodeSvg(PARTS, { width: 479 })).toThrow("at least 480");
   });
 
-  it("renders the common case pristine: Q error correction, not degraded", () => {
+  it("renders the common case pristine: M error correction, not degraded", () => {
     const result = createBarcodeSvg(PARTS);
-    expect(result.errorCorrectionLevel).toBe("Q");
+    expect(result.errorCorrectionLevel).toBe("M");
     expect(result.degraded).toBe(false);
     expect(result.modulePx).toBeGreaterThanOrEqual(4);
+  });
+
+  it("raises density on demand: maxErrorCorrection 'Q' uses Q, still not degraded", () => {
+    const result = createBarcodeSvg(PARTS, { maxErrorCorrection: "Q" });
+    expect(result.errorCorrectionLevel).toBe("Q");
+    expect(result.degraded).toBe(false);
+    // Q packs more modules in the fixed box, so each module is smaller.
+    expect(result.modulePx).toBeLessThan(createBarcodeSvg(PARTS).modulePx);
+  });
+
+  it("rejects an invalid maxErrorCorrection instead of silently forcing L", () => {
+    // An untyped (JS) caller could pass a value outside "Q" | "M"; the ladder
+    // must fail loudly rather than slice down to the weakest level.
+    expect(() =>
+      createBarcodeSvg(PARTS, {
+        maxErrorCorrection: "L" as unknown as "Q" | "M",
+      }),
+    ).toThrow(/maxErrorCorrection must be "Q" or "M"/);
   });
 
   // Quiet zone: the white margin from the inner frame border to the QR matrix
@@ -125,12 +144,13 @@ describe("createBarcodeSvg", () => {
     expect(quietZoneModules).toBeGreaterThanOrEqual(4 - 1e-6);
   });
 
-  // The damage-first ladder keeps the highest error correction whose modules
-  // still clear the floor, never varying the fixed frame. Lowercase base64url
-  // ("a") forces byte mode like real encrypted PII. Thresholds are at width 480.
+  // From the default "M" ceiling, the ladder keeps M (flagging degraded once
+  // modules fall below the ideal size) until even M won't fit, then drops to L,
+  // never varying the fixed frame. Lowercase base64url ("a") forces byte mode
+  // like real encrypted PII. Thresholds are at width 480.
   it.each([
-    { label: "long: degraded Q", ciphertext: "a".repeat(600), ec: "Q" },
-    { label: "longer: drops to M", ciphertext: "a".repeat(1000), ec: "M" },
+    { label: "stays M, sub-ideal modules", ciphertext: "a".repeat(1000), ec: "M" },
+    { label: "stays M near the floor", ciphertext: "a".repeat(1100), ec: "M" },
     { label: "longest fittable: drops to L", ciphertext: "a".repeat(1300), ec: "L" },
   ])("degrades error correction in order for $label", ({ ciphertext, ec }) => {
     const result = createBarcodeSvg({ ...PARTS, encryptedPii: ciphertext });
