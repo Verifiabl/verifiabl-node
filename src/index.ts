@@ -23,7 +23,7 @@ export {
   SANDBOX_ISSUER_BASE_URL,
   SANDBOX_SCAN_BASE_URL,
   type ScanUrlOptions,
-  verifiablIdSchema,
+  verifiablReferenceSchema,
 } from "./payload.js";
 export {
   formatPii,
