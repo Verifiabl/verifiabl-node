@@ -1,4 +1,10 @@
-import { buildBarcodePayload, buildScanUrl, DEFAULT_SCAN_BASE_URL } from "../payload.js";
+import {
+  buildBarcodePayload,
+  buildScanUrl,
+  DEFAULT_SCAN_BASE_URL,
+  generateVerifiablReference,
+  verifiablReferenceSchema,
+} from "../payload.js";
 
 const VERIFIABL_REF = "AbCdEfGhIjKlMnOpQrStUv"; // 22 base64url chars
 const CIPHERTEXT = "Zm9vYmFyYmF6cXV4";
@@ -61,5 +67,24 @@ describe("buildScanUrl", () => {
         { scanBaseUrl: "http://evil.example" },
       ),
     ).toThrow("https");
+  });
+});
+
+describe("generateVerifiablReference", () => {
+  it("returns a 22-char base64url string that passes the wire schema", () => {
+    const reference = generateVerifiablReference();
+    expect(reference).toHaveLength(22);
+    expect(reference).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(() => verifiablReferenceSchema.parse(reference)).not.toThrow();
+  });
+
+  it("produces unique references across many calls (128 bits of entropy)", () => {
+    // 10_000 random 128-bit strings have a collision probability around
+    // 1e-31; a duplicate here means the generator is not actually random.
+    const seen = new Set<string>();
+    for (let i = 0; i < 10_000; i++) {
+      seen.add(generateVerifiablReference());
+    }
+    expect(seen.size).toBe(10_000);
   });
 });

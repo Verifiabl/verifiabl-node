@@ -9,8 +9,13 @@ import {
   createBarcodeFromWire,
   createBarcodeRequestSchema,
   createBarcodeToWire,
+  type RegisterNonPiiBatchRequest,
+  type RegisterNonPiiBatchResponse,
   type RegisterNonPiiRequest,
   type RegisterNonPiiResponse,
+  registerNonPiiBatchFromWire,
+  registerNonPiiBatchRequestSchema,
+  registerNonPiiBatchToWire,
   registerNonPiiRequestSchema,
   registrationFromWire,
   registrationToWire,
@@ -166,9 +171,9 @@ export interface VerifiablClientOptions {
   environment?: VerifiablEnvironment;
   /**
    * Advanced local development override for issuer API calls
-   * (`registerNonPii` and `createBarcode`). Most integrations should
-   * leave this unset and use `environment` instead. Must use https,
-   * except localhost may use http.
+   * (`registerNonPii`, `registerNonPiiBatch`, and `createBarcode`). Most
+   * integrations should leave this unset and use `environment` instead.
+   * Must use https, except localhost may use http.
    */
   issuerBaseUrl?: string;
   /** Request timeout in milliseconds (default: 30000). */
@@ -248,6 +253,21 @@ export class VerifiablClient {
   ): Promise<CreateBarcodeResponse> {
     const body = createBarcodeToWire(createBarcodeRequestSchema.parse(request));
     return this.post("/v1/registerAndBuildSymbol", body, options, createBarcodeFromWire);
+  }
+
+  /**
+   * Register a batch of non-PII payslip records in a single request, up to
+   * `MAX_BATCH_RECORDS` records. Each record carries a provider-minted
+   * Verifiabl reference (from `generateVerifiablReference`) and the same
+   * fields as `registerNonPii`. The response contains a per-record result
+   * index-aligned to the input array: one bad record never fails the batch.
+   */
+  async registerNonPiiBatch(
+    request: RegisterNonPiiBatchRequest,
+    options: VerifiablRequestOptions = {},
+  ): Promise<RegisterNonPiiBatchResponse> {
+    const body = registerNonPiiBatchToWire(registerNonPiiBatchRequestSchema.parse(request));
+    return this.post("/v1/registerNonPIIBatch", body, options, registerNonPiiBatchFromWire);
   }
 
   private async post<T>(
