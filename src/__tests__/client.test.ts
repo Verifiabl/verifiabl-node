@@ -696,6 +696,23 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     });
   });
 
+  it("passes through batch statuses this SDK version does not know", async () => {
+    const fetch = mockFetch(200, {
+      results: [{ index: 0, status: "skipped", verifiabl_reference: VERIFIABL_REF_A }],
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch({
+      records: [{ ...REQUEST, verifiablReference: VERIFIABL_REF_A }],
+    });
+
+    expect(result.results[0]).toEqual({
+      index: 0,
+      status: "skipped",
+      verifiablReference: VERIFIABL_REF_A,
+    });
+  });
+
   it("tolerates additive fields in batch results", async () => {
     const fetch = mockFetch(200, {
       results: [
