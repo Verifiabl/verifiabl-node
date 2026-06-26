@@ -69,6 +69,42 @@ const { png } = await createBarcodePng(
 
 `createBarcodeSvg` is available if you prefer SVG. Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
 
+## Batch registration
+
+For pay runs, register up to 1000 records in one request with `registerNonPiiBatch`. The provider mints each Verifiabl reference up-front with `generateVerifiablReference` and includes it on each record, so the whole batch can go in one round trip. Results are returned index-aligned to the input; one bad record never fails the whole batch.
+
+```ts
+import { encryptPii, formatPii, generateVerifiablReference } from "verifiabl";
+
+const issuedAt = new Date().toISOString();
+const prepared = payslips.map((payslip) => {
+  const verifiablReference = generateVerifiablReference();
+  const { encryptedPii, encryptionMetadata } = encryptPii(
+    formatPii(payslip.pii),
+    key,
+    keyVersion,
+  );
+  // Keep `encryptedPii` alongside the reference locally: you need both to render the barcode.
+  return { verifiablReference, encryptedPii, encryptionMetadata, payslip };
+});
+
+const { results } = await client.registerNonPiiBatch({
+  records: prepared.map(({ verifiablReference, encryptionMetadata, payslip }) => ({
+    verifiablReference,
+    schema: "au.payslip.v1",
+    issuedAt,
+    payslipData: { periodStart: payslip.periodStart, periodEnd: payslip.periodEnd },
+    encryptionMetadata,
+  })),
+});
+
+for (const result of results) {
+  if (result.status === "error") {
+    console.error(result.verifiablReference, result.code, result.detail);
+  }
+}
+```
+
 ## Environments
 
 Set `environment` to `production` (default) or `sandbox`. Pass the same value to the client and the barcode renderer, so the scan URL printed on the document matches where the record was registered.

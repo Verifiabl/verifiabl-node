@@ -1,5 +1,9 @@
 import { VerifiablApiError, VerifiablAuthError, VerifiablClient } from "../client.js";
-import type { CreateBarcodeRequest, RegisterNonPiiRequest } from "../types.js";
+import type {
+  CreateBarcodeRequest,
+  RegisterNonPiiBatchRequest,
+  RegisterNonPiiRequest,
+} from "../types.js";
 
 const VERIFIABL_REF = "AbCdEfGhIjKlMnOpQrStUv";
 const CIPHERTEXT = "Zm9v";
@@ -580,6 +584,127 @@ describe("VerifiablClient with static auth", () => {
     await expect(
       client.registerNonPii({ ...REQUEST, issuedAt: "2026-06-11T10:00:00+10:00" }),
     ).rejects.toThrow("UTC");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("VerifiablClient.registerNonPiiBatch", () => {
+  const VERIFIABL_REF_A = "AbCdEfGhIjKlMnOpQrStUv";
+  const VERIFIABL_REF_B = "WxYz0123456789ABCDEFGH";
+
+  const BATCH_REQUEST: RegisterNonPiiBatchRequest = {
+    records: [
+      { ...REQUEST, verifiablReference: VERIFIABL_REF_A },
+      { ...REQUEST, verifiablReference: VERIFIABL_REF_B },
+    ],
+  };
+
+  function batchResponseBody(): unknown {
+    return {
+      results: [
+        { index: 0, status: "created", verifiabl_reference: VERIFIABL_REF_A },
+        {
+          index: 1,
+          status: "error",
+          verifiabl_reference: VERIFIABL_REF_B,
+          code: "CONFLICT",
+          detail: "verifiabl_reference already registered with different data",
+        },
+      ],
+    };
+  }
+
+  it("posts the batch to the batch endpoint with the wire body and maps the response", async () => {
+    const fetch = mockFetch(200, batchResponseBody());
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch(BATCH_REQUEST);
+
+    const [url] = firstFetchCall(fetch);
+    expect(url).toBe("https://register.verifiabl.io/v1/registerNonPIIBatch");
+    expect(requestBody(firstFetchCall(fetch))).toEqual({
+      records: [
+        { verifiabl_reference: VERIFIABL_REF_A, ...WIRE_REQUEST },
+        { verifiabl_reference: VERIFIABL_REF_B, ...WIRE_REQUEST },
+      ],
+    });
+    expect(result.results).toEqual([
+      { index: 0, status: "created", verifiablReference: VERIFIABL_REF_A },
+      {
+        index: 1,
+        status: "error",
+        verifiablReference: VERIFIABL_REF_B,
+        code: "CONFLICT",
+        detail: "verifiabl_reference already registered with different data",
+      },
+    ]);
+  });
+
+  it("routes the batch to the sandbox issuer origin", async () => {
+    const fetch = mockFetch(200, { results: [] });
+    const client = new VerifiablClient({ ...STATIC_AUTH, environment: "sandbox", fetch });
+
+    await client.registerNonPiiBatch({
+      records: [{ ...REQUEST, verifiablReference: VERIFIABL_REF_A }],
+    });
+
+    expect(firstFetchCall(fetch)[0]).toBe(
+      "https://register.sandbox.verifiabl.io/v1/registerNonPIIBatch",
+    );
+  });
+
+  it("tolerates additive fields in batch results", async () => {
+    const fetch = mockFetch(200, {
+      results: [
+        {
+          index: 0,
+          status: "created",
+          verifiabl_reference: VERIFIABL_REF_A,
+          // The API may add per-record fields (e.g. an id); ignore them.
+          id: "rec_123",
+        },
+      ],
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch({
+      records: [{ ...REQUEST, verifiablReference: VERIFIABL_REF_A }],
+    });
+
+    expect(result.results).toEqual([
+      { index: 0, status: "created", verifiablReference: VERIFIABL_REF_A },
+    ]);
+  });
+
+  it("rejects records with a malformed Verifiabl reference before sending", async () => {
+    const fetch = mockFetch(200, { results: [] });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await expect(
+      client.registerNonPiiBatch({
+        records: [{ ...REQUEST, verifiablReference: "too-short" }],
+      }),
+    ).rejects.toThrow();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects an empty batch before sending", async () => {
+    const fetch = mockFetch(200, { results: [] });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await expect(client.registerNonPiiBatch({ records: [] })).rejects.toThrow();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects batches above the API maximum before sending", async () => {
+    const fetch = mockFetch(200, { results: [] });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const records = Array.from({ length: 1001 }, () => ({
+      ...REQUEST,
+      verifiablReference: VERIFIABL_REF_A,
+    }));
+    await expect(client.registerNonPiiBatch({ records })).rejects.toThrow();
     expect(fetch).not.toHaveBeenCalled();
   });
 });

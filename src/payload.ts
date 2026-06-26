@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
@@ -13,6 +14,21 @@ export const verifiablReferenceSchema = z
   .string()
   .length(22, "Verifiabl reference must be exactly 22 base64url characters")
   .regex(BASE64URL_RE, "Verifiabl reference must be base64url encoded");
+
+/**
+ * Generate a fresh Verifiabl reference: 16 cryptographically random bytes
+ * (128 bits) encoded as 22 base64url characters without padding. Matches the
+ * server's algorithm so a provider-minted reference is indistinguishable
+ * from one issued by the API.
+ *
+ * Use this for `registerNonPiiBatch`, where providers mint their own
+ * references up-front so a whole pay run can be submitted in one request.
+ * Single-record `registerNonPii` does not need it; the API mints a reference
+ * for you and returns it.
+ */
+export function generateVerifiablReference(): string {
+  return randomBytes(16).toString("base64url");
+}
 
 /** Encrypted PII ciphertext: base64url, as produced by `encryptPii`. */
 export const ciphertextSchema = z

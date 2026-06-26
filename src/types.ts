@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { verifiablReferenceSchema } from "./payload.js";
 
 function tuple<const T extends readonly string[]>(value: T): T {
   return value;
@@ -207,6 +208,106 @@ export function createBarcodeFromWire(value: unknown): CreateBarcodeResponse {
       widthPx: wire.symbol.width_px,
       heightPx: wire.symbol.height_px,
     },
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * Batch registration                                                  *
+ *                                                                     *
+ * `registerNonPiiBatch` lets a pay run be submitted in one request.    *
+ * The provider mints each record's reference up-front with             *
+ * `generateVerifiablReference` and includes it in the record.          *
+ * ------------------------------------------------------------------ */
+
+/** Maximum records per batch request. Matches the API's MAX_BATCH_RECORDS. */
+export const MAX_BATCH_RECORDS = 1000;
+
+const batchRecordRequestSchema = basePayslipRegistrationSchema
+  .extend({
+    verifiablReference: verifiablReferenceSchema,
+  })
+  .strict();
+
+export const registerNonPiiBatchRequestSchema = z
+  .object({
+    records: z
+      .array(batchRecordRequestSchema)
+      .min(1, "records must contain at least one record")
+      .max(MAX_BATCH_RECORDS, `records must contain at most ${MAX_BATCH_RECORDS} records`),
+  })
+  .strict();
+
+export type RegisterNonPiiBatchRequest = z.infer<typeof registerNonPiiBatchRequestSchema>;
+
+/**
+ * Per-record outcome, index-aligned to the input `records` array.
+ * `status` is "created" for a newly registered record, "duplicate" for an
+ * idempotent resend of identical content, or "error" for a per-record
+ * failure. One bad record never fails the whole batch.
+ */
+export const batchRecordResultSchema = z.object({
+  index: z.number().int().nonnegative(),
+  status: z.enum(["created", "duplicate", "error"]),
+  verifiablReference: z.string().length(22).regex(BASE64URL_RE),
+  code: z.string().optional(),
+  detail: z.string().optional(),
+});
+
+export type BatchRecordResult = z.infer<typeof batchRecordResultSchema>;
+
+export const registerNonPiiBatchResponseSchema = z.object({
+  results: z.array(batchRecordResultSchema),
+});
+
+export type RegisterNonPiiBatchResponse = z.infer<typeof registerNonPiiBatchResponseSchema>;
+
+/** Map a validated batch request to the snake_case wire body. */
+export function registerNonPiiBatchToWire(
+  request: RegisterNonPiiBatchRequest,
+): Record<string, unknown> {
+  return {
+    records: request.records.map((record) => ({
+      verifiabl_reference: record.verifiablReference,
+      ...registrationToWire({
+        schema: record.schema,
+        issuedAt: record.issuedAt,
+        payslipData: record.payslipData,
+        encryptionMetadata: record.encryptionMetadata,
+      }),
+    })),
+  };
+}
+
+const batchRecordResultWireSchema = z.object({
+  index: z.number().int().nonnegative(),
+  status: z.enum(["created", "duplicate", "error"]),
+  verifiabl_reference: z.string().length(22).regex(BASE64URL_RE),
+  code: z.string().optional(),
+  detail: z.string().optional(),
+});
+
+const registerNonPiiBatchWireResponseSchema = z.object({
+  results: z.array(batchRecordResultWireSchema),
+});
+
+/** Parse and map a batch response from the snake_case wire shape. */
+export function registerNonPiiBatchFromWire(value: unknown): RegisterNonPiiBatchResponse {
+  const wire = registerNonPiiBatchWireResponseSchema.parse(value);
+  return {
+    results: wire.results.map((result) => {
+      const mapped: BatchRecordResult = {
+        index: result.index,
+        status: result.status,
+        verifiablReference: result.verifiabl_reference,
+      };
+      if (result.code !== undefined) {
+        mapped.code = result.code;
+      }
+      if (result.detail !== undefined) {
+        mapped.detail = result.detail;
+      }
+      return mapped;
+    }),
   };
 }
 
