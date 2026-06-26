@@ -653,6 +653,49 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     );
   });
 
+  it("surfaces the three per-record statuses, including idempotent duplicates", async () => {
+    // A resend of the same record set: the API replays "duplicate" for content
+    // that already exists under this reference, "error"/CONFLICT for a
+    // reference that exists with different content, and "created" for new ones.
+    const VERIFIABL_REF_C = "ZyXwVuTsRqPoNmLkJiHgFe";
+    const fetch = mockFetch(200, {
+      results: [
+        { index: 0, status: "duplicate", verifiabl_reference: VERIFIABL_REF_A },
+        {
+          index: 1,
+          status: "error",
+          verifiabl_reference: VERIFIABL_REF_B,
+          code: "CONFLICT",
+          detail: "verifiabl_reference already registered with different data",
+        },
+        { index: 2, status: "created", verifiabl_reference: VERIFIABL_REF_C },
+      ],
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch({
+      records: [
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_A },
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_B },
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_C },
+      ],
+    });
+
+    expect(result.results.map((r) => r.status)).toEqual(["duplicate", "error", "created"]);
+    expect(result.results[0]).toEqual({
+      index: 0,
+      status: "duplicate",
+      verifiablReference: VERIFIABL_REF_A,
+    });
+    expect(result.results[1]).toEqual({
+      index: 1,
+      status: "error",
+      verifiablReference: VERIFIABL_REF_B,
+      code: "CONFLICT",
+      detail: "verifiabl_reference already registered with different data",
+    });
+  });
+
   it("tolerates additive fields in batch results", async () => {
     const fetch = mockFetch(200, {
       results: [
