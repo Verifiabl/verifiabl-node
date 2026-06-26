@@ -240,26 +240,39 @@ export const registerNonPiiBatchRequestSchema = z
 export type RegisterNonPiiBatchRequest = z.infer<typeof registerNonPiiBatchRequestSchema>;
 
 /**
- * Per-record outcome, index-aligned to the input `records` array.
- * `status` is "created" for a newly registered record, "duplicate" for an
- * idempotent resend of identical content, or "error" for a per-record
- * failure. One bad record never fails the whole batch.
+ * Per-record outcome statuses the API returns today: "created" for a newly
+ * registered record, "duplicate" for an idempotent resend of identical
+ * content, "error" for a per-record failure. Like the error codes, the API
+ * may add statuses over time, so an unknown status flows through rather than
+ * failing the whole response.
  */
-export const batchRecordResultSchema = z.object({
-  index: z.number().int().nonnegative(),
-  status: z.enum(["created", "duplicate", "error"]),
-  verifiablReference: z.string().length(22).regex(BASE64URL_RE),
-  code: z.string().optional(),
-  detail: z.string().optional(),
-});
+export const KNOWN_BATCH_RECORD_STATUSES = tuple(["created", "duplicate", "error"]);
 
-export type BatchRecordResult = z.infer<typeof batchRecordResultSchema>;
+export type KnownBatchRecordStatus = (typeof KNOWN_BATCH_RECORD_STATUSES)[number];
 
-export const registerNonPiiBatchResponseSchema = z.object({
-  results: z.array(batchRecordResultSchema),
-});
+/**
+ * Per-record status. Typed as the known statuses plus `string` so a future
+ * API status flows through to your handling untouched while autocomplete
+ * still offers the known values.
+ */
+export type BatchRecordStatus = KnownBatchRecordStatus | (string & {});
 
-export type RegisterNonPiiBatchResponse = z.infer<typeof registerNonPiiBatchResponseSchema>;
+/**
+ * Per-record outcome, index-aligned to the input `records` array. `code` and
+ * `detail` accompany an "error" status. One bad record never fails the whole
+ * batch.
+ */
+export interface BatchRecordResult {
+  index: number;
+  status: BatchRecordStatus;
+  verifiablReference: string;
+  code?: string;
+  detail?: string;
+}
+
+export interface RegisterNonPiiBatchResponse {
+  results: BatchRecordResult[];
+}
 
 /** Map a validated batch request to the snake_case wire body. */
 export function registerNonPiiBatchToWire(
@@ -280,7 +293,10 @@ export function registerNonPiiBatchToWire(
 
 const batchRecordResultWireSchema = z.object({
   index: z.number().int().nonnegative(),
-  status: z.enum(["created", "duplicate", "error"]),
+  // Tolerant on purpose: an unknown status must pass through, not throw and
+  // discard the whole batch response. Known values are listed in
+  // KNOWN_BATCH_RECORD_STATUSES for callers to branch on.
+  status: z.string(),
   verifiabl_reference: z.string().length(22).regex(BASE64URL_RE),
   code: z.string().optional(),
   detail: z.string().optional(),
