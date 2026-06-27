@@ -66,5 +66,9 @@
     "@resvg/resvg-js": {
       "optional": true
     }
+  },
+  "overrides": {
+    "esbuild": "0.28.1",
+    "js-yaml": "^4.2.0"
   }
 }
