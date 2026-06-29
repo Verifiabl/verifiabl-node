@@ -56,7 +56,7 @@ export {
   type KnownBatchRecordStatus,
   type KnownVerifiablErrorCode,
   MAX_BATCH_RECORDS,
-  type PayslipData,
+  type PayslipNonPii,
   type RegisterNonPiiBatchRequest,
   type RegisterNonPiiBatchResponse,
   type RegisterNonPiiRequest,

@@ -53,7 +53,7 @@ const { encryptedPii, encryptionMetadata } = encryptPii(pii, key, keyVersion);
 const { verifiablReference } = await client.registerNonPii({
   schema: "au.payslip.v1",
   issuedAt: new Date().toISOString(),
-  payslipData: { periodStart: "2026-05-01", periodEnd: "2026-05-31" },
+  payslipNonPii: { periodStart: "2026-05-01", periodEnd: "2026-05-31" },
   encryptionMetadata,
 });
 
@@ -90,7 +90,7 @@ const { results } = await client.registerNonPiiBatch({
     verifiablReference,
     schema: "au.payslip.v1",
     issuedAt,
-    payslipData: { periodStart: payslip.periodStart, periodEnd: payslip.periodEnd },
+    payslipNonPii: { periodStart: payslip.periodStart, periodEnd: payslip.periodEnd },
     encryptionMetadata,
   })),
 });
