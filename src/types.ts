@@ -133,7 +133,8 @@ export const barcodeImageSchema = z.object({
 export type BarcodeImage = z.infer<typeof barcodeImageSchema>;
 
 export const createBarcodeResponseSchema = z.object({
-  id: z.string().min(1),
+  /** 22-char base64url Verifiabl reference embedded in the returned barcode. */
+  verifiablReference: z.string().length(22).regex(BASE64URL_RE),
   barcode: barcodeImageSchema,
 });
 
@@ -193,7 +194,7 @@ const barcodeImageWireSchema = z.object({
 });
 
 const createBarcodeApiWireResponseSchema = z.object({
-  id: z.string().min(1),
+  verifiabl_reference: z.string().length(22).regex(BASE64URL_RE),
   symbol: barcodeImageWireSchema,
 });
 
@@ -201,7 +202,7 @@ const createBarcodeApiWireResponseSchema = z.object({
 export function createBarcodeFromWire(value: unknown): CreateBarcodeResponse {
   const wire = createBarcodeApiWireResponseSchema.parse(value);
   return {
-    id: wire.id,
+    verifiablReference: wire.verifiabl_reference,
     barcode: {
       format: wire.symbol.format,
       data: wire.symbol.data,

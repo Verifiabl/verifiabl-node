@@ -53,7 +53,7 @@ function registerResponse(): Response {
 function createBarcodeResponse(): Response {
   return new Response(
     JSON.stringify({
-      id: "barcode-record",
+      verifiabl_reference: VERIFIABL_REF,
       symbol: { format: "png", data: "iVBORw0KGgo=", width_px: 720, height_px: 720 },
     }),
     { status: 201 },
@@ -245,7 +245,7 @@ describe("VerifiablClient with static auth", () => {
     const result = await client.createBarcode(CREATE_BARCODE_REQUEST);
 
     expect(result).toEqual({
-      id: "barcode-record",
+      verifiablReference: VERIFIABL_REF,
       barcode: { format: "png", data: "iVBORw0KGgo=", widthPx: 720, heightPx: 720 },
     });
     expect(firstFetchCall(fetchMock)[0]).toBe(
