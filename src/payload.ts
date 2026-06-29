@@ -18,13 +18,13 @@ export const verifiablReferenceSchema = z
 /**
  * Generate a fresh Verifiabl reference: 16 cryptographically random bytes
  * (128 bits) encoded as 22 base64url characters without padding. Matches the
- * server's algorithm so a provider-minted reference is indistinguishable
+ * server's algorithm so a provider-generated reference is indistinguishable
  * from one issued by the API.
  *
- * Use this for `registerNonPiiBatch`, where providers mint their own
+ * Use this for `registerNonPiiBatch`, where providers generate their own
  * references up-front so a whole pay run can be submitted in one request.
- * Single-record `registerNonPii` does not need it; the API mints a reference
- * for you and returns it.
+ * Single-record `registerNonPii` does not need it; the API generates a
+ * reference for you and returns it.
  */
 export function generateVerifiablReference(): string {
   return randomBytes(16).toString("base64url");
@@ -72,14 +72,13 @@ export function buildBarcodePayload({ verifiablReference, encryptedPii }: Barcod
 }
 
 /**
- * PDF metadata failsafe.
+ * PDF metadata copy of the payload.
  *
  * Write the barcode payload (`buildBarcodePayload`) into the payslip PDF's XMP
- * metadata in addition to the QR code, so the payload is carried in two places.
- * Both hold the identical encrypted `1|verifiablReference|ciphertext` value, NEVER plaintext PII (PDF
- * metadata is not encrypted). They differ only in durability: the QR is page
- * content, while the metadata copy can be removed by re-rendering, flattening,
- * or print-to-PDF.
+ * metadata in addition to the QR code, so a verifier can read the payload even
+ * when the QR itself cannot be scanned. Both hold the identical encrypted
+ * `1|verifiablReference|<encrypted PII>` value; never write plaintext PII to
+ * metadata, which is not encrypted.
  *
  * Store the single payload string under the XMP property below. Write it with
  * any PDF toolchain that can set a custom XMP property; the SDK only provides
@@ -87,7 +86,7 @@ export function buildBarcodePayload({ verifiablReference, encryptedPii }: Barcod
  * `/v1/verifications/payload`.
  *
  *   XMP namespace: https://verifiabl.io/ns/   (property `payload`)
- *   value: "1|<verifiablReference>|<ciphertext>"
+ *   value: "1|<verifiablReference>|<encrypted PII>"
  *
  * The namespace is permanent: it is embedded in already-issued PDFs, so it
  * must not change.

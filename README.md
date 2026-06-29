@@ -12,20 +12,18 @@ Verifiabl is for accredited payroll providers. You receive sandbox credentials a
 npm install verifiabl
 ```
 
-Requires Node.js 20+. The example below renders a PNG, which needs the optional renderer:
+Requires Node.js 20+. The example below renders an SVG badge, which needs no extra dependencies. To render a PNG instead (slower, and it pulls in a native renderer), also install:
 
 ```bash
 npm install @resvg/resvg-js
 ```
-
-If you render SVG instead (with `createBarcodeSvg`), you don't need it.
 
 ## Getting started
 
 This is the self-managed flow: register the payslip, encrypt the personal details locally, and generate the QR code yourself. You need four values from onboarding: your OAuth client ID and secret, your encryption key, and your key version.
 
 ```ts
-import { VerifiablClient, formatPii, encryptPii, createBarcodePng } from "verifiabl";
+import { VerifiablClient, formatPii, encryptPii, createBarcodeSvg } from "verifiabl";
 
 const client = new VerifiablClient({
   environment: "sandbox",
@@ -55,41 +53,35 @@ const { encryptedPii, encryptionMetadata } = encryptPii(pii, key, keyVersion);
 const { verifiablReference } = await client.registerNonPii({
   schema: "au.payslip.v1",
   issuedAt: new Date().toISOString(),
-  payslipData: { periodStart: "2026-05-01", periodEnd: "2026-05-31" },
+  payslipNonPii: { periodStart: "2026-05-01", periodEnd: "2026-05-31" },
   encryptionMetadata,
 });
 
-// 3. Render the QR code and embed the PNG in your payslip PDF.
-const { png } = await createBarcodePng(
+// 3. Render the QR code and embed the SVG in your payslip PDF.
+const { svg } = createBarcodeSvg(
   { verifiablReference, encryptedPii },
   { environment: "sandbox" },
-  720,
 );
 ```
 
-Prefer `createBarcodeSvg` when you can: SVG scales to any size without losing quality. Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
+Prefer `createBarcodeSvg` when you can: SVG scales to any size without losing quality. Use `createBarcodePng` when you need a raster PNG (it needs the `@resvg/resvg-js` renderer). Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
 
 ### Rendering many codes
 
-`createBarcodePngBatch` renders an array of codes in input order:
+Generate codes in a loop. Each call is independent, so a single payslip and a large pay run are both fast:
 
 ```ts
-import { createBarcodePngBatch } from "verifiabl";
-
-const codes = await createBarcodePngBatch(
-  records.map(({ verifiablReference, encryptedPii }) => ({
-    parts: { verifiablReference, encryptedPii },
-    pixelWidth: 720,
-  })),
-);
-// codes[i].png is the PNG for records[i], in input order.
+for (const { verifiablReference, encryptedPii } of records) {
+  const { png } = await createBarcodePng({ verifiablReference, encryptedPii }, {}, 720);
+  // embed png in this record's PDF
+}
 ```
 
 PNGs default to truecolour. Pass `{ palette: true }` for smaller files when you embed many codes in a PDF.
 
 ## Batch registration
 
-For pay runs, register up to 1000 records in one request with `registerNonPiiBatch`. The provider mints each Verifiabl reference up-front with `generateVerifiablReference` and includes it on each record, so the whole batch can go in one round trip. Results are returned index-aligned to the input; one bad record never fails the whole batch.
+For pay runs, register up to 1000 records in one request with `registerNonPiiBatch`. The provider generates each Verifiabl reference up-front with `generateVerifiablReference` and includes it on each record, so the whole batch can go in one round trip. Results are returned index-aligned to the input; one bad record never fails the whole batch.
 
 ```ts
 import { encryptPii, formatPii, generateVerifiablReference } from "verifiabl";
@@ -111,7 +103,7 @@ const { results } = await client.registerNonPiiBatch({
     verifiablReference,
     schema: "au.payslip.v1",
     issuedAt,
-    payslipData: { periodStart: payslip.periodStart, periodEnd: payslip.periodEnd },
+    payslipNonPii: { periodStart: payslip.periodStart, periodEnd: payslip.periodEnd },
     encryptionMetadata,
   })),
 });
@@ -145,7 +137,7 @@ try {
 
 ## Security
 
-Employee PII is encrypted on your infrastructure and never reaches Verifiabl. Keep your encryption key and OAuth secret in a secrets manager. See the [security model](https://docs.verifiabl.io/) for the full detail.
+Employee PII is encrypted on your infrastructure and never reaches Verifiabl. Keep your encryption key and OAuth secret in a secrets manager. See the [security model](https://docs.verifiabl.io/architecture) for the full detail.
 
 ## Documentation
 

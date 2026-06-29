@@ -12,7 +12,7 @@ const KEY_VERSION = "0f8fad5b-d9cb-469f-a165-70867728950e.1";
 const REQUEST: RegisterNonPiiRequest = {
   schema: "au.payslip.v1",
   issuedAt: "2026-06-11T00:00:00Z",
-  payslipData: { periodStart: "2026-05-01", periodEnd: "2026-05-31", gross: "9000.00" },
+  payslipNonPii: { periodStart: "2026-05-01", periodEnd: "2026-05-31", gross: "9000.00" },
   encryptionMetadata: {
     iv: "AAAAAAAAAAAAAAAA",
     tag: "AAAAAAAAAAAAAAAAAAAAAA",
@@ -31,7 +31,7 @@ const CREATE_BARCODE_REQUEST: CreateBarcodeRequest = {
 const WIRE_REQUEST = {
   schema: "au.payslip.v1",
   issued_at: "2026-06-11T00:00:00Z",
-  payslip_data: { period_start: "2026-05-01", period_end: "2026-05-31", gross: "9000.00" },
+  payslip_non_pii: { period_start: "2026-05-01", period_end: "2026-05-31", gross: "9000.00" },
   encryption_metadata: {
     iv: "AAAAAAAAAAAAAAAA",
     tag: "AAAAAAAAAAAAAAAAAAAAAA",
@@ -53,8 +53,8 @@ function registerResponse(): Response {
 function createBarcodeResponse(): Response {
   return new Response(
     JSON.stringify({
-      id: "barcode-record",
-      symbol: { format: "png", data: "iVBORw0KGgo=", width_px: 720, height_px: 720 },
+      verifiabl_reference: VERIFIABL_REF,
+      symbol: { format: "png", data: "iVBORw0KGgo=" },
     }),
     { status: 201 },
   );
@@ -200,13 +200,13 @@ describe("VerifiablClient with static auth", () => {
     );
   });
 
-  it("does not let passthrough payslipData keys override the mapped period dates", async () => {
+  it("does not let passthrough payslipNonPii keys override the mapped period dates", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
 
     await client.registerNonPii({
       ...REQUEST,
-      payslipData: {
+      payslipNonPii: {
         periodStart: "2026-05-01",
         periodEnd: "2026-05-31",
         // A stray snake_case key in the provider passthrough must not win.
@@ -216,11 +216,11 @@ describe("VerifiablClient with static auth", () => {
     });
 
     const body = requestBody(firstFetchCall(fetch)) as {
-      payslip_data: { period_start: string; period_end: string; gross: string };
+      payslip_non_pii: { period_start: string; period_end: string; gross: string };
     };
-    expect(body.payslip_data.period_start).toBe("2026-05-01");
-    expect(body.payslip_data.period_end).toBe("2026-05-31");
-    expect(body.payslip_data.gross).toBe("9000.00");
+    expect(body.payslip_non_pii.period_start).toBe("2026-05-01");
+    expect(body.payslip_non_pii.period_end).toBe("2026-05-31");
+    expect(body.payslip_non_pii.gross).toBe("9000.00");
   });
 
   it("lets explicit issuer base URL overrides win over the environment", async () => {
@@ -245,8 +245,8 @@ describe("VerifiablClient with static auth", () => {
     const result = await client.createBarcode(CREATE_BARCODE_REQUEST);
 
     expect(result).toEqual({
-      id: "barcode-record",
-      barcode: { format: "png", data: "iVBORw0KGgo=", widthPx: 720, heightPx: 720 },
+      verifiablReference: VERIFIABL_REF,
+      barcode: { format: "png", data: "iVBORw0KGgo=" },
     });
     expect(firstFetchCall(fetchMock)[0]).toBe(
       "https://register.verifiabl.io/v1/registerAndBuildSymbol",

@@ -36,12 +36,9 @@ export {
 } from "./pii.js";
 
 export {
-  type BarcodePngBatchItem,
-  type BarcodePngBatchOptions,
   type BarcodePngOptions,
   type BarcodePngResult,
   createBarcodePng,
-  createBarcodePngBatch,
 } from "./qr/png.js";
 export {
   type BarcodeErrorCorrectionLevel,
@@ -63,7 +60,7 @@ export {
   type KnownBatchRecordStatus,
   type KnownVerifiablErrorCode,
   MAX_BATCH_RECORDS,
-  type PayslipData,
+  type PayslipNonPii,
   type RegisterNonPiiBatchRequest,
   type RegisterNonPiiBatchResponse,
   type RegisterNonPiiRequest,

@@ -32,7 +32,7 @@ export const payslipSchemaIdSchema = z.string().regex(SCHEMA_RE, {
  * Request and response types for the Verifiabl API.
  *
  * The SDK surface is camelCase throughout. The HTTP API speaks snake_case
- * (`issued_at`, `payslip_data`, `verifiabl_reference`, ...); the SDK translates
+ * (`issued_at`, `payslip_non_pii`, `verifiabl_reference`, ...); the SDK translates
  * to and from that wire format at the network boundary (see the `*ToWire`
  * and `*FromWire` helpers below), so you never handle snake_case yourself.
  *
@@ -65,14 +65,14 @@ export type EncryptionMetadata = z.infer<typeof encryptionMetadataSchema>;
  * translated. Provider-specific fields (e.g. line items) use whatever names
  * your payslip schema specifies, which are typically snake_case on the wire.
  */
-export const payslipDataSchema = z
+export const payslipNonPiiSchema = z
   .object({
     periodStart: z.string().regex(ISO_DATE_RE),
     periodEnd: z.string().regex(ISO_DATE_RE),
   })
   .catchall(z.unknown());
 
-export type PayslipData = z.infer<typeof payslipDataSchema>;
+export type PayslipNonPii = z.infer<typeof payslipNonPiiSchema>;
 
 const basePayslipRegistrationSchema = z
   .object({
@@ -87,7 +87,7 @@ const basePayslipRegistrationSchema = z
       error:
         "issuedAt must be an ISO 8601 UTC datetime ending in 'Z' (use new Date().toISOString())",
     }),
-    payslipData: payslipDataSchema,
+    payslipNonPii: payslipNonPiiSchema,
     encryptionMetadata: encryptionMetadataSchema,
   })
   .strict();
@@ -103,7 +103,7 @@ export type RegisterNonPiiRequest = z.infer<typeof registerNonPiiRequestSchema>;
 
 export const registerNonPiiResponseSchema = z.object({
   /** 22-char base64url Verifiabl reference to embed in the barcode. */
-  verifiablReference: z.string().length(22).regex(BASE64URL_RE),
+  verifiablReference: verifiablReferenceSchema,
 });
 
 export type RegisterNonPiiResponse = z.infer<typeof registerNonPiiResponseSchema>;
@@ -126,14 +126,13 @@ export const barcodeImageSchema = z.object({
   format: z.literal("png"),
   /** Base64-encoded PNG. */
   data: z.string().min(1),
-  widthPx: z.number().int().positive(),
-  heightPx: z.number().int().positive(),
 });
 
 export type BarcodeImage = z.infer<typeof barcodeImageSchema>;
 
 export const createBarcodeResponseSchema = z.object({
-  id: z.string().min(1),
+  /** 22-char base64url Verifiabl reference embedded in the returned barcode. */
+  verifiablReference: verifiablReferenceSchema,
   barcode: barcodeImageSchema,
 });
 
@@ -152,11 +151,11 @@ function encryptionMetadataToWire(metadata: EncryptionMetadata): Record<string, 
   return { iv: metadata.iv, tag: metadata.tag, key_version: metadata.keyVersion };
 }
 
-function payslipDataToWire(data: PayslipData): Record<string, unknown> {
+function payslipNonPiiToWire(data: PayslipNonPii): Record<string, unknown> {
   const { periodStart, periodEnd, ...rest } = data;
   // Spread provider-specific passthrough fields first so the SDK-mapped
   // period_start/period_end always win, even if a caller put a stray
-  // snake_case "period_start"/"period_end" in payslipData.
+  // snake_case "period_start"/"period_end" in payslipNonPii.
   return { ...rest, period_start: periodStart, period_end: periodEnd };
 }
 
@@ -165,7 +164,7 @@ export function registrationToWire(request: RegisterNonPiiRequest): Record<strin
   return {
     schema: request.schema,
     issued_at: request.issuedAt,
-    payslip_data: payslipDataToWire(request.payslipData),
+    payslip_non_pii: payslipNonPiiToWire(request.payslipNonPii),
     encryption_metadata: encryptionMetadataToWire(request.encryptionMetadata),
   };
 }
@@ -176,7 +175,7 @@ export function createBarcodeToWire(request: CreateBarcodeRequest): Record<strin
 }
 
 const registerNonPiiWireResponseSchema = z.object({
-  verifiabl_reference: z.string().length(22).regex(BASE64URL_RE),
+  verifiabl_reference: verifiablReferenceSchema,
 });
 
 /** Parse and map a registration response from the snake_case wire shape. */
@@ -188,12 +187,10 @@ export function registrationFromWire(value: unknown): RegisterNonPiiResponse {
 const barcodeImageWireSchema = z.object({
   format: z.literal("png"),
   data: z.string().min(1),
-  width_px: z.number().int().positive(),
-  height_px: z.number().int().positive(),
 });
 
 const createBarcodeApiWireResponseSchema = z.object({
-  id: z.string().min(1),
+  verifiabl_reference: verifiablReferenceSchema,
   symbol: barcodeImageWireSchema,
 });
 
@@ -201,12 +198,10 @@ const createBarcodeApiWireResponseSchema = z.object({
 export function createBarcodeFromWire(value: unknown): CreateBarcodeResponse {
   const wire = createBarcodeApiWireResponseSchema.parse(value);
   return {
-    id: wire.id,
+    verifiablReference: wire.verifiabl_reference,
     barcode: {
       format: wire.symbol.format,
       data: wire.symbol.data,
-      widthPx: wire.symbol.width_px,
-      heightPx: wire.symbol.height_px,
     },
   };
 }
@@ -215,7 +210,7 @@ export function createBarcodeFromWire(value: unknown): CreateBarcodeResponse {
  * Batch registration                                                  *
  *                                                                     *
  * `registerNonPiiBatch` lets a pay run be submitted in one request.    *
- * The provider mints each record's reference up-front with             *
+ * The provider generates each record's reference up-front with         *
  * `generateVerifiablReference` and includes it in the record.          *
  * ------------------------------------------------------------------ */
 
@@ -284,7 +279,7 @@ export function registerNonPiiBatchToWire(
       ...registrationToWire({
         schema: record.schema,
         issuedAt: record.issuedAt,
-        payslipData: record.payslipData,
+        payslipNonPii: record.payslipNonPii,
         encryptionMetadata: record.encryptionMetadata,
       }),
     })),
@@ -297,7 +292,7 @@ const batchRecordResultWireSchema = z.object({
   // discard the whole batch response. Known values are listed in
   // KNOWN_BATCH_RECORD_STATUSES for callers to branch on.
   status: z.string(),
-  verifiabl_reference: z.string().length(22).regex(BASE64URL_RE),
+  verifiabl_reference: verifiablReferenceSchema,
   code: z.string().optional(),
   detail: z.string().optional(),
 });

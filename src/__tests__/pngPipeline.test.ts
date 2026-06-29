@@ -5,7 +5,7 @@ import jsQR = require("jsqr");
 
 import { PNG } from "pngjs";
 import type { BarcodeParts } from "../payload.js";
-import { createBarcodePng, createBarcodePngBatch } from "../qr/png.js";
+import { createBarcodePng } from "../qr/png.js";
 import { createBarcodeSvg } from "../qr/styled.js";
 
 const PARTS: BarcodeParts = {
@@ -113,14 +113,10 @@ describe("PNG scannability", () => {
     });
   });
 
-  it("renders a batch and every code is scannable, in order", async () => {
-    const items = payloads.map((ref) => ({
-      parts: { verifiablReference: ref, encryptedPii: PARTS.encryptedPii },
-      pixelWidth: 720,
-    }));
-    const results = await createBarcodePngBatch(items);
-    expect(results).toHaveLength(items.length);
-    for (const { png, content } of results) {
+  it("a loop over createBarcodePng renders every code scannable", async () => {
+    for (const ref of payloads) {
+      const parts: BarcodeParts = { verifiablReference: ref, encryptedPii: PARTS.encryptedPii };
+      const { png, content } = await createBarcodePng(parts, {}, 720);
       expect(scan(png)).toBe(content);
     }
   });
