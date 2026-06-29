@@ -1,6 +1,6 @@
 {
   "name": "verifiabl",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Official Verifiabl Node.js SDK for issuing payslip QR codes, formatting PII, AES-256-GCM encryption helpers, and typed issuer API calls.",
   "license": "MIT",
   "repository": {
@@ -42,6 +42,7 @@
     "format": "biome format --write .",
     "check": "biome check --write .",
     "typecheck": "tsc --noEmit",
+    "bench": "npm run build && node scripts/bench-png.mjs",
     "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
@@ -52,9 +53,11 @@
     "@biomejs/biome": "^2.0.0",
     "@resvg/resvg-js": "^2.6.2",
     "@types/jest": "^29.5.14",
+    "@types/pngjs": "^6.0.5",
     "@types/qrcode": "^1.5.5",
     "jest": "^29.7.0",
     "jsqr": "^1.4.0",
+    "pngjs": "^5.0.0",
     "ts-jest": "^29.2.5",
     "tsup": "^8.3.5",
     "typescript": "^5.7.0"
