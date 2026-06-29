@@ -59,7 +59,7 @@ const { verifiablReference } = await client.registerNonPii({
   encryptionMetadata,
 });
 
-// 3. Render the QR badge and embed the PNG in your payslip PDF.
+// 3. Render the QR code and embed the PNG in your payslip PDF.
 const { png } = await createBarcodePng(
   { verifiablReference, encryptedPii },
   { environment: "sandbox" },
@@ -67,27 +67,25 @@ const { png } = await createBarcodePng(
 );
 ```
 
-`createBarcodeSvg` is available if you prefer SVG, and is the cheaper artifact: it has no native dependency, is resolution-independent, and rasterising to PNG is only needed at the edge that requires a bitmap. Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
+Prefer `createBarcodeSvg` when you can: SVG scales to any size without losing quality. Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
 
-### Rendering many badges
+### Rendering many codes
 
-`createBarcodePng` renders with system fonts disabled (every glyph in the badge is a vector path, so nothing is lost) — that skips resvg's per-render system-font-database scan, the dominant cost, and is about 11x faster than leaving it on. It applies to the first render as much as the thousandth, so a single payslip and a 100k pay run are both fast, and a plain loop over `createBarcodePng` is memory-stable.
-
-For convenience there is `createBarcodePngBatch`, which renders an array in input order:
+`createBarcodePngBatch` renders an array of codes in input order:
 
 ```ts
 import { createBarcodePngBatch } from "verifiabl";
 
-const badges = await createBarcodePngBatch(
+const codes = await createBarcodePngBatch(
   records.map(({ verifiablReference, encryptedPii }) => ({
     parts: { verifiablReference, encryptedPii },
     pixelWidth: 720,
   })),
 );
-// badges[i].png is the PNG for records[i], in input order.
+// codes[i].png is the PNG for records[i], in input order.
 ```
 
-PNGs are truecolour by default. Pass `{ palette: true }` for a ~60% smaller palette PNG (useful when many codes are embedded in a PDF), at about 2x the encode time. For a large palette-encoded run prefer `createBarcodePngBatch`, which yields between codes to keep memory flat.
+PNGs default to truecolour. Pass `{ palette: true }` for smaller files when you embed many codes in a PDF.
 
 ## Batch registration
 
