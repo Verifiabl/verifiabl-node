@@ -69,8 +69,19 @@ const old = async (parts) => {
   await yieldTurn();
   return png;
 };
-const next = async (parts) => (await createBarcodePng(parts, {}, pixelWidth)).png;
-const nextPalette = async (parts) => (await createBarcodePng(parts, { palette: true }, pixelWidth)).png;
+// All three paths yield once per code, exactly as createBarcodePngBatch does,
+// so the comparison is symmetric and the palette path's peak RSS reflects the
+// recommended batched usage rather than a tight unyielded loop.
+const next = async (parts) => {
+  const png = (await createBarcodePng(parts, {}, pixelWidth)).png;
+  await yieldTurn();
+  return png;
+};
+const nextPalette = async (parts) => {
+  const png = (await createBarcodePng(parts, { palette: true }, pixelWidth)).png;
+  await yieldTurn();
+  return png;
+};
 
 console.log(`Generating ${count} barcodes at ${pixelWidth}px each...`);
 const oldMs = await run("OLD: render whole SVG, loadSystemFonts default(true)", old);
