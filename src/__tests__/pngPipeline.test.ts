@@ -65,6 +65,14 @@ describe("PNG pipeline visual identity", () => {
     expect(maxChannelDelta).toBe(0);
     expect(differingPixels).toBe(0);
   });
+
+  it("the rendered SVG has no <text>, so disabling system fonts is safe", () => {
+    // The whole PNG path renders with loadSystemFonts:false. That is only safe
+    // because every glyph is a vector path; a stray <text>/<tspan> would be
+    // silently dropped or substituted. Fail loudly here if one is ever added.
+    const { svg } = createBarcodeSvg(PARTS, { width: 720 });
+    expect(svg).not.toMatch(/<text[\s>]|<tspan[\s>]/);
+  });
 });
 
 describe("PNG scannability", () => {
@@ -75,19 +83,37 @@ describe("PNG scannability", () => {
     "aaaaaaaaaaaaaaaaaaaaaa",
     "Q-w-E-r-T-y-U-i-O-p-12",
   ];
+  // A long ciphertext forces a dense, high-version QR, exercising the encoder
+  // and the palette path on the hardest-to-scan codes, not just sparse ones.
+  const DENSE: BarcodeParts = {
+    verifiablReference: "AbCdEfGhIjKlMnOpQrStUv",
+    encryptedPii: "A".repeat(220),
+  };
 
-  it.each(payloads)("generated PNG decodes back to the scan URL (%s)", async (ref) => {
-    const parts: BarcodeParts = { verifiablReference: ref, encryptedPii: PARTS.encryptedPii };
-    const { png, content } = await createBarcodePng(parts, {}, 720);
+  function scan(png: Buffer): string | null {
     const img = decode(png);
-    const result = jsQR.default(new Uint8ClampedArray(img.data), img.width, img.height);
-    expect(result).not.toBeNull();
-    expect(result?.data).toBe(content);
-    // Sanity: the decoded content is exactly the badge's scan URL.
-    expect(content).toBe(createBarcodeSvg(parts).content);
+    return jsQR.default(new Uint8ClampedArray(img.data), img.width, img.height)?.data ?? null;
+  }
+
+  // Both encoders, since the palette path is our own code, not resvg's.
+  describe.each([
+    ["truecolour", {} as const],
+    ["palette", { palette: true } as const],
+  ])("%s", (_label, options) => {
+    it.each(payloads)("decodes back to the scan URL (%s)", async (ref) => {
+      const parts: BarcodeParts = { verifiablReference: ref, encryptedPii: PARTS.encryptedPii };
+      const { png, content } = await createBarcodePng(parts, options, 720);
+      expect(scan(png)).toBe(content);
+      expect(content).toBe(createBarcodeSvg(parts).content);
+    });
+
+    it("decodes a dense (long-PII) code", async () => {
+      const { png, content } = await createBarcodePng(DENSE, options, 720);
+      expect(scan(png)).toBe(content);
+    });
   });
 
-  it("renders a batch with bounded memory and every code scannable", async () => {
+  it("renders a batch and every code is scannable, in order", async () => {
     const items = payloads.map((ref) => ({
       parts: { verifiablReference: ref, encryptedPii: PARTS.encryptedPii },
       pixelWidth: 720,
@@ -95,9 +121,7 @@ describe("PNG scannability", () => {
     const results = await createBarcodePngBatch(items);
     expect(results).toHaveLength(items.length);
     for (const { png, content } of results) {
-      const img = decode(png);
-      const decoded = jsQR.default(new Uint8ClampedArray(img.data), img.width, img.height);
-      expect(decoded?.data).toBe(content);
+      expect(scan(png)).toBe(content);
     }
   });
 });
