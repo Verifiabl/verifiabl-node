@@ -71,7 +71,7 @@ const { png } = await createBarcodePng(
 
 ### Rendering many badges
 
-For a pay run, use `createBarcodePngBatch` instead of a hand-written loop. The static branded frame (header, logo, text, card) is rasterised once and cached; each badge re-renders only its QR and composites it onto a copy of the frame, so per-code work drops to the QR raster plus a fast palette-PNG encode (about 5x faster). The batch helper also yields to the event loop between codes, which keeps peak memory flat across very large runs (resvg's native render memory is otherwise reclaimed too slowly in a tight loop).
+For a pay run, use `createBarcodePngBatch` instead of looping `createBarcodePng` yourself (or `Promise.all`-ing it). The static branded frame (header, logo, text, card) is rasterised once and cached; each badge re-renders only its QR and composites it onto a copy of the frame, so per-code work drops to the QR raster plus a fast palette-PNG encode (about 5x faster). Just as importantly, the batch helper yields to the event loop between codes: resvg's native render memory is freed only on event-loop turns, so a tight loop that never yields lets peak memory climb into the gigabytes on a large run. The batch helper keeps it flat (~300 MB at any size). A single call is always fine — this only matters for high-throughput loops.
 
 ```ts
 import { createBarcodePngBatch } from "verifiabl";

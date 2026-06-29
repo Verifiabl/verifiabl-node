@@ -45,10 +45,12 @@ describe("PNG pipeline visual identity", () => {
     expect(current.width).toBe(baseline.width);
     expect(current.height).toBe(baseline.height);
     const { maxDelta, differingFraction } = maxChannelDelta(baseline.data, current.data);
-    // Composited output is visually identical; only finder-edge anti-aliasing
-    // may differ by a single 8-bit level on a tiny fraction of pixels.
-    expect(maxDelta).toBeLessThanOrEqual(1);
-    expect(differingFraction).toBeLessThan(0.01);
+    // Exact match: the cached-frame composite reproduces the original
+    // single-document render byte-for-byte (resvg's CPU rasteriser is
+    // deterministic with system fonts disabled). Zero tolerance so an alpha
+    // rounding regression cannot hide behind a threshold.
+    expect(maxDelta).toBe(0);
+    expect(differingFraction).toBe(0);
   });
 });
 

@@ -1,4 +1,4 @@
-import { createBarcodePng } from "../qr/png.js";
+import { clearBarcodeFrameCache, createBarcodePng, frameCacheSizeForTests } from "../qr/png.js";
 
 const PARTS = {
   verifiablReference: "AbCdEfGhIjKlMnOpQrStUv",
@@ -19,5 +19,17 @@ describe("createBarcodePng", () => {
   it("rejects invalid pixel widths", async () => {
     await expect(createBarcodePng(PARTS, {}, 0)).rejects.toThrow("pixelWidth");
     await expect(createBarcodePng(PARTS, {}, 479)).rejects.toThrow("at least 480");
+  });
+
+  it("bounds the frame cache so many distinct widths cannot grow it without limit", async () => {
+    clearBarcodeFrameCache();
+    // Render at 16 distinct widths; the cache must not retain more than its cap.
+    for (let i = 0; i < 16; i++) {
+      const { width } = await createBarcodePng(PARTS, {}, 480 + i);
+      expect(width).toBe(480 + i);
+    }
+    expect(frameCacheSizeForTests()).toBeLessThanOrEqual(8);
+    clearBarcodeFrameCache();
+    expect(frameCacheSizeForTests()).toBe(0);
   });
 });

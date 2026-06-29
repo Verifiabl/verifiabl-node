@@ -71,22 +71,40 @@ function renderRgba(Resvg: ResvgConstructor, svg: string, pixelWidth: number): R
 
 // The branded frame is identical for every barcode at a given width, so its
 // rasterised pixels are cached and only the QR is re-rendered per code. Keyed
-// by pixel width; the set of distinct widths in any process is tiny.
+// by pixel width. Real workloads use a tiny set of widths; the cache is still
+// bounded with LRU eviction so a process that renders many distinct widths
+// cannot retain frame rasters without limit (each is width*height*4 bytes).
+const MAX_CACHED_FRAME_WIDTHS = 8;
 const frameCache = new Map<number, RgbaRaster>();
 
 function getFrameRaster(Resvg: ResvgConstructor, pixelWidth: number, frameSvg: string): RgbaRaster {
   const cached = frameCache.get(pixelWidth);
   if (cached !== undefined) {
+    // Refresh recency: re-insert so this width is the most recently used.
+    frameCache.delete(pixelWidth);
+    frameCache.set(pixelWidth, cached);
     return cached;
   }
   const frame = renderRgba(Resvg, frameSvg, pixelWidth);
   frameCache.set(pixelWidth, frame);
+  if (frameCache.size > MAX_CACHED_FRAME_WIDTHS) {
+    // Evict the least-recently-used width (the oldest insertion-order key).
+    const oldest = frameCache.keys().next().value;
+    if (oldest !== undefined) {
+      frameCache.delete(oldest);
+    }
+  }
   return frame;
 }
 
 /** Clear the cached frame rasters (e.g. to release memory). Rarely needed. */
 export function clearBarcodeFrameCache(): void {
   frameCache.clear();
+}
+
+/** Internal: number of cached frame widths. Used by tests; not part of the public API. */
+export function frameCacheSizeForTests(): number {
+  return frameCache.size;
 }
 
 /**
@@ -103,6 +121,13 @@ export function clearBarcodeFrameCache(): void {
  * cached; each call re-renders only the QR and composites it onto a copy of the
  * cached frame, so per-code work is just the QR raster plus a palette-PNG
  * encode. Output is visually identical to a single-document render.
+ *
+ * To render MANY badges, use {@link createBarcodePngBatch}, not a `for` loop or
+ * `Promise.all` over this function. resvg's native render memory is freed only
+ * on event-loop turns, so a tight loop that never yields lets RSS climb into the
+ * gigabytes; the batch helper yields between codes to keep peak memory flat. A
+ * single call (or occasional calls) is fine — this only bites high-throughput
+ * loops.
  *
  * @param pixelWidth Output bitmap width in pixels (default: 720).
  */

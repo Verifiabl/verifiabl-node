@@ -54,11 +54,34 @@ describe("frame + QR composite vs combined render", () => {
       );
 
       const stats = diff(combined.data, composited.data);
-      // Visual identity: the alpha-over-white blend at the rounded finder edges
-      // can differ by at most one 8-bit level from resvg's internal compositing
-      // rounding, on a tiny fraction of pixels. Modules and chrome are exact.
-      expect(stats.maxDelta).toBeLessThanOrEqual(1);
-      expect(stats.differingPixels / stats.totalPixels).toBeLessThan(0.01);
+      // Exact: premultiplied source-over reproduces resvg's own compositing
+      // byte-for-byte, including the anti-aliased finder edges. Both sides are
+      // rendered in this same process, so this is a zero-tolerance guard against
+      // any future alpha-rounding drift, independent of platform.
+      expect(stats.maxDelta).toBe(0);
+      expect(stats.differingPixels).toBe(0);
     });
   }
+});
+
+describe("frame cache key completeness", () => {
+  // The frame raster is cached by pixel width alone, so the frame markup must
+  // depend on nothing else. If a future option changes the chrome but not the
+  // cache key, this fails before a stale frame can be served.
+  it("frameSvg is invariant to payload and non-frame options at a given width", () => {
+    const base = buildBarcodeLayers(PARTS, { width: 720 }).frameSvg;
+    const variants = [
+      buildBarcodeLayers(
+        { verifiablReference: "ZZZZZZZZZZZZZZZZZZZZZZ", encryptedPii: "A".repeat(200) },
+        { width: 720 },
+      ).frameSvg,
+      buildBarcodeLayers(PARTS, { width: 720, maxErrorCorrection: "Q" }).frameSvg,
+      buildBarcodeLayers(PARTS, { width: 720, environment: "sandbox" }).frameSvg,
+    ];
+    for (const v of variants) {
+      expect(v).toBe(base);
+    }
+    // ...but it must change with width, or the cache would serve the wrong size.
+    expect(buildBarcodeLayers(PARTS, { width: 480 }).frameSvg).not.toBe(base);
+  });
 });
