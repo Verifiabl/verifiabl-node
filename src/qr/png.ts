@@ -1,4 +1,5 @@
 import type { BarcodeParts } from "../payload.js";
+import { encodePng, type PngEncodeOptions, unpremultiplyInPlace } from "./pngEncode.js";
 import {
   type BarcodeErrorCorrectionLevel,
   type BarcodeSvgOptions,
@@ -20,23 +21,70 @@ export interface BarcodePngResult {
   degraded: boolean;
 }
 
+/** PNG-specific options. A superset of the SVG options, so callers can pass either. */
+export interface BarcodePngOptions extends BarcodeSvgOptions {
+  /**
+   * Encode as an 8-bit palette PNG instead of truecolour (default false).
+   *
+   * The QR code is a low-colour image, so a palette PNG is roughly 60% smaller,
+   * worth it when many codes are embedded in a PDF. It encodes in this SDK
+   * rather than via resvg, which is about 2x slower. Lossless either way.
+   */
+  palette?: boolean;
+  /**
+   * DEFLATE level (0-9, default 6) for the palette encoder. Lossless at every
+   * level; only trades file size for encode speed. Ignored unless `palette`.
+   */
+  compressionLevel?: number;
+}
+
 const MIN_PIXEL_WIDTH = 480;
 
+type ResvgConstructor = typeof import("@resvg/resvg-js").Resvg;
+
+let resvgLoad: Promise<ResvgConstructor> | undefined;
+
 /**
- * Render the branded Verifiabl QR badge as a PNG.
+ * Load the optional `@resvg/resvg-js` peer dependency once and cache the
+ * constructor. A failed load is not cached, so a later install can recover.
+ */
+async function loadResvg(): Promise<ResvgConstructor> {
+  if (resvgLoad === undefined) {
+    resvgLoad = import("@resvg/resvg-js")
+      .then((mod) => mod.Resvg)
+      .catch((cause: unknown) => {
+        resvgLoad = undefined;
+        throw new Error(
+          "PNG output requires the optional peer dependency '@resvg/resvg-js'. " +
+            "Install it with: npm install @resvg/resvg-js, or use createBarcodeSvg for SVG output.",
+          { cause },
+        );
+      });
+  }
+  return resvgLoad;
+}
+
+/**
+ * Render the branded Verifiabl QR code as a PNG.
  *
  * Requires the optional peer dependency `@resvg/resvg-js`:
  *
  *   npm install @resvg/resvg-js
  *
- * If your PDF pipeline accepts SVG, prefer `createBarcodeSvg`. It has no
- * native dependencies and scales without rasterisation artefacts.
+ * If your pipeline accepts SVG, prefer `createBarcodeSvg`.
+ *
+ * Renders with `loadSystemFonts: false`. The QR code has no `<text>` (every
+ * glyph is a vector path), so this is visually identical and skips resvg's
+ * system-font-database scan, which otherwise dominates render time. Do not
+ * re-enable system fonts.
+ *
+ * Pass `palette: true` for a smaller palette PNG, at roughly twice the encode time.
  *
  * @param pixelWidth Output bitmap width in pixels (default: 720).
  */
 export async function createBarcodePng(
   parts: BarcodeParts,
-  options: BarcodeSvgOptions = {},
+  options: BarcodePngOptions = {},
   pixelWidth = 720,
 ): Promise<BarcodePngResult> {
   if (!Number.isInteger(pixelWidth) || pixelWidth <= 0) {
@@ -46,34 +94,47 @@ export async function createBarcodePng(
     throw new Error(`pixelWidth must be at least ${MIN_PIXEL_WIDTH}`);
   }
 
-  let Resvg: typeof import("@resvg/resvg-js").Resvg;
-  try {
-    ({ Resvg } = await import("@resvg/resvg-js"));
-  } catch {
-    throw new Error(
-      "PNG output requires the optional peer dependency '@resvg/resvg-js'. " +
-        "Install it with: npm install @resvg/resvg-js, or use createBarcodeSvg for SVG output.",
-    );
-  }
+  const Resvg = await loadResvg();
 
   // resvg rasterises to pixelWidth regardless of the SVG's width attribute, so
-  // build the SVG at that same width. This makes the scannability floor in
-  // createBarcodeSvg reflect the actual PNG resolution rather than the default.
+  // build the SVG at that same width. This keeps the scannability floor in
+  // styled.ts reflecting the actual PNG resolution.
   const { svg, content, errorCorrectionLevel, modulePx, degraded } = createBarcodeSvg(parts, {
     ...options,
     width: pixelWidth,
   });
-  const rendered = new Resvg(svg, {
-    fitTo: { mode: "width", value: pixelWidth },
-  }).render();
 
-  return {
-    png: rendered.asPng(),
+  let png: Buffer;
+  let width: number;
+  let height: number;
+  try {
+    const rendered = new Resvg(svg, {
+      fitTo: { mode: "width", value: pixelWidth },
+      font: { loadSystemFonts: false },
+    }).render();
+    width = rendered.width;
+    height = rendered.height;
+    png = options.palette === true ? encodePalette(rendered, options) : rendered.asPng();
+  } catch (cause) {
+    throw new Error("Failed to rasterise the Verifiabl barcode PNG", { cause });
+  }
+
+  return { png, width, height, content, errorCorrectionLevel, modulePx, degraded };
+}
+
+function encodePalette(
+  rendered: { pixels: Buffer; width: number; height: number },
+  options: BarcodePngOptions,
+): Buffer {
+  // resvg's pixels are premultiplied; PNG is straight alpha.
+  const raster = unpremultiplyInPlace({
+    data: Buffer.from(rendered.pixels),
     width: rendered.width,
     height: rendered.height,
-    content,
-    errorCorrectionLevel,
-    modulePx,
-    degraded,
-  };
+  });
+  const encodeOptions: PngEncodeOptions = {};
+  if (options.compressionLevel !== undefined) {
+    encodeOptions.compressionLevel = options.compressionLevel;
+  }
+  return encodePng(raster, encodeOptions);
 }

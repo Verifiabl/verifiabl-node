@@ -57,14 +57,27 @@ const { verifiablReference } = await client.registerNonPii({
   encryptionMetadata,
 });
 
-// 3. Render the QR badge and embed the SVG in your payslip PDF.
+// 3. Render the QR code and embed the SVG in your payslip PDF.
 const { svg } = createBarcodeSvg(
   { verifiablReference, encryptedPii },
   { environment: "sandbox" },
 );
 ```
 
-`createBarcodePng` is available if you need a raster PNG instead (slower, and it needs the `@resvg/resvg-js` renderer above). Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
+Prefer `createBarcodeSvg` when you can: SVG scales to any size without losing quality. Use `createBarcodePng` when you need a raster PNG (it needs the `@resvg/resvg-js` renderer). Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
+
+### Rendering many codes
+
+Generate codes in a loop. Each call is independent, so a single payslip and a large pay run are both fast:
+
+```ts
+for (const { verifiablReference, encryptedPii } of records) {
+  const { png } = await createBarcodePng({ verifiablReference, encryptedPii }, {}, 720);
+  // embed png in this record's PDF
+}
+```
+
+PNGs default to truecolour. Pass `{ palette: true }` for smaller files when you embed many codes in a PDF.
 
 ## Batch registration
 
