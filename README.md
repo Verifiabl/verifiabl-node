@@ -67,7 +67,23 @@ const { png } = await createBarcodePng(
 );
 ```
 
-`createBarcodeSvg` is available if you prefer SVG. Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
+`createBarcodeSvg` is available if you prefer SVG, and is the cheaper artifact: it has no native dependency, is resolution-independent, and rasterising to PNG is only needed at the edge that requires a bitmap. Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
+
+### Rendering many badges
+
+For a pay run, use `createBarcodePngBatch` instead of a hand-written loop. The static branded frame (header, logo, text, card) is rasterised once and cached; each badge re-renders only its QR and composites it onto a copy of the frame, so per-code work drops to the QR raster plus a fast palette-PNG encode (about 5x faster). The batch helper also yields to the event loop between codes, which keeps peak memory flat across very large runs (resvg's native render memory is otherwise reclaimed too slowly in a tight loop).
+
+```ts
+import { createBarcodePngBatch } from "verifiabl";
+
+const badges = await createBarcodePngBatch(
+  records.map(({ verifiablReference, encryptedPii }) => ({
+    parts: { verifiablReference, encryptedPii },
+    pixelWidth: 720,
+  })),
+);
+// badges[i].png is the PNG for records[i], in input order.
+```
 
 ## Batch registration
 

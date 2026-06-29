@@ -35,7 +35,15 @@ export {
   piiFieldsSchema,
 } from "./pii.js";
 
-export { type BarcodePngResult, createBarcodePng } from "./qr/png.js";
+export {
+  type BarcodePngBatchItem,
+  type BarcodePngBatchOptions,
+  type BarcodePngOptions,
+  type BarcodePngResult,
+  clearBarcodeFrameCache,
+  createBarcodePng,
+  createBarcodePngBatch,
+} from "./qr/png.js";
 export {
   type BarcodeErrorCorrectionLevel,
   type BarcodeSvgOptions,
