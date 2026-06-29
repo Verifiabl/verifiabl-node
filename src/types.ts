@@ -103,7 +103,7 @@ export type RegisterNonPiiRequest = z.infer<typeof registerNonPiiRequestSchema>;
 
 export const registerNonPiiResponseSchema = z.object({
   /** 22-char base64url Verifiabl reference to embed in the barcode. */
-  verifiablReference: z.string().length(22).regex(BASE64URL_RE),
+  verifiablReference: verifiablReferenceSchema,
 });
 
 export type RegisterNonPiiResponse = z.infer<typeof registerNonPiiResponseSchema>;
@@ -132,7 +132,7 @@ export type BarcodeImage = z.infer<typeof barcodeImageSchema>;
 
 export const createBarcodeResponseSchema = z.object({
   /** 22-char base64url Verifiabl reference embedded in the returned barcode. */
-  verifiablReference: z.string().length(22).regex(BASE64URL_RE),
+  verifiablReference: verifiablReferenceSchema,
   barcode: barcodeImageSchema,
 });
 
@@ -175,7 +175,7 @@ export function createBarcodeToWire(request: CreateBarcodeRequest): Record<strin
 }
 
 const registerNonPiiWireResponseSchema = z.object({
-  verifiabl_reference: z.string().length(22).regex(BASE64URL_RE),
+  verifiabl_reference: verifiablReferenceSchema,
 });
 
 /** Parse and map a registration response from the snake_case wire shape. */
@@ -190,7 +190,7 @@ const barcodeImageWireSchema = z.object({
 });
 
 const createBarcodeApiWireResponseSchema = z.object({
-  verifiabl_reference: z.string().length(22).regex(BASE64URL_RE),
+  verifiabl_reference: verifiablReferenceSchema,
   symbol: barcodeImageWireSchema,
 });
 
@@ -292,7 +292,7 @@ const batchRecordResultWireSchema = z.object({
   // discard the whole batch response. Known values are listed in
   // KNOWN_BATCH_RECORD_STATUSES for callers to branch on.
   status: z.string(),
-  verifiabl_reference: z.string().length(22).regex(BASE64URL_RE),
+  verifiabl_reference: verifiablReferenceSchema,
   code: z.string().optional(),
   detail: z.string().optional(),
 });
