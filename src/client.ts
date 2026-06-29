@@ -257,7 +257,7 @@ export class VerifiablClient {
 
   /**
    * Register a batch of non-PII payslip records in a single request, up to
-   * `MAX_BATCH_RECORDS` records. Each record carries a provider-minted
+   * `MAX_BATCH_RECORDS` records. Each record carries a provider-generated
    * Verifiabl reference (from `generateVerifiablReference`) and the same
    * fields as `registerNonPii`. The response contains a per-record result
    * index-aligned to the input array: one bad record never fails the batch.

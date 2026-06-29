@@ -216,7 +216,7 @@ export function createBarcodeFromWire(value: unknown): CreateBarcodeResponse {
  * Batch registration                                                  *
  *                                                                     *
  * `registerNonPiiBatch` lets a pay run be submitted in one request.    *
- * The provider mints each record's reference up-front with             *
+ * The provider generates each record's reference up-front with         *
  * `generateVerifiablReference` and includes it in the record.          *
  * ------------------------------------------------------------------ */
 

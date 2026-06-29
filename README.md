@@ -12,20 +12,18 @@ Verifiabl is for accredited payroll providers. You receive sandbox credentials a
 npm install verifiabl
 ```
 
-Requires Node.js 20+. The example below renders a PNG, which needs the optional renderer:
+Requires Node.js 20+. The example below renders an SVG badge, which needs no extra dependencies. To render a PNG instead (slower, and it pulls in a native renderer), also install:
 
 ```bash
 npm install @resvg/resvg-js
 ```
-
-If you render SVG instead (with `createBarcodeSvg`), you don't need it.
 
 ## Getting started
 
 This is the self-managed flow: register the payslip, encrypt the personal details locally, and generate the QR code yourself. You need four values from onboarding: your OAuth client ID and secret, your encryption key, and your key version.
 
 ```ts
-import { VerifiablClient, formatPii, encryptPii, createBarcodePng } from "verifiabl";
+import { VerifiablClient, formatPii, encryptPii, createBarcodeSvg } from "verifiabl";
 
 const client = new VerifiablClient({
   environment: "sandbox",
@@ -59,19 +57,18 @@ const { verifiablReference } = await client.registerNonPii({
   encryptionMetadata,
 });
 
-// 3. Render the QR badge and embed the PNG in your payslip PDF.
-const { png } = await createBarcodePng(
+// 3. Render the QR badge and embed the SVG in your payslip PDF.
+const { svg } = createBarcodeSvg(
   { verifiablReference, encryptedPii },
   { environment: "sandbox" },
-  720,
 );
 ```
 
-`createBarcodeSvg` is available if you prefer SVG. Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
+`createBarcodePng` is available if you need a raster PNG instead (slower, and it needs the `@resvg/resvg-js` renderer above). Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
 
 ## Batch registration
 
-For pay runs, register up to 1000 records in one request with `registerNonPiiBatch`. The provider mints each Verifiabl reference up-front with `generateVerifiablReference` and includes it on each record, so the whole batch can go in one round trip. Results are returned index-aligned to the input; one bad record never fails the whole batch.
+For pay runs, register up to 1000 records in one request with `registerNonPiiBatch`. The provider generates each Verifiabl reference up-front with `generateVerifiablReference` and includes it on each record, so the whole batch can go in one round trip. Results are returned index-aligned to the input; one bad record never fails the whole batch.
 
 ```ts
 import { encryptPii, formatPii, generateVerifiablReference } from "verifiabl";
@@ -127,7 +124,7 @@ try {
 
 ## Security
 
-Employee PII is encrypted on your infrastructure and never reaches Verifiabl. Keep your encryption key and OAuth secret in a secrets manager. See the [security model](https://docs.verifiabl.io/) for the full detail.
+Employee PII is encrypted on your infrastructure and never reaches Verifiabl. Keep your encryption key and OAuth secret in a secrets manager. See the [security model](https://docs.verifiabl.io/architecture) for the full detail.
 
 ## Documentation
 

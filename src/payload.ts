@@ -18,13 +18,13 @@ export const verifiablReferenceSchema = z
 /**
  * Generate a fresh Verifiabl reference: 16 cryptographically random bytes
  * (128 bits) encoded as 22 base64url characters without padding. Matches the
- * server's algorithm so a provider-minted reference is indistinguishable
+ * server's algorithm so a provider-generated reference is indistinguishable
  * from one issued by the API.
  *
- * Use this for `registerNonPiiBatch`, where providers mint their own
+ * Use this for `registerNonPiiBatch`, where providers generate their own
  * references up-front so a whole pay run can be submitted in one request.
- * Single-record `registerNonPii` does not need it; the API mints a reference
- * for you and returns it.
+ * Single-record `registerNonPii` does not need it; the API generates a
+ * reference for you and returns it.
  */
 export function generateVerifiablReference(): string {
   return randomBytes(16).toString("base64url");
