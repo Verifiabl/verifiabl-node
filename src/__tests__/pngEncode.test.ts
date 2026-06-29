@@ -1,6 +1,5 @@
 import { PNG } from "pngjs";
-import { encodePng } from "../qr/pngEncode.js";
-import type { RgbaRaster } from "../qr/raster.js";
+import { encodePng, type RgbaRaster } from "../qr/pngEncode.js";
 
 function colorTypeOf(png: Buffer): number {
   // signature(8) + len(4) + "IHDR"(4) + width(4) + height(4) + bitDepth(1) => colorType at 25

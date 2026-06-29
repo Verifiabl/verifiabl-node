@@ -273,56 +273,17 @@ function renderDefaultHeader(textColor: string): string {
   );
 }
 
-/** Standalone SVG wrapper shared by the combined document and the two layers. */
-function svgDocument(badgeWidth: number, height: number, body: string): string {
-  return (
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${round2(badgeWidth)}" height="${round2(height)}" ` +
-    `viewBox="0 0 ${FRAME_VIEWBOX_WIDTH} ${FRAME_VIEWBOX_HEIGHT}" role="img" ` +
-    `aria-label="Secured by Verifiabl verification barcode">${body}</svg>`
-  );
-}
-
 /**
- * Static branded chrome: white card, grey border, navy header, and the
- * vectorised wordmark and "Secured by Verifiabl" text. Identical for every
- * badge at a given width — there is no per-code content here — which is exactly
- * what lets the PNG path rasterise it once and composite the QR on top. All
- * text is pre-vectorised `<path>` data, so this layer needs no font.
+ * Render the branded Verifiabl barcode as SVG.
+ *
+ * Takes the Verifiabl reference from `client.registerNonPii` and the encrypted PII
+ * ciphertext from `encryptPii`, then returns a standalone SVG suitable for
+ * embedding in a payslip PDF.
  */
-function frameMarkup(): string {
-  const headerBackground = `<path d="M0 8C0 3.58172 3.58172 0 8 0H88C92.4183 0 96 3.58172 96 8V${FRAME_HEADER_HEIGHT}H0V8Z" fill="${DEFAULT_NAVY}"/>`;
-  return (
-    `<rect x="1" y="1" width="94" height="149" rx="7" fill="${FRAME_BACKGROUND}"/>` +
-    `<rect x="1" y="1" width="94" height="149" rx="7" stroke="${FRAME_BORDER}" stroke-width="2" fill="none"/>` +
-    headerBackground +
-    renderDefaultHeader(DEFAULT_TEXT)
-  );
-}
-
-/** Per-code QR layer: crisp data modules plus rounded finders, placed in the fixed QR box. */
-function qrMarkup(selected: SelectedQrRendering): string {
-  const { qr, size, moduleSize, insetModules } = selected;
-  const qrPadding = insetModules * moduleSize;
-  return (
-    `<g transform="translate(${round2(FRAME_QR_BOX_X + qrPadding)} ${round2(FRAME_QR_BOX_Y + qrPadding)})">` +
-    `<g shape-rendering="crispEdges">` +
-    renderModules(qr.modules.data, size, moduleSize, DEFAULT_QR) +
-    `</g>` +
-    renderFinders(size, moduleSize, DEFAULT_QR) +
-    `</g>`
-  );
-}
-
-interface PreparedBarcode {
-  badgeWidth: number;
-  height: number;
-  content: string;
-  selected: SelectedQrRendering;
-  degraded: boolean;
-}
-
-/** Shared setup for the SVG document and the split layers: scan URL, ladder, sizing. */
-function prepareBarcode(parts: BarcodeParts, options: BarcodeSvgOptions): PreparedBarcode {
+export function createBarcodeSvg(
+  parts: BarcodeParts,
+  options: BarcodeSvgOptions = {},
+): BarcodeSvgResult {
   const { width = MIN_BADGE_WIDTH } = options;
   const badgeWidth = validateBadgeWidth(width, "width");
 
@@ -336,76 +297,42 @@ function prepareBarcode(parts: BarcodeParts, options: BarcodeSvgOptions): Prepar
   const content = buildScanUrl(parts, scanOptions);
 
   const ladder = errorCorrectionLadder(options.maxErrorCorrection ?? DEFAULT_MAX_ERROR_CORRECTION);
-  const selected = selectQrRendering(content, badgeWidth, ladder);
-  const degraded =
-    selected.errorCorrectionLevel !== ladder[0] || selected.modulePx < IDEAL_MODULE_PX;
+  const { qr, errorCorrectionLevel, size, moduleSize, modulePx, insetModules } = selectQrRendering(
+    content,
+    badgeWidth,
+    ladder,
+  );
+  const matrixData = qr.modules.data;
+  const degraded = errorCorrectionLevel !== ladder[0] || modulePx < IDEAL_MODULE_PX;
+
   const height = round2((badgeWidth * FRAME_VIEWBOX_HEIGHT) / FRAME_VIEWBOX_WIDTH);
+  const qrPadding = insetModules * moduleSize;
 
-  return { badgeWidth, height, content, selected, degraded };
-}
+  const headerBackground = `<path d="M0 8C0 3.58172 3.58172 0 8 0H88C92.4183 0 96 3.58172 96 8V${FRAME_HEADER_HEIGHT}H0V8Z" fill="${DEFAULT_NAVY}"/>`;
+  const header = headerBackground + renderDefaultHeader(DEFAULT_TEXT);
 
-function barcodeResult(prepared: PreparedBarcode, svg: string): BarcodeSvgResult {
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${round2(badgeWidth)}" height="${round2(height)}" ` +
+    `viewBox="0 0 ${FRAME_VIEWBOX_WIDTH} ${FRAME_VIEWBOX_HEIGHT}" role="img" ` +
+    `aria-label="Secured by Verifiabl verification barcode">` +
+    `<rect x="1" y="1" width="94" height="149" rx="7" fill="${FRAME_BACKGROUND}"/>` +
+    `<rect x="1" y="1" width="94" height="149" rx="7" stroke="${FRAME_BORDER}" stroke-width="2" fill="none"/>` +
+    header +
+    `<g transform="translate(${round2(FRAME_QR_BOX_X + qrPadding)} ${round2(FRAME_QR_BOX_Y + qrPadding)})">` +
+    `<g shape-rendering="crispEdges">` +
+    renderModules(matrixData, size, moduleSize, DEFAULT_QR) +
+    `</g>` +
+    renderFinders(size, moduleSize, DEFAULT_QR) +
+    `</g></svg>`;
+
   return {
     svg,
-    width: prepared.badgeWidth,
-    height: prepared.height,
-    content: prepared.content,
-    errorCorrectionLevel: prepared.selected.errorCorrectionLevel,
-    modulePx: round2(prepared.selected.modulePx),
-    degraded: prepared.degraded,
-  };
-}
-
-/**
- * Render the branded Verifiabl barcode as SVG.
- *
- * Takes the Verifiabl reference from `client.registerNonPii` and the encrypted PII
- * ciphertext from `encryptPii`, then returns a standalone SVG suitable for
- * embedding in a payslip PDF.
- */
-export function createBarcodeSvg(
-  parts: BarcodeParts,
-  options: BarcodeSvgOptions = {},
-): BarcodeSvgResult {
-  const prepared = prepareBarcode(parts, options);
-  const svg = svgDocument(
-    prepared.badgeWidth,
-    prepared.height,
-    frameMarkup() + qrMarkup(prepared.selected),
-  );
-  return barcodeResult(prepared, svg);
-}
-
-/** The static frame and per-code QR as two separately-rasterisable SVG layers. */
-export interface BarcodeRenderLayers extends BarcodeSvgResult {
-  /** Static branded chrome, identical for every badge at this width. */
-  frameSvg: string;
-  /** QR-only layer (transparent elsewhere), in the same coordinate system as the frame. */
-  qrSvg: string;
-}
-
-/**
- * Internal: build the frame and QR as two SVG layers sharing one coordinate
- * system and pixel size. Rasterising both and compositing the QR over the frame
- * is pixel-identical to {@link createBarcodeSvg}'s single document, but lets the
- * PNG path cache the frame raster and re-render only the QR per code.
- *
- * Not part of the public API: consumed by the PNG renderer.
- */
-export function buildBarcodeLayers(
-  parts: BarcodeParts,
-  options: BarcodeSvgOptions = {},
-): BarcodeRenderLayers {
-  const prepared = prepareBarcode(parts, options);
-  const combined = svgDocument(
-    prepared.badgeWidth,
-    prepared.height,
-    frameMarkup() + qrMarkup(prepared.selected),
-  );
-  return {
-    ...barcodeResult(prepared, combined),
-    frameSvg: svgDocument(prepared.badgeWidth, prepared.height, frameMarkup()),
-    qrSvg: svgDocument(prepared.badgeWidth, prepared.height, qrMarkup(prepared.selected)),
+    width: badgeWidth,
+    height: round2(height),
+    content,
+    errorCorrectionLevel,
+    modulePx: round2(modulePx),
+    degraded,
   };
 }
 

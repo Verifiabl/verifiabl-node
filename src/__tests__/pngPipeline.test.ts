@@ -37,18 +37,22 @@ function maxChannelDelta(a: Buffer, b: Buffer): { maxDelta: number; differingFra
 }
 
 describe("PNG pipeline visual identity", () => {
-  it("matches the committed baseline (original single-document render)", async () => {
+  // Both the default (truecolour) and palette encoders must reproduce the
+  // committed baseline (the original single-document render) byte-for-byte.
+  // resvg's CPU rasteriser is deterministic with system fonts disabled, so the
+  // diff is exact — zero tolerance, so an alpha-rounding regression in the
+  // palette path cannot hide behind a threshold.
+  it.each([
+    ["truecolour (default)", {}],
+    ["palette", { palette: true }],
+  ])("%s output matches the committed baseline", async (_label, options) => {
     const baseline = decode(readFileSync(join(__dirname, "fixtures", "badge-baseline-480.png")));
-    const { png } = await createBarcodePng(PARTS, {}, 480);
+    const { png } = await createBarcodePng(PARTS, options, 480);
     const current = decode(png);
 
     expect(current.width).toBe(baseline.width);
     expect(current.height).toBe(baseline.height);
     const { maxDelta, differingFraction } = maxChannelDelta(baseline.data, current.data);
-    // Exact match: the cached-frame composite reproduces the original
-    // single-document render byte-for-byte (resvg's CPU rasteriser is
-    // deterministic with system fonts disabled). Zero tolerance so an alpha
-    // rounding regression cannot hide behind a threshold.
     expect(maxDelta).toBe(0);
     expect(differingFraction).toBe(0);
   });

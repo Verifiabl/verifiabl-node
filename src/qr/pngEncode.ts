@@ -1,5 +1,37 @@
 import { deflateSync } from "node:zlib";
-import type { RgbaRaster } from "./raster.js";
+
+/** Decoded straight-alpha RGBA image: `data` is `width * height * 4` bytes. */
+export interface RgbaRaster {
+  data: Buffer;
+  width: number;
+  height: number;
+}
+
+/**
+ * Convert a premultiplied RGBA raster (resvg's `.pixels`) to straight
+ * (non-premultiplied) alpha in place, as PNG requires. Fully-opaque pixels are
+ * unchanged; fully-transparent collapse to 0,0,0,0; only anti-aliased edges are
+ * scaled back up. Matches resvg's own `asPng()` conversion byte-for-byte.
+ */
+export function unpremultiplyInPlace(raster: RgbaRaster): RgbaRaster {
+  const d = raster.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3] ?? 0;
+    if (a === 0) {
+      d[i] = 0;
+      d[i + 1] = 0;
+      d[i + 2] = 0;
+      continue;
+    }
+    if (a === 255) {
+      continue;
+    }
+    d[i] = Math.min(255, Math.round(((d[i] ?? 0) * 255) / a));
+    d[i + 1] = Math.min(255, Math.round(((d[i + 1] ?? 0) * 255) / a));
+    d[i + 2] = Math.min(255, Math.round(((d[i + 2] ?? 0) * 255) / a));
+  }
+  return raster;
+}
 
 /**
  * Minimal, dependency-free PNG encoder for the composited badge raster.

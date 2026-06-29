@@ -61,19 +61,22 @@ async function run(label, fn) {
 // resvg's native render memory is reclaimed and peak RSS stays flat.
 const yieldTurn = () => new Promise((r) => setImmediate(r));
 
+// OLD = the pre-change path: render the whole SVG with system fonts enabled
+// (the dominant cost was resvg's per-render system-font-database scan).
 const old = async (parts) => {
   const { svg } = createBarcodeSvg(parts, { width: pixelWidth });
   const png = new Resvg(svg, { fitTo: { mode: "width", value: pixelWidth } }).render().asPng();
   await yieldTurn();
   return png;
 };
-const next = async (parts) => {
-  const { png } = await createBarcodePng(parts, {}, pixelWidth);
-  await yieldTurn();
-  return png;
-};
+const next = async (parts) => (await createBarcodePng(parts, {}, pixelWidth)).png;
+const nextPalette = async (parts) => (await createBarcodePng(parts, { palette: true }, pixelWidth)).png;
 
 console.log(`Generating ${count} barcodes at ${pixelWidth}px each...`);
-const oldMs = await run("OLD: combined render + resvg asPng (loadSystemFonts default)", old);
-const newMs = await run("NEW: frame cache + QR composite + palette PNG", next);
-console.log(`\nSpeedup: ${(oldMs / newMs).toFixed(1)}x  (${oldMs.toFixed(0)} ms -> ${newMs.toFixed(0)} ms)`);
+const oldMs = await run("OLD: render whole SVG, loadSystemFonts default(true)", old);
+const newMs = await run("NEW default: loadSystemFonts:false + resvg asPng (truecolour)", next);
+const palMs = await run("NEW palette: loadSystemFonts:false + SDK palette encode", nextPalette);
+console.log(
+  `\nSpeedup vs OLD: default ${(oldMs / newMs).toFixed(1)}x, palette ${(oldMs / palMs).toFixed(1)}x` +
+    `  (palette is ${(palMs / newMs).toFixed(1)}x the default's time for ~60% smaller files)`,
+);

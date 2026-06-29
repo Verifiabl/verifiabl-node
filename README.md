@@ -71,7 +71,9 @@ const { png } = await createBarcodePng(
 
 ### Rendering many badges
 
-For a pay run, use `createBarcodePngBatch` instead of looping `createBarcodePng` yourself (or `Promise.all`-ing it). The static branded frame (header, logo, text, card) is rasterised once and cached; each badge re-renders only its QR and composites it onto a copy of the frame, so per-code work drops to the QR raster plus a fast palette-PNG encode (about 5x faster). Just as importantly, the batch helper yields to the event loop between codes: resvg's native render memory is freed only on event-loop turns, so a tight loop that never yields lets peak memory climb into the gigabytes on a large run. The batch helper keeps it flat (~300 MB at any size). A single call is always fine — this only matters for high-throughput loops.
+`createBarcodePng` renders with system fonts disabled (every glyph in the badge is a vector path, so nothing is lost) — that skips resvg's per-render system-font-database scan, the dominant cost, and is about 11x faster than leaving it on. It applies to the first render as much as the thousandth, so a single payslip and a 100k pay run are both fast, and a plain loop over `createBarcodePng` is memory-stable.
+
+For convenience there is `createBarcodePngBatch`, which renders an array in input order:
 
 ```ts
 import { createBarcodePngBatch } from "verifiabl";
@@ -84,6 +86,8 @@ const badges = await createBarcodePngBatch(
 );
 // badges[i].png is the PNG for records[i], in input order.
 ```
+
+PNGs are truecolour by default. Pass `{ palette: true }` for a ~60% smaller palette PNG (useful when many codes are embedded in a PDF), at about 2x the encode time. For a large palette-encoded run prefer `createBarcodePngBatch`, which yields between codes to keep memory flat.
 
 ## Batch registration
 

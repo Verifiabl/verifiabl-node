@@ -40,7 +40,6 @@ export {
   type BarcodePngBatchOptions,
   type BarcodePngOptions,
   type BarcodePngResult,
-  clearBarcodeFrameCache,
   createBarcodePng,
   createBarcodePngBatch,
 } from "./qr/png.js";
