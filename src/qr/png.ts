@@ -26,11 +26,9 @@ export interface BarcodePngOptions extends BarcodeSvgOptions {
   /**
    * Encode as an 8-bit palette PNG instead of truecolour (default false).
    *
-   * The badge is a low-colour image, so a palette PNG is roughly 60% smaller —
-   * worth it when many codes are embedded in a PDF or stored. The tradeoff is
-   * speed: the palette path encodes in this SDK (composite-free, but a JS
-   * DEFLATE pass) and is about 2x slower than resvg's native truecolour
-   * encoder. Output is lossless and visually identical either way.
+   * The QR code is a low-colour image, so a palette PNG is roughly 60% smaller,
+   * worth it when many codes are embedded in a PDF. It encodes in this SDK
+   * rather than via resvg, which is about 2x slower. Lossless either way.
    */
   palette?: boolean;
   /**
@@ -67,22 +65,20 @@ async function loadResvg(): Promise<ResvgConstructor> {
 }
 
 /**
- * Render the branded Verifiabl QR badge as a PNG.
+ * Render the branded Verifiabl QR code as a PNG.
  *
  * Requires the optional peer dependency `@resvg/resvg-js`:
  *
  *   npm install @resvg/resvg-js
  *
- * If your PDF pipeline accepts SVG, prefer `createBarcodeSvg`. It has no
- * native dependencies and scales without rasterisation artefacts.
+ * If your pipeline accepts SVG, prefer `createBarcodeSvg`.
  *
- * System fonts are disabled on the render: every glyph in the badge is a
- * pre-vectorised path (there is no `<text>`), so this is visually identical
- * (verified by pixel-diff) while skipping resvg's slow system-font-database
- * enumeration — the dominant cost — and making output deterministic across
- * machines. The first render is as fast as the rest; there is no warm-up.
+ * Renders with `loadSystemFonts: false`. The QR code has no `<text>` (every
+ * glyph is a vector path), so this is visually identical and skips resvg's
+ * system-font-database scan, which otherwise dominates render time. Do not
+ * re-enable system fonts.
  *
- * Pass `palette: true` for a ~60% smaller palette PNG, at ~2x the encode time.
+ * Pass `palette: true` for a smaller palette PNG, at roughly twice the encode time.
  *
  * @param pixelWidth Output bitmap width in pixels (default: 720).
  */

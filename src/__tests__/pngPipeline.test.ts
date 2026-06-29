@@ -18,29 +18,38 @@ function decode(png: Buffer): { data: Buffer; width: number; height: number } {
   return { data: img.data, width: img.width, height: img.height };
 }
 
-function maxChannelDelta(a: Buffer, b: Buffer): { maxDelta: number; differingFraction: number } {
-  if (a.length !== b.length) {
-    throw new Error(`size mismatch: ${a.length} vs ${b.length}`);
+/**
+ * Compare two equal-size RGBA buffers: the largest single-channel difference,
+ * and how many pixels differ in any channel.
+ */
+function comparePixels(
+  expected: Buffer,
+  actual: Buffer,
+): { maxChannelDelta: number; differingPixels: number } {
+  if (expected.length !== actual.length) {
+    throw new Error(`size mismatch: ${expected.length} vs ${actual.length}`);
   }
-  let maxDelta = 0;
-  let differing = 0;
-  for (let i = 0; i < a.length; i += 4) {
-    let d = 0;
-    for (let c = 0; c < 4; c++) {
-      const delta = Math.abs((a[i + c] ?? 0) - (b[i + c] ?? 0));
-      if (delta > d) d = delta;
+  let maxChannelDelta = 0;
+  let differingPixels = 0;
+  for (let pixel = 0; pixel < expected.length; pixel += 4) {
+    let pixelDelta = 0;
+    for (let channel = 0; channel < 4; channel++) {
+      const delta = Math.abs((expected[pixel + channel] ?? 0) - (actual[pixel + channel] ?? 0));
+      pixelDelta = Math.max(pixelDelta, delta);
     }
-    if (d > 0) differing++;
-    if (d > maxDelta) maxDelta = d;
+    if (pixelDelta > 0) {
+      differingPixels++;
+    }
+    maxChannelDelta = Math.max(maxChannelDelta, pixelDelta);
   }
-  return { maxDelta, differingFraction: differing / (a.length / 4) };
+  return { maxChannelDelta, differingPixels };
 }
 
 describe("PNG pipeline visual identity", () => {
   // Both the default (truecolour) and palette encoders must reproduce the
   // committed baseline (the original single-document render) byte-for-byte.
   // resvg's CPU rasteriser is deterministic with system fonts disabled, so the
-  // diff is exact — zero tolerance, so an alpha-rounding regression in the
+  // diff is exact: zero tolerance, so an alpha-rounding regression in the
   // palette path cannot hide behind a threshold.
   it.each([
     ["truecolour (default)", {}],
@@ -52,9 +61,9 @@ describe("PNG pipeline visual identity", () => {
 
     expect(current.width).toBe(baseline.width);
     expect(current.height).toBe(baseline.height);
-    const { maxDelta, differingFraction } = maxChannelDelta(baseline.data, current.data);
-    expect(maxDelta).toBe(0);
-    expect(differingFraction).toBe(0);
+    const { maxChannelDelta, differingPixels } = comparePixels(baseline.data, current.data);
+    expect(maxChannelDelta).toBe(0);
+    expect(differingPixels).toBe(0);
   });
 });
 

@@ -9,35 +9,38 @@ export interface RgbaRaster {
 
 /**
  * Convert a premultiplied RGBA raster (resvg's `.pixels`) to straight
- * (non-premultiplied) alpha in place, as PNG requires. Fully-opaque pixels are
- * unchanged; fully-transparent collapse to 0,0,0,0; only anti-aliased edges are
- * scaled back up. Matches resvg's own `asPng()` conversion byte-for-byte.
+ * (non-premultiplied) alpha in place, which is what PNG stores. Opaque pixels
+ * are already straight; fully transparent pixels carry no colour; only the
+ * anti-aliased edges are scaled back up. Matches resvg's own `asPng()`
+ * conversion byte-for-byte.
  */
 export function unpremultiplyInPlace(raster: RgbaRaster): RgbaRaster {
-  const d = raster.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const a = d[i + 3] ?? 0;
-    if (a === 0) {
-      d[i] = 0;
-      d[i + 1] = 0;
-      d[i + 2] = 0;
+  const { data } = raster;
+  for (let offset = 0; offset < data.length; offset += 4) {
+    const alpha = data[offset + 3] ?? 0;
+    if (alpha === 255) {
+      continue; // Already straight.
+    }
+    if (alpha === 0) {
+      data[offset] = 0;
+      data[offset + 1] = 0;
+      data[offset + 2] = 0;
       continue;
     }
-    if (a === 255) {
-      continue;
+    // Premultiplied colour is the straight colour scaled by alpha; divide it back out.
+    for (let channel = 0; channel < 3; channel++) {
+      const premultiplied = data[offset + channel] ?? 0;
+      data[offset + channel] = Math.min(255, Math.round((premultiplied * 255) / alpha));
     }
-    d[i] = Math.min(255, Math.round(((d[i] ?? 0) * 255) / a));
-    d[i + 1] = Math.min(255, Math.round(((d[i + 1] ?? 0) * 255) / a));
-    d[i + 2] = Math.min(255, Math.round(((d[i + 2] ?? 0) * 255) / a));
   }
   return raster;
 }
 
 /**
- * Minimal, dependency-free PNG encoder for the composited badge raster.
+ * Minimal, dependency-free PNG encoder for the rendered QR code raster.
  *
- * The branded badge is a low-colour image (navy header, white card, grey
- * border, black QR, plus anti-aliased blends — measured at ~140 distinct
+ * The branded QR code is a low-colour image (navy header, white card, grey
+ * border, black QR, plus anti-aliased blends, measured at ~140 distinct
  * colours), so it encodes losslessly as an 8-bit palette PNG (colour type 3)
  * with a `tRNS` chunk for the rounded-corner alpha. That is ~1 byte/pixel
  * versus 4 for truecolour, so both the buffer and the DEFLATE pass are smaller.
