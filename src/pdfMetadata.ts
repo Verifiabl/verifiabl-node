@@ -20,13 +20,26 @@ const STREAM_KEYWORD_RE = /stream(?:\r\n|\n|\r)/g;
 const DICT_LOOKBACK_CHARS = 2048;
 // Ignore implausibly large candidate streams; XMP packets are a few KB.
 const MAX_STREAM_BYTES = 5 * 1024 * 1024;
+// Abort inflation past this much output: a decompression bomb in an
+// attacker-supplied PDF must not be able to exhaust memory.
+const MAX_INFLATED_BYTES = 8 * 1024 * 1024;
+
+// Out-of-range code points (String.fromCodePoint throws past 0x10FFFF) leave
+// the entity as written rather than failing the whole extraction.
+function decodeNumericEntity(entity: string, codePoint: number): string {
+  return Number.isInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff
+    ? String.fromCodePoint(codePoint)
+    : entity;
+}
 
 function xmlUnescape(value: string): string {
   return value
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex: string) =>
-      String.fromCodePoint(Number.parseInt(hex, 16)),
+    .replace(/&#x([0-9a-fA-F]+);/g, (entity, hex: string) =>
+      decodeNumericEntity(entity, Number.parseInt(hex, 16)),
     )
-    .replace(/&#([0-9]+);/g, (_, dec: string) => String.fromCodePoint(Number.parseInt(dec, 10)))
+    .replace(/&#([0-9]+);/g, (entity, dec: string) =>
+      decodeNumericEntity(entity, Number.parseInt(dec, 10)),
+    )
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
@@ -80,7 +93,31 @@ async function inflate(bytes: Uint8Array, format: "deflate" | "deflate-raw"): Pr
   const stream = new Blob([new Uint8Array(bytes)])
     .stream()
     .pipeThrough(new DecompressionStream(format));
-  const inflated = await new Response(stream).arrayBuffer();
+
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_INFLATED_BYTES) {
+        throw new Error("Inflated stream exceeds the size cap");
+      }
+      chunks.push(value);
+    }
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    throw error;
+  }
+
+  const inflated = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    inflated.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
   return new TextDecoder("utf-8").decode(inflated);
 }
 

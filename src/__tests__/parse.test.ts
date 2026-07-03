@@ -95,6 +95,12 @@ describe("parseBarcode", () => {
     );
   });
 
+  it("reports the real schema failure, not a generic message", () => {
+    expect(() => parseBarcode(`1|${VERIFIABL_REF}|${"A".repeat(10_001)}`)).toThrow(
+      "Ciphertext exceeds maximum allowed length",
+    );
+  });
+
   it("rejects empty input", () => {
     expect(() => parseBarcode("")).toThrow("Barcode text is required");
   });

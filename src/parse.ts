@@ -146,13 +146,17 @@ export function parseBarcode(rawText: string): BarcodeParts {
 
   const { verifiablReference, ciphertext } = parsePayloadString(payload);
 
+  // Surface the wire-format schemas' own messages so the real cause is
+  // reported (wrong length vs not base64url vs too long).
   const referenceResult = verifiablReferenceSchema.safeParse(verifiablReference);
   if (!referenceResult.success) {
-    throw new BarcodeParseError("Verifiabl reference must be exactly 22 base64url characters");
+    throw new BarcodeParseError(
+      referenceResult.error.issues[0]?.message ?? "Invalid Verifiabl reference",
+    );
   }
   const ciphertextResult = ciphertextSchema.safeParse(ciphertext);
   if (!ciphertextResult.success) {
-    throw new BarcodeParseError("Ciphertext must be base64url encoded");
+    throw new BarcodeParseError(ciphertextResult.error.issues[0]?.message ?? "Invalid ciphertext");
   }
 
   return { verifiablReference: referenceResult.data, encryptedPii: ciphertextResult.data };

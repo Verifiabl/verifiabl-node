@@ -140,6 +140,30 @@ describe("extractPayloadFromPdf", () => {
     await expect(extractPayloadFromPdf(pdfWithUncompressedMetadata(empty))).resolves.toBeNull();
   });
 
+  it("leaves out-of-range numeric entities as written instead of throwing", async () => {
+    const outOfRange = xmpPacket(
+      `<rdf:Description rdf:about="" xmlns:verifiabl="https://verifiabl.io/ns/">
+      <verifiabl:payload>payload&#x110000;end</verifiabl:payload>
+    </rdf:Description>`,
+    );
+    await expect(extractPayloadFromPdf(pdfWithUncompressedMetadata(outOfRange))).resolves.toBe(
+      "payload&#x110000;end",
+    );
+  });
+
+  it("aborts decompression bombs instead of buffering them", async () => {
+    // ~64MB of zeros compresses to a few KB; the inflate cap must stop it
+    // while the legitimate metadata stream after it is still found.
+    const bomb = pdfWithCompressedMetadata(
+      new TextDecoder("latin1").decode(new Uint8Array(64 * 1024 * 1024)),
+    );
+    const good = pdfWithCompressedMetadata(ELEMENT_FORM);
+    const bytes = new Uint8Array(bomb.length + good.length);
+    bytes.set(bomb, 0);
+    bytes.set(good, bomb.length);
+    await expect(extractPayloadFromPdf(bytes)).resolves.toBe(PAYLOAD);
+  });
+
   it("survives undecodable FlateDecode streams elsewhere in the file", async () => {
     const garbage = new TextEncoder().encode(`%PDF-1.7
 1 0 obj
