@@ -11,6 +11,7 @@ export {
   type VerifiablResponseEvent,
 } from "./client.js";
 export { type EncryptedPii, encryptPii } from "./crypto.js";
+export { BarcodeParseError, parseBarcode } from "./parse.js";
 export {
   type BarcodeParts,
   buildBarcodePayload,
@@ -26,6 +27,7 @@ export {
   type ScanUrlOptions,
   verifiablReferenceSchema,
 } from "./payload.js";
+export { extractPayloadFromPdf } from "./pdfMetadata.js";
 export {
   formatPii,
   PII_FIELD_ORDER,

@@ -115,6 +115,27 @@ for (const result of results) {
 }
 ```
 
+## Reading scanned barcodes
+
+For verifier integrations and tooling that consume payslips rather than issue them, the SDK ships the reader-side inverses of the barcode builders:
+
+```ts
+import { extractPayloadFromPdf, parseBarcode } from "verifiabl";
+
+// Any scanned text a Verifiabl QR can carry: the public scan URL,
+// the bare "1|<verifiablReference>|<ciphertext>" payload, or the JSON form.
+const { verifiablReference, encryptedPii } = parseBarcode(scannedText);
+
+// Failsafe: recover the same payload from the payslip PDF's XMP metadata
+// when the QR itself is cropped or unscannable.
+const payload = await extractPayloadFromPdf(pdfBytes);
+if (payload !== null) {
+  const parts = parseBarcode(payload);
+}
+```
+
+`parseBarcode` applies the same format rules and verifiabl.io host allow-list as the Verifiabl API, so anything it accepts can be submitted for verification. It throws `BarcodeParseError` on invalid input. `extractPayloadFromPdf` handles uncompressed and FlateDecode-compressed metadata streams without a PDF library and returns `null` when no Verifiabl metadata is present. Decryption stays server-side; neither helper touches key material.
+
 ## Environments
 
 Set `environment` to `production` (default) or `sandbox`. Pass the same value to the client and the barcode renderer, so the scan URL printed on the document matches where the record was registered.
