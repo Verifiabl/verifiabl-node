@@ -117,7 +117,9 @@ for (const result of results) {
 
 ## Reading scanned barcodes
 
-For verifier integrations and tooling that consume payslips rather than issue them, the SDK ships the reader-side inverses of the barcode builders:
+Lenders do not need this SDK to verify a payslip: `POST /v1/verifications/payload` accepts the raw scanned text as-is (the scan URL, the bare pipe payload, or the JSON form) from any language, so a verifier integration is one HTTP call.
+
+For Verifiabl's own tooling and other TypeScript consumers that read payslips locally, the SDK ships the reader-side inverses of the barcode builders so the wire contract has one implementation:
 
 ```ts
 import { extractPayloadFromPdf, parseBarcode } from "verifiabl";
