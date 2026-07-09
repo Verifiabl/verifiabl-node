@@ -640,6 +640,44 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     ]);
   });
 
+  it("sends externalId as external_id on the wire and maps it back onto the result", async () => {
+    const fetch = mockFetch(200, {
+      results: [
+        {
+          index: 0,
+          status: "created",
+          verifiabl_reference: VERIFIABL_REF_A,
+          external_id: "payslip-1",
+        },
+        { index: 1, status: "created", verifiabl_reference: VERIFIABL_REF_B },
+      ],
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch({
+      records: [
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_A, externalId: "payslip-1" },
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_B },
+      ],
+    });
+
+    // Sent snake_case, and only when supplied.
+    expect(requestBody(firstFetchCall(fetch))).toEqual({
+      records: [
+        { verifiabl_reference: VERIFIABL_REF_A, external_id: "payslip-1", ...WIRE_REQUEST },
+        { verifiabl_reference: VERIFIABL_REF_B, ...WIRE_REQUEST },
+      ],
+    });
+    // Mapped back camelCase on the matching result; absent when the API omits it.
+    expect(result.results[0]).toEqual({
+      index: 0,
+      status: "created",
+      verifiablReference: VERIFIABL_REF_A,
+      externalId: "payslip-1",
+    });
+    expect(result.results[1]).not.toHaveProperty("externalId");
+  });
+
   it("routes the batch to the sandbox issuer origin", async () => {
     const fetch = mockFetch(200, { results: [] });
     const client = new VerifiablClient({ ...STATIC_AUTH, environment: "sandbox", fetch });
