@@ -30,7 +30,11 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: npm
       - run: npm ci
-      # Trusted publishing requires a recent npm
-      - run: npm install -g npm@latest
+      # Trusted publishing requires npm >=11.5.1. Pin an exact known-good
+      # version rather than @latest or a floating major: npm 12.0.0
+      # (published 2026-07-08) ships broken and fails
+      # `npm publish --provenance` with "Cannot find module 'sigstore'".
+      # Bump this deliberately after verifying a newer release works.
+      - run: npm install -g npm@11.18.0
       # prepublishOnly runs typecheck + tests + build before publish
       - run: npm publish --provenance --access public
