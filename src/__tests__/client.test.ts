@@ -602,9 +602,8 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
   function batchResponseBody(): unknown {
     return {
       results: [
-        { index: 0, status: "created", verifiabl_reference: VERIFIABL_REF_A },
+        { status: "created", verifiabl_reference: VERIFIABL_REF_A },
         {
-          index: 1,
           status: "error",
           verifiabl_reference: VERIFIABL_REF_B,
           code: "CONFLICT",
@@ -629,9 +628,8 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
       ],
     });
     expect(result.results).toEqual([
-      { index: 0, status: "created", verifiablReference: VERIFIABL_REF_A },
+      { status: "created", verifiablReference: VERIFIABL_REF_A },
       {
-        index: 1,
         status: "error",
         verifiablReference: VERIFIABL_REF_B,
         code: "CONFLICT",
@@ -644,12 +642,11 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     const fetch = mockFetch(200, {
       results: [
         {
-          index: 0,
           status: "created",
           verifiabl_reference: VERIFIABL_REF_A,
           external_id: "payslip-1",
         },
-        { index: 1, status: "created", verifiabl_reference: VERIFIABL_REF_B },
+        { status: "created", verifiabl_reference: VERIFIABL_REF_B },
       ],
     });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
@@ -670,7 +667,6 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     });
     // Mapped back camelCase on the matching result; absent when the API omits it.
     expect(result.results[0]).toEqual({
-      index: 0,
       status: "created",
       verifiablReference: VERIFIABL_REF_A,
       externalId: "payslip-1",
@@ -698,15 +694,14 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     const VERIFIABL_REF_C = "ZyXwVuTsRqPoNmLkJiHgFe";
     const fetch = mockFetch(200, {
       results: [
-        { index: 0, status: "duplicate", verifiabl_reference: VERIFIABL_REF_A },
+        { status: "duplicate", verifiabl_reference: VERIFIABL_REF_A },
         {
-          index: 1,
           status: "error",
           verifiabl_reference: VERIFIABL_REF_B,
           code: "CONFLICT",
           detail: "verifiabl_reference already registered with different data",
         },
-        { index: 2, status: "created", verifiabl_reference: VERIFIABL_REF_C },
+        { status: "created", verifiabl_reference: VERIFIABL_REF_C },
       ],
     });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
@@ -721,12 +716,10 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
 
     expect(result.results.map((r) => r.status)).toEqual(["duplicate", "error", "created"]);
     expect(result.results[0]).toEqual({
-      index: 0,
       status: "duplicate",
       verifiablReference: VERIFIABL_REF_A,
     });
     expect(result.results[1]).toEqual({
-      index: 1,
       status: "error",
       verifiablReference: VERIFIABL_REF_B,
       code: "CONFLICT",
@@ -736,7 +729,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
 
   it("passes through batch statuses this SDK version does not know", async () => {
     const fetch = mockFetch(200, {
-      results: [{ index: 0, status: "skipped", verifiabl_reference: VERIFIABL_REF_A }],
+      results: [{ status: "skipped", verifiabl_reference: VERIFIABL_REF_A }],
     });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
 
@@ -745,7 +738,6 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     });
 
     expect(result.results[0]).toEqual({
-      index: 0,
       status: "skipped",
       verifiablReference: VERIFIABL_REF_A,
     });
@@ -755,7 +747,6 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     const fetch = mockFetch(200, {
       results: [
         {
-          index: 0,
           status: "created",
           verifiabl_reference: VERIFIABL_REF_A,
           // The API may add per-record fields (e.g. an id); ignore them.
@@ -769,9 +760,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
       records: [{ ...REQUEST, verifiablReference: VERIFIABL_REF_A }],
     });
 
-    expect(result.results).toEqual([
-      { index: 0, status: "created", verifiablReference: VERIFIABL_REF_A },
-    ]);
+    expect(result.results).toEqual([{ status: "created", verifiablReference: VERIFIABL_REF_A }]);
   });
 
   it("rejects records with a malformed Verifiabl reference before sending", async () => {

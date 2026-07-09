@@ -271,12 +271,12 @@ export type KnownBatchRecordStatus = (typeof KNOWN_BATCH_RECORD_STATUSES)[number
 export type BatchRecordStatus = KnownBatchRecordStatus | (string & {});
 
 /**
- * Per-record outcome, index-aligned to the input `records` array. `code` and
- * `detail` accompany an "error" status. One bad record never fails the whole
- * batch.
+ * Per-record outcome, in the same order as the input `records` (so `results[i]`
+ * is the outcome of `records[i]`). `code` and `detail` accompany an "error"
+ * status. One bad record never fails the whole batch. Correlate by position, by
+ * the record's `externalId` (echoed when supplied), or by `verifiablReference`.
  */
 export interface BatchRecordResult {
-  index: number;
   status: BatchRecordStatus;
   verifiablReference: string;
   /** Echoed back when the record supplied one. */
@@ -308,7 +308,6 @@ export function registerNonPiiBatchToWire(
 }
 
 const batchRecordResultWireSchema = z.object({
-  index: z.number().int().nonnegative(),
   // Tolerant on purpose: an unknown status must pass through, not throw and
   // discard the whole batch response. Known values are listed in
   // KNOWN_BATCH_RECORD_STATUSES for callers to branch on.
@@ -329,7 +328,6 @@ export function registerNonPiiBatchFromWire(value: unknown): RegisterNonPiiBatch
   return {
     results: wire.results.map((result) => {
       const mapped: BatchRecordResult = {
-        index: result.index,
         status: result.status,
         verifiablReference: result.verifiabl_reference,
       };
