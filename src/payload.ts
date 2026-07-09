@@ -45,18 +45,46 @@ export interface BarcodeParts {
 }
 
 /**
- * Default production origins used by issuing integrations.
+ * Per-environment origins for every Verifiabl service an integration talks to:
+ * the issuer API, the public QR scan host, and the OAuth token endpoint. This
+ * table is the single source of truth for environment -> URL resolution; the
+ * client and the scan-URL builder both resolve through it rather than each
+ * re-deriving hosts, so a new environment or a host change lands in one place.
  */
-export const DEFAULT_ISSUER_BASE_URL = "https://register.verifiabl.io";
-export const DEFAULT_SCAN_BASE_URL = "https://verify.verifiabl.io";
-
-/** Sandbox origins, selected via `environment: "sandbox"` on the client. */
-export const SANDBOX_ISSUER_BASE_URL = "https://register.sandbox.verifiabl.io";
-export const SANDBOX_SCAN_BASE_URL = "https://verify.sandbox.verifiabl.io";
-
-function scanBaseUrlForEnvironment(environment: VerifiablEnvironment): string {
-  return environment === "sandbox" ? SANDBOX_SCAN_BASE_URL : DEFAULT_SCAN_BASE_URL;
+export interface EnvironmentOrigins {
+  readonly issuerBaseUrl: string;
+  readonly scanBaseUrl: string;
+  readonly tokenUrl: string;
 }
+
+// Frozen so resolveEnvironment can hand back the singleton entry by reference
+// without a caller being able to mutate shared config and misroute later traffic.
+const ENVIRONMENTS: Record<VerifiablEnvironment, EnvironmentOrigins> = {
+  production: Object.freeze({
+    issuerBaseUrl: "https://register.verifiabl.io",
+    scanBaseUrl: "https://verify.verifiabl.io",
+    tokenUrl: "https://auth.verifiabl.io/oauth/token",
+  }),
+  sandbox: Object.freeze({
+    issuerBaseUrl: "https://register.sandbox.verifiabl.io",
+    scanBaseUrl: "https://verify.sandbox.verifiabl.io",
+    tokenUrl: "https://auth.sandbox.verifiabl.io/oauth/token",
+  }),
+};
+
+/** Resolve the origins for an environment. Callers apply their own default. */
+export function resolveEnvironment(environment: VerifiablEnvironment): EnvironmentOrigins {
+  return ENVIRONMENTS[normaliseEnvironment(environment)];
+}
+
+/**
+ * Public origin constants, kept as named exports for API stability. Sourced
+ * from {@link ENVIRONMENTS} so each literal lives in exactly one place.
+ */
+export const DEFAULT_ISSUER_BASE_URL = ENVIRONMENTS.production.issuerBaseUrl;
+export const DEFAULT_SCAN_BASE_URL = ENVIRONMENTS.production.scanBaseUrl;
+export const SANDBOX_ISSUER_BASE_URL = ENVIRONMENTS.sandbox.issuerBaseUrl;
+export const SANDBOX_SCAN_BASE_URL = ENVIRONMENTS.sandbox.scanBaseUrl;
 
 /**
  * Build the v1 barcode payload: `1|<verifiablReference>|<ciphertext>`.
@@ -116,7 +144,7 @@ export interface ScanUrlOptions {
 export function buildScanUrl(parts: BarcodeParts, options: ScanUrlOptions = {}): string {
   const environment = normaliseEnvironment(options.environment ?? "production");
   const baseUrl = normaliseScanBaseUrl(
-    options.scanBaseUrl ?? scanBaseUrlForEnvironment(environment),
+    options.scanBaseUrl ?? resolveEnvironment(environment).scanBaseUrl,
   );
   const payload = buildBarcodePayload(parts);
   return `${baseUrl}/v/${encodeURIComponent(payload)}`;

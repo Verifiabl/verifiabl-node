@@ -24,7 +24,7 @@ const IV_BYTES = 12; // 96-bit IV, the NIST-recommended size for GCM
 const KEY_BYTES = 32; // AES-256
 
 export interface EncryptedPii {
-  /** Base64url ciphertext to embed in the barcode or send to createBarcode. */
+  /** Base64url ciphertext to embed in the barcode or send to registerAndBuildBarcode. */
   encryptedPii: string;
   /** Server-side decryption metadata for registration endpoints. */
   encryptionMetadata: {

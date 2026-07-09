@@ -1,6 +1,6 @@
 import { VerifiablApiError, VerifiablAuthError, VerifiablClient } from "../client.js";
 import type {
-  CreateBarcodeRequest,
+  RegisterAndBuildBarcodeRequest,
   RegisterNonPiiBatchRequest,
   RegisterNonPiiRequest,
 } from "../types.js";
@@ -20,7 +20,7 @@ const REQUEST: RegisterNonPiiRequest = {
   },
 };
 
-const CREATE_BARCODE_REQUEST: CreateBarcodeRequest = {
+const REGISTER_AND_BUILD_BARCODE_REQUEST: RegisterAndBuildBarcodeRequest = {
   ...REQUEST,
   encryptedPii: CIPHERTEXT,
 };
@@ -39,7 +39,7 @@ const WIRE_REQUEST = {
   },
 };
 
-const WIRE_CREATE_BARCODE_REQUEST = {
+const WIRE_REGISTER_AND_BUILD_BARCODE_REQUEST = {
   ...WIRE_REQUEST,
   encrypted_pii: CIPHERTEXT,
 };
@@ -50,11 +50,11 @@ function registerResponse(): Response {
   return new Response(JSON.stringify({ verifiabl_reference: VERIFIABL_REF }), { status: 201 });
 }
 
-function createBarcodeResponse(): Response {
+function registerAndBuildBarcodeResponse(): Response {
   return new Response(
     JSON.stringify({
       verifiabl_reference: VERIFIABL_REF,
-      symbol: { format: "png", data: "iVBORw0KGgo=" },
+      barcode: { format: "png", data: "iVBORw0KGgo=" },
     }),
     { status: 201 },
   );
@@ -236,22 +236,22 @@ describe("VerifiablClient with static auth", () => {
     expect(firstFetchCall(fetch)[0]).toBe("http://localhost:3001/v1/registerNonPII");
   });
 
-  it("maps the API response to a barcode image for createBarcode", async () => {
+  it("maps the API response to a barcode image for registerAndBuildBarcode", async () => {
     const fetchMock = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
-      return createBarcodeResponse();
+      return registerAndBuildBarcodeResponse();
     });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch: fetchMock });
 
-    const result = await client.createBarcode(CREATE_BARCODE_REQUEST);
+    const result = await client.registerAndBuildBarcode(REGISTER_AND_BUILD_BARCODE_REQUEST);
 
     expect(result).toEqual({
       verifiablReference: VERIFIABL_REF,
       barcode: { format: "png", data: "iVBORw0KGgo=" },
     });
     expect(firstFetchCall(fetchMock)[0]).toBe(
-      "https://register.verifiabl.io/v1/registerAndBuildSymbol",
+      "https://register.verifiabl.io/v1/registerAndBuildBarcode",
     );
-    expect(requestBody(firstFetchCall(fetchMock))).toEqual(WIRE_CREATE_BARCODE_REQUEST);
+    expect(requestBody(firstFetchCall(fetchMock))).toEqual(WIRE_REGISTER_AND_BUILD_BARCODE_REQUEST);
   });
 
   it("throws VerifiablApiError with the stable code on API errors", async () => {
@@ -866,12 +866,14 @@ describe("VerifiablClient with OAuth client credentials", () => {
         return tokenResponse(`tok-${tokenRequests}`);
       },
       api: (url) =>
-        url.includes("registerAndBuildSymbol") ? createBarcodeResponse() : registerResponse(),
+        url.includes("registerAndBuildBarcode")
+          ? registerAndBuildBarcodeResponse()
+          : registerResponse(),
     });
     const client = new VerifiablClient({ auth: OAUTH, fetch });
 
     await client.registerNonPii(REQUEST);
-    await client.createBarcode(CREATE_BARCODE_REQUEST);
+    await client.registerAndBuildBarcode(REGISTER_AND_BUILD_BARCODE_REQUEST);
 
     expect(tokenRequests).toBe(1);
   });
@@ -884,12 +886,14 @@ describe("VerifiablClient with OAuth client credentials", () => {
         return tokenResponse(`tok-${tokenRequests}`, 30);
       },
       api: (url) =>
-        url.includes("registerAndBuildSymbol") ? createBarcodeResponse() : registerResponse(),
+        url.includes("registerAndBuildBarcode")
+          ? registerAndBuildBarcodeResponse()
+          : registerResponse(),
     });
     const client = new VerifiablClient({ auth: OAUTH, fetch });
 
     await client.registerNonPii(REQUEST);
-    await client.createBarcode(CREATE_BARCODE_REQUEST);
+    await client.registerAndBuildBarcode(REGISTER_AND_BUILD_BARCODE_REQUEST);
 
     expect(tokenRequests).toBe(1);
   });

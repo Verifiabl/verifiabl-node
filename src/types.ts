@@ -109,18 +109,18 @@ export const registerNonPiiResponseSchema = z.object({
 export type RegisterNonPiiResponse = z.infer<typeof registerNonPiiResponseSchema>;
 
 /**
- * Request for `client.createBarcode`. Calls POST
- * /v1/registerAndBuildSymbol. This API-managed flow also sends the
+ * Request for `client.registerAndBuildBarcode`. Calls POST
+ * /v1/registerAndBuildBarcode. This API-managed flow also sends the
  * ciphertext, and the server returns a ready-made barcode image.
  */
-export const createBarcodeRequestSchema = basePayslipRegistrationSchema
+export const registerAndBuildBarcodeRequestSchema = basePayslipRegistrationSchema
   .extend({
     /** Base64url AES-256-GCM ciphertext of the formatted PII plaintext. */
     encryptedPii: z.string().min(1).max(10_000).regex(BASE64URL_RE),
   })
   .strict();
 
-export type CreateBarcodeRequest = z.infer<typeof createBarcodeRequestSchema>;
+export type RegisterAndBuildBarcodeRequest = z.infer<typeof registerAndBuildBarcodeRequestSchema>;
 
 export const barcodeImageSchema = z.object({
   format: z.literal("png"),
@@ -130,13 +130,13 @@ export const barcodeImageSchema = z.object({
 
 export type BarcodeImage = z.infer<typeof barcodeImageSchema>;
 
-export const createBarcodeResponseSchema = z.object({
+export const registerAndBuildBarcodeResponseSchema = z.object({
   /** 22-char base64url Verifiabl reference embedded in the returned barcode. */
   verifiablReference: verifiablReferenceSchema,
   barcode: barcodeImageSchema,
 });
 
-export type CreateBarcodeResponse = z.infer<typeof createBarcodeResponseSchema>;
+export type RegisterAndBuildBarcodeResponse = z.infer<typeof registerAndBuildBarcodeResponseSchema>;
 
 /* ------------------------------------------------------------------ *
  * Wire translation                                                    *
@@ -169,8 +169,10 @@ export function registrationToWire(request: RegisterNonPiiRequest): Record<strin
   };
 }
 
-/** Map a validated create-barcode request to the snake_case wire body. */
-export function createBarcodeToWire(request: CreateBarcodeRequest): Record<string, unknown> {
+/** Map a validated register-and-build-barcode request to the snake_case wire body. */
+export function registerAndBuildBarcodeToWire(
+  request: RegisterAndBuildBarcodeRequest,
+): Record<string, unknown> {
   return { ...registrationToWire(request), encrypted_pii: request.encryptedPii };
 }
 
@@ -189,19 +191,19 @@ const barcodeImageWireSchema = z.object({
   data: z.string().min(1),
 });
 
-const createBarcodeApiWireResponseSchema = z.object({
+const registerAndBuildBarcodeApiWireResponseSchema = z.object({
   verifiabl_reference: verifiablReferenceSchema,
-  symbol: barcodeImageWireSchema,
+  barcode: barcodeImageWireSchema,
 });
 
-/** Parse and map a create-barcode response from the snake_case wire shape. */
-export function createBarcodeFromWire(value: unknown): CreateBarcodeResponse {
-  const wire = createBarcodeApiWireResponseSchema.parse(value);
+/** Parse and map a register-and-build-barcode response from the snake_case wire shape. */
+export function registerAndBuildBarcodeFromWire(value: unknown): RegisterAndBuildBarcodeResponse {
+  const wire = registerAndBuildBarcodeApiWireResponseSchema.parse(value);
   return {
     verifiablReference: wire.verifiabl_reference,
     barcode: {
-      format: wire.symbol.format,
-      data: wire.symbol.data,
+      format: wire.barcode.format,
+      data: wire.barcode.data,
     },
   };
 }
