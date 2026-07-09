@@ -1,18 +1,14 @@
+import { resolveEnvironment, type VerifiablEnvironment } from "./payload.js";
 import {
-  DEFAULT_ISSUER_BASE_URL,
-  SANDBOX_ISSUER_BASE_URL,
-  type VerifiablEnvironment,
-} from "./payload.js";
-import {
-  type CreateBarcodeRequest,
-  type CreateBarcodeResponse,
-  createBarcodeFromWire,
-  createBarcodeRequestSchema,
-  createBarcodeToWire,
+  type RegisterAndBuildBarcodeRequest,
+  type RegisterAndBuildBarcodeResponse,
   type RegisterNonPiiBatchRequest,
   type RegisterNonPiiBatchResponse,
   type RegisterNonPiiRequest,
   type RegisterNonPiiResponse,
+  registerAndBuildBarcodeFromWire,
+  registerAndBuildBarcodeRequestSchema,
+  registerAndBuildBarcodeToWire,
   registerNonPiiBatchFromWire,
   registerNonPiiBatchRequestSchema,
   registerNonPiiBatchToWire,
@@ -89,20 +85,6 @@ export type VerifiablAuth =
       tokenUrl?: string;
     };
 
-/**
- * Issuer API origins and OAuth token endpoints for each public environment.
- */
-const ENVIRONMENTS: Record<VerifiablEnvironment, { issuer: string; tokenUrl: string }> = {
-  production: {
-    issuer: DEFAULT_ISSUER_BASE_URL,
-    tokenUrl: "https://auth.verifiabl.io/oauth/token",
-  },
-  sandbox: {
-    issuer: SANDBOX_ISSUER_BASE_URL,
-    tokenUrl: "https://auth.sandbox.verifiabl.io/oauth/token",
-  },
-};
-
 const VERIFIABL_AUTH_HOSTS = new Set(["auth.verifiabl.io", "auth.sandbox.verifiabl.io"]);
 
 const ISSUER_SCOPE = "verifiabl:issuer";
@@ -171,7 +153,7 @@ export interface VerifiablClientOptions {
   environment?: VerifiablEnvironment;
   /**
    * Advanced local development override for issuer API calls
-   * (`registerNonPii`, `registerNonPiiBatch`, and `createBarcode`). Most
+   * (`registerNonPii`, `registerNonPiiBatch`, and `registerAndBuildBarcode`). Most
    * integrations should leave this unset and use `environment` instead.
    * Must use https, except localhost may use http.
    */
@@ -205,18 +187,17 @@ export class VerifiablClient {
   private tokenInFlight: Promise<CachedToken> | undefined;
 
   constructor(options: VerifiablClientOptions) {
-    const environment = options.environment ?? "production";
-    const origins = ENVIRONMENTS[environment];
-    if (origins === undefined) {
-      throw new Error("environment must be 'production' or 'sandbox'");
-    }
+    const origins = resolveEnvironment(options.environment ?? "production");
     const auth = validateAuth(options.auth);
     this.auth = auth;
     this.tokenUrl =
       "tokenUrl" in auth && auth.tokenUrl !== undefined
         ? parseTokenUrl(auth.tokenUrl)
         : origins.tokenUrl;
-    this.issuerBaseUrl = parseBaseUrl(options.issuerBaseUrl ?? origins.issuer, "issuerBaseUrl");
+    this.issuerBaseUrl = parseBaseUrl(
+      options.issuerBaseUrl ?? origins.issuerBaseUrl,
+      "issuerBaseUrl",
+    );
     const timeoutMs = options.timeoutMs ?? 30_000;
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
       throw new Error("timeoutMs must be a positive number");
@@ -247,12 +228,12 @@ export class VerifiablClient {
    * Register non-PII payslip data and have the API build the barcode.
    * Sends the encrypted PII alongside the non-PII data.
    */
-  async createBarcode(
-    request: CreateBarcodeRequest,
+  async registerAndBuildBarcode(
+    request: RegisterAndBuildBarcodeRequest,
     options: VerifiablRequestOptions = {},
-  ): Promise<CreateBarcodeResponse> {
-    const body = createBarcodeToWire(createBarcodeRequestSchema.parse(request));
-    return this.post("/v1/registerAndBuildSymbol", body, options, createBarcodeFromWire);
+  ): Promise<RegisterAndBuildBarcodeResponse> {
+    const body = registerAndBuildBarcodeToWire(registerAndBuildBarcodeRequestSchema.parse(request));
+    return this.post("/v1/registerAndBuildBarcode", body, options, registerAndBuildBarcodeFromWire);
   }
 
   /**
