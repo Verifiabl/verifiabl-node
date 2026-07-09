@@ -52,22 +52,24 @@ export interface BarcodeParts {
  * re-deriving hosts, so a new environment or a host change lands in one place.
  */
 export interface EnvironmentOrigins {
-  issuerBaseUrl: string;
-  scanBaseUrl: string;
-  tokenUrl: string;
+  readonly issuerBaseUrl: string;
+  readonly scanBaseUrl: string;
+  readonly tokenUrl: string;
 }
 
+// Frozen so resolveEnvironment can hand back the singleton entry by reference
+// without a caller being able to mutate shared config and misroute later traffic.
 const ENVIRONMENTS: Record<VerifiablEnvironment, EnvironmentOrigins> = {
-  production: {
+  production: Object.freeze({
     issuerBaseUrl: "https://register.verifiabl.io",
     scanBaseUrl: "https://verify.verifiabl.io",
     tokenUrl: "https://auth.verifiabl.io/oauth/token",
-  },
-  sandbox: {
+  }),
+  sandbox: Object.freeze({
     issuerBaseUrl: "https://register.sandbox.verifiabl.io",
     scanBaseUrl: "https://verify.sandbox.verifiabl.io",
     tokenUrl: "https://auth.sandbox.verifiabl.io/oauth/token",
-  },
+  }),
 };
 
 /** Resolve the origins for an environment. Callers apply their own default. */
