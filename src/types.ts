@@ -219,9 +219,25 @@ export function registerAndBuildBarcodeFromWire(value: unknown): RegisterAndBuil
 /** Maximum records per batch request. Matches the API's MAX_BATCH_RECORDS. */
 export const MAX_BATCH_RECORDS = 1000;
 
+/** Longest accepted externalId. Matches the API's limit. */
+const MAX_EXTERNAL_ID_LENGTH = 255;
+
+/**
+ * Optional caller-supplied correlation id for a batch record. The API echoes it
+ * back verbatim in the matching result and never stores it, so you can line up
+ * results (and error logs) with your own payslip records by your own id rather
+ * than by array position. Printable ASCII, so it is safe to place in logs.
+ */
+const externalIdSchema = z
+  .string()
+  .min(1)
+  .max(MAX_EXTERNAL_ID_LENGTH)
+  .regex(/^[\x20-\x7e]+$/);
+
 const batchRecordRequestSchema = basePayslipRegistrationSchema
   .extend({
     verifiablReference: verifiablReferenceSchema,
+    externalId: externalIdSchema.optional(),
   })
   .strict();
 
@@ -255,14 +271,16 @@ export type KnownBatchRecordStatus = (typeof KNOWN_BATCH_RECORD_STATUSES)[number
 export type BatchRecordStatus = KnownBatchRecordStatus | (string & {});
 
 /**
- * Per-record outcome, index-aligned to the input `records` array. `code` and
- * `detail` accompany an "error" status. One bad record never fails the whole
- * batch.
+ * Per-record outcome, in the same order as the input `records` (so `results[i]`
+ * is the outcome of `records[i]`). `code` and `detail` accompany an "error"
+ * status. One bad record never fails the whole batch. Correlate by position, by
+ * the record's `externalId` (echoed when supplied), or by `verifiablReference`.
  */
 export interface BatchRecordResult {
-  index: number;
   status: BatchRecordStatus;
   verifiablReference: string;
+  /** Echoed back when the record supplied one. */
+  externalId?: string;
   code?: string;
   detail?: string;
 }
@@ -278,6 +296,7 @@ export function registerNonPiiBatchToWire(
   return {
     records: request.records.map((record) => ({
       verifiabl_reference: record.verifiablReference,
+      ...(record.externalId !== undefined && { external_id: record.externalId }),
       ...registrationToWire({
         schema: record.schema,
         issuedAt: record.issuedAt,
@@ -289,12 +308,12 @@ export function registerNonPiiBatchToWire(
 }
 
 const batchRecordResultWireSchema = z.object({
-  index: z.number().int().nonnegative(),
   // Tolerant on purpose: an unknown status must pass through, not throw and
   // discard the whole batch response. Known values are listed in
   // KNOWN_BATCH_RECORD_STATUSES for callers to branch on.
   status: z.string(),
   verifiabl_reference: verifiablReferenceSchema,
+  external_id: z.string().optional(),
   code: z.string().optional(),
   detail: z.string().optional(),
 });
@@ -309,10 +328,12 @@ export function registerNonPiiBatchFromWire(value: unknown): RegisterNonPiiBatch
   return {
     results: wire.results.map((result) => {
       const mapped: BatchRecordResult = {
-        index: result.index,
         status: result.status,
         verifiablReference: result.verifiabl_reference,
       };
+      if (result.external_id !== undefined) {
+        mapped.externalId = result.external_id;
+      }
       if (result.code !== undefined) {
         mapped.code = result.code;
       }
