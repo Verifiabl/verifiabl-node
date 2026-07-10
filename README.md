@@ -81,7 +81,7 @@ PNGs default to truecolour. Pass `{ palette: true }` for smaller files when you 
 
 ## Batch registration
 
-For pay runs, register up to 1000 records in one request with `registerNonPiiBatch`. The provider generates each Verifiabl reference up-front with `generateVerifiablReference` and includes it on each record, so the whole batch can go in one round trip. Results are returned index-aligned to the input; one bad record never fails the whole batch.
+For pay runs, register up to 1000 records in one request with `registerNonPiiBatch`. The provider generates each Verifiabl reference up-front with `generateVerifiablReference` and includes it on each record, so the whole batch can go in one round trip. Results come back in the same order as the input records (`results[i]` is the outcome of `records[i]`); one bad record never fails the whole batch.
 
 ```ts
 import { encryptPii, formatPii, generateVerifiablReference } from "verifiabl";
