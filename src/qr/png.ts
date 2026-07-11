@@ -1,9 +1,15 @@
-import type { BarcodeParts } from "../payload.js";
-import { encodePng, type PngEncodeOptions, unpremultiplyInPlace } from "./pngEncode.js";
+import { type BarcodeParts, buildScanUrl, type ScanUrlOptions } from "../payload.js";
+import { blitQrOntoFrame } from "./blit.js";
+import { frameRaster, SUPPORTED_PNG_PIXEL_WIDTHS, type SupportedPngPixelWidth } from "./frame.js";
+import { encodePng, type PngEncodeOptions } from "./pngEncode.js";
 import {
   type BarcodeErrorCorrectionLevel,
   type BarcodeSvgOptions,
-  createBarcodeSvg,
+  DEFAULT_MAX_ERROR_CORRECTION,
+  errorCorrectionLadder,
+  IDEAL_MODULE_PX,
+  round2,
+  selectQrRendering,
 } from "./styled.js";
 
 export interface BarcodePngResult {
@@ -24,61 +30,34 @@ export interface BarcodePngResult {
 /** PNG-specific options. A superset of the SVG options, so callers can pass either. */
 export interface BarcodePngOptions extends BarcodeSvgOptions {
   /**
-   * Encode as an 8-bit palette PNG instead of truecolour (default false).
-   *
-   * The QR code is a low-colour image, so a palette PNG is roughly 60% smaller,
-   * worth it when many codes are embedded in a PDF. It encodes in this SDK
-   * rather than via resvg, which is about 2x slower. Lossless either way.
+   * @deprecated The compositor always emits the smallest lossless encoding
+   * (an 8-bit palette PNG; truecolour only if the palette ever overflows).
+   * This flag is ignored and will be removed in a future release.
    */
   palette?: boolean;
   /**
-   * DEFLATE level (0-9, default 6) for the palette encoder. Lossless at every
-   * level; only trades file size for encode speed. Ignored unless `palette`.
+   * DEFLATE level (0-9, default 6). Lossless at every level; only trades file
+   * size for encode speed.
    */
   compressionLevel?: number;
 }
 
-const MIN_PIXEL_WIDTH = 480;
-
-type ResvgConstructor = typeof import("@resvg/resvg-js").Resvg;
-
-let resvgLoad: Promise<ResvgConstructor> | undefined;
-
-/**
- * Load the optional `@resvg/resvg-js` peer dependency once and cache the
- * constructor. A failed load is not cached, so a later install can recover.
- */
-async function loadResvg(): Promise<ResvgConstructor> {
-  if (resvgLoad === undefined) {
-    resvgLoad = import("@resvg/resvg-js")
-      .then((mod) => mod.Resvg)
-      .catch((cause: unknown) => {
-        resvgLoad = undefined;
-        throw new Error(
-          "PNG output requires the optional peer dependency '@resvg/resvg-js'. " +
-            "Install it with: npm install @resvg/resvg-js, or use createBarcodeSvg for SVG output.",
-          { cause },
-        );
-      });
-  }
-  return resvgLoad;
+function isSupportedPixelWidth(value: number): value is SupportedPngPixelWidth {
+  return SUPPORTED_PNG_PIXEL_WIDTHS.some((width) => width === value);
 }
 
 /**
  * Render the branded Verifiabl QR code as a PNG.
  *
- * Requires the optional peer dependency `@resvg/resvg-js`:
+ * The PNG is composited deterministically from a pre-rasterised frame plus
+ * exact pixel-aligned QR modules - no vector rasteriser is involved, so there
+ * is no native dependency, and the same record produces the byte-identical
+ * raster in every Verifiabl SDK.
  *
- *   npm install @resvg/resvg-js
- *
- * If your pipeline accepts SVG, prefer `createBarcodeSvg`.
- *
- * Renders with `loadSystemFonts: false`. The QR code has no `<text>` (every
- * glyph is a vector path), so this is visually identical and skips resvg's
- * system-font-database scan, which otherwise dominates render time. Do not
- * re-enable system fonts.
- *
- * Pass `palette: true` for a smaller palette PNG, at roughly twice the encode time.
+ * Because the frame is pre-rasterised, PNG output exists only at the widths in
+ * {@link SUPPORTED_PNG_PIXEL_WIDTHS}. If you need a different size, prefer
+ * `createBarcodeSvg` (continuously scalable), or scale at placement time: PDF
+ * toolchains set the physical size independently of the pixel size.
  *
  * @param pixelWidth Output bitmap width in pixels (default: 720).
  */
@@ -87,54 +66,48 @@ export async function createBarcodePng(
   options: BarcodePngOptions = {},
   pixelWidth = 720,
 ): Promise<BarcodePngResult> {
-  if (!Number.isInteger(pixelWidth) || pixelWidth <= 0) {
-    throw new Error("pixelWidth must be a positive integer");
-  }
-  if (pixelWidth < MIN_PIXEL_WIDTH) {
-    throw new Error(`pixelWidth must be at least ${MIN_PIXEL_WIDTH}`);
+  if (!Number.isInteger(pixelWidth) || !isSupportedPixelWidth(pixelWidth)) {
+    throw new Error(`pixelWidth must be one of ${SUPPORTED_PNG_PIXEL_WIDTHS.join(", ")}`);
   }
 
-  const Resvg = await loadResvg();
-
-  // resvg rasterises to pixelWidth regardless of the SVG's width attribute, so
-  // build the SVG at that same width. This keeps the scannability floor in
-  // styled.ts reflecting the actual PNG resolution.
-  const { svg, content, errorCorrectionLevel, modulePx, degraded } = createBarcodeSvg(parts, {
-    ...options,
-    width: pixelWidth,
-  });
-
-  let png: Buffer;
-  let width: number;
-  let height: number;
-  try {
-    const rendered = new Resvg(svg, {
-      fitTo: { mode: "width", value: pixelWidth },
-      font: { loadSystemFonts: false },
-    }).render();
-    width = rendered.width;
-    height = rendered.height;
-    png = options.palette === true ? encodePalette(rendered, options) : rendered.asPng();
-  } catch (cause) {
-    throw new Error("Failed to rasterise the Verifiabl barcode PNG", { cause });
+  const scanOptions: ScanUrlOptions = {};
+  if (options.environment !== undefined) {
+    scanOptions.environment = options.environment;
   }
+  if (options.scanBaseUrl !== undefined) {
+    scanOptions.scanBaseUrl = options.scanBaseUrl;
+  }
+  const content = buildScanUrl(parts, scanOptions);
 
-  return { png, width, height, content, errorCorrectionLevel, modulePx, degraded };
-}
+  const ladder = errorCorrectionLadder(options.maxErrorCorrection ?? DEFAULT_MAX_ERROR_CORRECTION);
+  const selected = selectQrRendering(content, pixelWidth, ladder);
+  const degraded =
+    selected.errorCorrectionLevel !== ladder[0] || selected.modulePx < IDEAL_MODULE_PX;
 
-function encodePalette(
-  rendered: { pixels: Buffer; width: number; height: number },
-  options: BarcodePngOptions,
-): Buffer {
-  // resvg's pixels are premultiplied; PNG is straight alpha.
-  const raster = unpremultiplyInPlace({
-    data: Buffer.from(rendered.pixels),
-    width: rendered.width,
-    height: rendered.height,
-  });
+  const raster = frameRaster(pixelWidth);
+  blitQrOntoFrame(
+    raster,
+    {
+      matrixData: selected.qr.modules.data,
+      size: selected.size,
+      insetModules: selected.insetModules,
+    },
+    pixelWidth,
+  );
+
   const encodeOptions: PngEncodeOptions = {};
   if (options.compressionLevel !== undefined) {
     encodeOptions.compressionLevel = options.compressionLevel;
   }
-  return encodePng(raster, encodeOptions);
+  const png = encodePng(raster, encodeOptions);
+
+  return {
+    png,
+    width: raster.width,
+    height: raster.height,
+    content,
+    errorCorrectionLevel: selected.errorCorrectionLevel,
+    modulePx: round2(selected.modulePx),
+    degraded,
+  };
 }

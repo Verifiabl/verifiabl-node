@@ -12,11 +12,7 @@ Verifiabl is for accredited payroll providers. You receive sandbox credentials a
 npm install verifiabl
 ```
 
-Requires Node.js 20+. The example below renders an SVG badge, which needs no extra dependencies. To render a PNG instead (slower, and it pulls in a native renderer), also install:
-
-```bash
-npm install @resvg/resvg-js
-```
+Requires Node.js 20+. No native dependencies: both the SVG and PNG renderers are pure JavaScript.
 
 ## Getting started
 
@@ -64,7 +60,7 @@ const { svg } = createBarcodeSvg(
 );
 ```
 
-Prefer `createBarcodeSvg` when you can: SVG scales to any size without losing quality. Use `createBarcodePng` when you need a raster PNG (it needs the `@resvg/resvg-js` renderer). Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
+Prefer `createBarcodeSvg` when you can: SVG scales to any size without losing quality. Use `createBarcodePng` when your document pipeline needs a raster image; it composites the badge deterministically (no rasteriser involved), so the same record produces the byte-identical raster in every Verifiabl SDK. PNG output comes in fixed pixel widths (480, 720, 960 or 1440; the physical print size is set where you place the image in the PDF). Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
 
 ### Rendering many codes
 
@@ -77,7 +73,7 @@ for (const { verifiablReference, encryptedPii } of records) {
 }
 ```
 
-PNGs default to truecolour. Pass `{ palette: true }` for smaller files when you embed many codes in a PDF.
+PNGs are lossless 8-bit palette images, the smallest encoding for the badge's low colour count.
 
 ## Batch registration
 

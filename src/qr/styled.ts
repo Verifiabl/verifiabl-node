@@ -70,16 +70,16 @@ const FRAME_BORDER = "#ADADAD";
 // host document. The fill follows the rounded border path (rx=7), so the four
 // corners outside that radius stay transparent.
 const FRAME_BACKGROUND = "#FFFFFF";
-const FRAME_VIEWBOX_WIDTH = 96;
+export const FRAME_VIEWBOX_WIDTH = 96;
 const FRAME_VIEWBOX_HEIGHT = 151;
 const FRAME_HEADER_HEIGHT = 47;
-const FRAME_QR_BOX_X = 8;
-const FRAME_QR_BOX_Y = 59;
+export const FRAME_QR_BOX_X = 8;
+export const FRAME_QR_BOX_Y = 59;
 const FRAME_QR_BOX_SIZE = 80;
 // At this width, a realistic fully-populated PII record renders QR modules at
 // or above IDEAL_MODULE_PX at the default "M" ceiling (the pristine tier).
 const MIN_BADGE_WIDTH = 480;
-const FINDER_SIZE = 7;
+export const FINDER_SIZE = 7;
 // Degradation ladder, highest-ECC-first (Q -> M -> L; Q is the densest, most
 // damage-tolerant level). The branded frame's outer size is fixed, so the only
 // levers are error-correction level and module size inside the fixed QR box.
@@ -91,7 +91,7 @@ const FINDER_SIZE = 7;
 // density for damage tolerance. Error correction is invisible to the scan
 // service, which only reads the decoded URL.
 const FULL_ERROR_CORRECTION_LADDER = ["Q", "M", "L"] as const;
-const DEFAULT_MAX_ERROR_CORRECTION = "M" as const;
+export const DEFAULT_MAX_ERROR_CORRECTION = "M" as const;
 
 /**
  * The ladder from `ceiling` down to "L", e.g. "M" yields ["M", "L"].
@@ -101,7 +101,7 @@ const DEFAULT_MAX_ERROR_CORRECTION = "M" as const;
  * would return -1 and `slice(-1)` would silently force ["L"], the weakest
  * level. Fail loudly instead.
  */
-function errorCorrectionLadder(ceiling: "Q" | "M"): readonly BarcodeErrorCorrectionLevel[] {
+export function errorCorrectionLadder(ceiling: "Q" | "M"): readonly BarcodeErrorCorrectionLevel[] {
   // Validate against the allowed ceilings, not just membership in the full
   // ladder: "L" is a real ladder entry but not a valid ceiling, and would
   // otherwise pass through as an L-only (weakest) ladder.
@@ -113,7 +113,7 @@ function errorCorrectionLadder(ceiling: "Q" | "M"): readonly BarcodeErrorCorrect
 
 // Pristine target: at or above this module size (px) at the chosen ceiling, the
 // code is not considered degraded.
-const IDEAL_MODULE_PX = 4;
+export const IDEAL_MODULE_PX = 4;
 // Absolute floor: a module smaller than this (px) is unreliable for real-world
 // scans, so we hard-error rather than emit it. Evaluated at the badge's width.
 const MIN_MODULE_PX = 3;
@@ -169,7 +169,7 @@ function renderModules(
   return parts.join("");
 }
 
-function isFinderModule(row: number, col: number, size: number): boolean {
+export function isFinderModule(row: number, col: number, size: number): boolean {
   const inTop = row < FINDER_SIZE;
   const inLeft = col < FINDER_SIZE;
   const inRight = col >= size - FINDER_SIZE;
@@ -230,7 +230,7 @@ function roundedRectPath(
   );
 }
 
-function round2(n: number): number {
+export function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
@@ -336,7 +336,7 @@ export function createBarcodeSvg(
   };
 }
 
-interface SelectedQrRendering {
+export interface SelectedQrRendering {
   qr: ReturnType<typeof QRCode.create>;
   errorCorrectionLevel: BarcodeErrorCorrectionLevel;
   size: number;
@@ -353,7 +353,7 @@ interface SelectedQrRendering {
  * cannot fit, so an over-long payload fails loudly at issuance instead of
  * producing an unscannable code.
  */
-function selectQrRendering(
+export function selectQrRendering(
   content: string,
   badgeWidth: number,
   ladder: readonly BarcodeErrorCorrectionLevel[],
