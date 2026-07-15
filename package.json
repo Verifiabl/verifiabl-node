@@ -43,7 +43,8 @@
     "check": "biome check --write .",
     "typecheck": "tsc --noEmit",
     "bench": "npm run build && node scripts/bench-png.mjs",
-    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build",
+    "bake:frames": "npm run build && node scripts/bake-frames.mjs"
   },
   "dependencies": {
     "qrcode": "^1.5.4",
@@ -61,14 +62,6 @@
     "ts-jest": "^29.2.5",
     "tsup": "^8.3.5",
     "typescript": "^5.7.0"
-  },
-  "peerDependencies": {
-    "@resvg/resvg-js": "^2.6.0"
-  },
-  "peerDependenciesMeta": {
-    "@resvg/resvg-js": {
-      "optional": true
-    }
   },
   "overrides": {
     "esbuild": "0.28.1",

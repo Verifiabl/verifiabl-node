@@ -36,6 +36,10 @@ export {
 } from "./pii.js";
 
 export {
+  SUPPORTED_PNG_PIXEL_WIDTHS,
+  type SupportedPngPixelWidth,
+} from "./qr/frame.js";
+export {
   type BarcodePngOptions,
   type BarcodePngResult,
   createBarcodePng,
