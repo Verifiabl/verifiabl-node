@@ -12,7 +12,7 @@ export const SUPPORTED_PNG_PIXEL_WIDTHS = [480, 720, 960, 1440] as const;
 
 export type SupportedPngPixelWidth = (typeof SUPPORTED_PNG_PIXEL_WIDTHS)[number];
 
-interface ParsedFrameAsset {
+export interface ParsedFrameAsset {
   width: number;
   height: number;
   /** RGBA (straight alpha), 4 bytes per palette entry. */
@@ -29,7 +29,17 @@ function parseAsset(pixelWidth: SupportedPngPixelWidth): ParsedFrameAsset {
     return cached;
   }
 
-  const container = Buffer.from(FRAME_ASSETS_V1[pixelWidth], "base64");
+  const parsed = parseFrameContainer(Buffer.from(FRAME_ASSETS_V1[pixelWidth], "base64"));
+  parsedAssets.set(pixelWidth, parsed);
+  return parsed;
+}
+
+/**
+ * Decode and validate one VFR1 frame container. Exported for the package's own
+ * tests (not re-exported from the entrypoint); production callers reach frames
+ * through {@link frameRaster}.
+ */
+export function parseFrameContainer(container: Buffer): ParsedFrameAsset {
   if (container.toString("ascii", 0, 4) !== "VFR1") {
     throw new Error("corrupt frame asset: bad magic");
   }
@@ -49,14 +59,26 @@ function parseAsset(pixelWidth: SupportedPngPixelWidth): ParsedFrameAsset {
     throw new Error("corrupt frame asset: pixel count mismatch");
   }
 
-  const parsed: ParsedFrameAsset = {
+  // Every index must address a palette entry. Validating here means a corrupt
+  // asset fails fast with a clear message; the ?? 0 reads in frameRaster then
+  // can never silently turn an out-of-range index into a black pixel.
+  let maxIndex = 0;
+  for (let p = 0; p < indices.length; p++) {
+    const index = indices[p] ?? 0;
+    if (index > maxIndex) {
+      maxIndex = index;
+    }
+  }
+  if (maxIndex >= paletteCount) {
+    throw new Error("corrupt frame asset: palette index out of range");
+  }
+
+  return {
     width,
     height,
     palette: container.subarray(paletteStart, deflatedLengthOffset),
     indices,
   };
-  parsedAssets.set(pixelWidth, parsed);
-  return parsed;
 }
 
 /**
