@@ -28,11 +28,15 @@ export {
 } from "./payload.js";
 export {
   formatPii,
+  PII_FIELD_MAX_LENGTH,
   PII_FIELD_ORDER,
   type PiiFieldName,
   type PiiFields,
+  type PiiFieldViolation,
+  type PiiFieldViolationReason,
   parsePii,
   piiFieldsSchema,
+  PiiValidationError,
 } from "./pii.js";
 
 export {

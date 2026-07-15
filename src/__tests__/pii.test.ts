@@ -1,4 +1,4 @@
-import { formatPii, parsePii, piiFieldsSchema } from "../pii.js";
+import { formatPii, parsePii, piiFieldsSchema, PiiValidationError } from "../pii.js";
 
 describe("formatPii", () => {
   it("formats the documented example exactly", () => {
@@ -25,13 +25,40 @@ describe("formatPii", () => {
   });
 
   it("rejects pipe characters in field values", () => {
-    expect(() => formatPii({ employeeName: "Jane|Doe" })).toThrow();
+    expect(() => formatPii({ employeeName: "Jane|Doe" })).toThrow(PiiValidationError);
   });
 
   it("rejects control characters in field values", () => {
-    expect(() => formatPii({ position: "Dev\nOps" })).toThrow();
-    expect(() => formatPii({ position: "Dev\tOps" })).toThrow();
-    expect(() => formatPii({ position: "Dev\u0085Ops" })).toThrow();
+    expect(() => formatPii({ position: "Dev\nOps" })).toThrow(PiiValidationError);
+    expect(() => formatPii({ position: "Dev\tOps" })).toThrow(PiiValidationError);
+    expect(() => formatPii({ position: "Dev\u0085Ops" })).toThrow(PiiValidationError);
+  });
+
+  it("names the offending field and reason without echoing the value", () => {
+    try {
+      formatPii({ employeeName: "Jane", accountName: "ACME|Trading" });
+      throw new Error("expected formatPii to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(PiiValidationError);
+      const violations = (error as PiiValidationError).violations;
+      expect(violations).toEqual([{ field: "accountName", reason: "pipe" }]);
+      // The value itself is PII and must never appear in the message.
+      expect((error as PiiValidationError).message).not.toContain("ACME|Trading");
+      expect((error as PiiValidationError).message).toContain("accountName");
+    }
+  });
+
+  it("reports every offending field in one error", () => {
+    try {
+      formatPii({ employeeName: "a|b", position: "x".repeat(257) });
+      throw new Error("expected formatPii to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(PiiValidationError);
+      expect((error as PiiValidationError).violations).toEqual([
+        { field: "employeeName", reason: "pipe" },
+        { field: "position", reason: "too-long" },
+      ]);
+    }
   });
 
   it("rejects unknown fields", () => {
@@ -39,7 +66,7 @@ describe("formatPii", () => {
   });
 
   it("rejects fields over 256 characters", () => {
-    expect(() => formatPii({ employeeName: "x".repeat(257) })).toThrow();
+    expect(() => formatPii({ employeeName: "x".repeat(257) })).toThrow(PiiValidationError);
   });
 
   it("accepts unicode names", () => {

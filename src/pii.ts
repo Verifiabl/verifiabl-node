@@ -33,6 +33,9 @@ export const PII_FIELD_ORDER = tuple([
 
 export type PiiFieldName = (typeof PII_FIELD_ORDER)[number];
 
+/** Per-field length ceiling, enforced by both formatPii and piiFieldsSchema. */
+export const PII_FIELD_MAX_LENGTH = 256;
+
 /**
  * Allow-list for a single PII field value: any printable character except
  * the pipe delimiter and control characters. Pipes would corrupt the
@@ -45,7 +48,7 @@ function isPrintableWithoutPipe(value: string): boolean {
 
 const piiFieldSchema = z
   .string()
-  .max(256, "PII field exceeds 256 characters")
+  .max(PII_FIELD_MAX_LENGTH, `PII field exceeds ${PII_FIELD_MAX_LENGTH} characters`)
   .refine(isPrintableWithoutPipe, "PII field must not contain '|' or control characters");
 
 export const piiFieldsSchema = z
@@ -62,14 +65,77 @@ export const piiFieldsSchema = z
 
 export type PiiFields = z.infer<typeof piiFieldsSchema>;
 
+/** Why a PII field value cannot be encoded in the P1 wire format. */
+export type PiiFieldViolationReason = "pipe" | "control-character" | "too-long";
+
+/** A single field `formatPii` refused to encode, and why. */
+export interface PiiFieldViolation {
+  field: PiiFieldName;
+  reason: PiiFieldViolationReason;
+}
+
+const VIOLATION_DESCRIPTIONS: Record<PiiFieldViolationReason, string> = {
+  pipe: "must not contain '|'",
+  "control-character": "must not contain control characters",
+  "too-long": `exceeds ${PII_FIELD_MAX_LENGTH} characters`,
+};
+
+/**
+ * Thrown by {@link formatPii} when a field value cannot be encoded in the P1
+ * wire format. The pipe is the field delimiter and the format has no escape
+ * mechanism, so an offending value must be corrected at the source (strip the
+ * character) rather than escaped. `violations` names each field and reason so
+ * callers can guide the user without echoing the value, which is PII.
+ */
+export class PiiValidationError extends Error {
+  readonly violations: readonly PiiFieldViolation[];
+
+  constructor(violations: readonly PiiFieldViolation[]) {
+    const detail = violations
+      .map((v) => `${v.field} ${VIOLATION_DESCRIPTIONS[v.reason]}`)
+      .join("; ");
+    super(`Invalid PII field${violations.length === 1 ? "" : "s"}: ${detail}`);
+    this.name = "PiiValidationError";
+    this.violations = violations;
+    Object.setPrototypeOf(this, PiiValidationError.prototype);
+  }
+}
+
+/**
+ * Inspect each supplied field for content the P1 format cannot carry, in
+ * field order. Non-string values are left for {@link piiFieldsSchema} to
+ * reject with its own type error.
+ */
+function findPiiViolations(fields: PiiFields): PiiFieldViolation[] {
+  const violations: PiiFieldViolation[] = [];
+  for (const field of PII_FIELD_ORDER) {
+    const value = fields[field];
+    if (typeof value !== "string") continue;
+    if (value.length > PII_FIELD_MAX_LENGTH) {
+      violations.push({ field, reason: "too-long" });
+    } else if (value.includes("|")) {
+      violations.push({ field, reason: "pipe" });
+    } else if (/\p{Cc}/u.test(value)) {
+      violations.push({ field, reason: "control-character" });
+    }
+  }
+  return violations;
+}
+
 /**
  * Format employee PII into Verifiabl's compact plaintext wire format.
  *
  * The result is what you encrypt with `encryptPii` before embedding it in
- * a barcode. Throws `ZodError` if any field contains a pipe or control
- * character, or if an unknown field is supplied.
+ * a barcode. Throws {@link PiiValidationError} if any field contains a pipe
+ * or control character or exceeds the length limit — each such value must be
+ * corrected at the source, as the format has no escape mechanism. Throws
+ * `ZodError` for structural problems (unknown field, non-string value).
  */
 export function formatPii(fields: PiiFields): string {
+  const violations = findPiiViolations(fields);
+  if (violations.length > 0) {
+    throw new PiiValidationError(violations);
+  }
   const validated = piiFieldsSchema.parse(fields);
   const segments = PII_FIELD_ORDER.map((name) => validated[name] ?? "");
   return `P1|${segments.join("|")}`;
