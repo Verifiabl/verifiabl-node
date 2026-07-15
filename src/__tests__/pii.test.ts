@@ -65,6 +65,17 @@ describe("formatPii", () => {
     expect(() => piiFieldsSchema.parse({ tax_file_number: "123" })).toThrow();
   });
 
+  it("leaves nullish input to the schema (ZodError, not TypeError)", () => {
+    for (const bad of [null, undefined]) {
+      try {
+        formatPii(bad as never);
+        throw new Error("expected formatPii to throw");
+      } catch (error) {
+        expect((error as Error).name).toBe("ZodError");
+      }
+    }
+  });
+
   it("rejects fields over 256 characters", () => {
     expect(() => formatPii({ employeeName: "x".repeat(257) })).toThrow(PiiValidationError);
   });

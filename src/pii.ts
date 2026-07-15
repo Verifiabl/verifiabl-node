@@ -103,11 +103,15 @@ export class PiiValidationError extends Error {
 
 /**
  * Inspect each supplied field for content the P1 format cannot carry, in
- * field order. Non-string values are left for {@link piiFieldsSchema} to
- * reject with its own type error.
+ * field order. Non-object inputs and non-string values are left for
+ * {@link piiFieldsSchema} to reject with its own (structural) ZodError, so
+ * `formatPii`'s documented error contract holds for nullish callers too.
  */
 function findPiiViolations(fields: PiiFields): PiiFieldViolation[] {
   const violations: PiiFieldViolation[] = [];
+  if (typeof fields !== "object" || fields === null) {
+    return violations;
+  }
   for (const field of PII_FIELD_ORDER) {
     const value = fields[field];
     if (typeof value !== "string") continue;
