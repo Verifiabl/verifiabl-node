@@ -18,12 +18,17 @@
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/index.d.cts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "files": [
@@ -43,13 +48,15 @@
     "check": "biome check --write .",
     "typecheck": "tsc --noEmit",
     "bench": "npm run build && node scripts/bench-png.mjs",
-    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build && npm run check:exports",
+    "check:exports": "attw --pack ."
   },
   "dependencies": {
     "qrcode": "^1.5.4",
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
     "@biomejs/biome": "^2.0.0",
     "@resvg/resvg-js": "^2.6.2",
     "@types/jest": "^29.5.14",
