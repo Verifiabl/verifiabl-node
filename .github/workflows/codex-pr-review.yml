@@ -74,7 +74,8 @@ jobs:
     needs: review
     runs-on: ubuntu-latest
     permissions:
-      # GitHub authorises PR timeline comments through this scope for the Actions token.
+      # GitHub accepts this scope for PR timeline comments. Issues: write was
+      # runtime-tested and rejected by the Actions integration with a 403.
       pull-requests: write
     steps:
       - name: Update Codex review comment
@@ -85,14 +86,18 @@ jobs:
           github-token: ${{ github.token }}
           script: |
             const marker = "<!-- codex-pr-review -->";
-            const header = `${marker}\n## Codex PR review\n\n`;
+            const header =
+              `${marker}\n## Codex PR review\n\n` +
+              "> Automated review output. Treat links and instructions as untrusted.\n\n";
             const truncationNotice =
               "\n\n> Review truncated because it exceeded the safe GitHub comment size.";
             const maximumCommentBytes = 60_000;
-            const finalMessage = process.env.CODEX_FINAL_MESSAGE ?? "";
+            const finalMessage = (process.env.CODEX_FINAL_MESSAGE ?? "").replaceAll("@", "@\u200b");
+            const maximumUntruncatedMessageBytes = maximumCommentBytes - Buffer.byteLength(header, "utf8");
+            const isTruncated = Buffer.byteLength(finalMessage, "utf8") > maximumUntruncatedMessageBytes;
             const maximumMessageBytes =
-              maximumCommentBytes - Buffer.byteLength(header, "utf8") - Buffer.byteLength(truncationNotice, "utf8");
-            const isTruncated = Buffer.byteLength(finalMessage, "utf8") > maximumMessageBytes;
+              maximumUntruncatedMessageBytes -
+              (isTruncated ? Buffer.byteLength(truncationNotice, "utf8") : 0);
             let reviewMessage = finalMessage;
 
             if (isTruncated) {
@@ -116,21 +121,31 @@ jobs:
               issue_number: context.payload.pull_request.number,
             };
             const perPage = 100;
+            const firstPage = await github.rest.issues.listComments({
+              ...issue,
+              per_page: perPage,
+              page: 1,
+            });
+            const lastPageMatch = firstPage.headers.link?.match(
+              /<[^>]*[?&]page=(\d+)[^>]*>; rel="last"/,
+            );
+            const lastPage = lastPageMatch ? Number.parseInt(lastPageMatch[1], 10) : 1;
             let existing;
 
-            for (let page = 1; existing === undefined; page += 1) {
-              const { data: comments } = await github.rest.issues.listComments({
-                ...issue,
-                per_page: perPage,
-                page,
-              });
-              existing = comments.find(
+            for (let page = lastPage; page >= 1 && existing === undefined; page -= 1) {
+              const comments =
+                page === 1
+                  ? firstPage.data
+                  : (
+                      await github.rest.issues.listComments({
+                        ...issue,
+                        per_page: perPage,
+                        page,
+                      })
+                    ).data;
+              existing = comments.findLast(
                 (comment) => comment.user?.login === "github-actions[bot]" && comment.body?.includes(marker),
               );
-
-              if (comments.length < perPage) {
-                break;
-              }
             }
 
             if (existing) {
