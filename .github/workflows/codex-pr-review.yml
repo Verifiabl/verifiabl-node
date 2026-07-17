@@ -75,7 +75,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: write
-      pull-requests: write
     steps:
       - name: Update Codex review comment
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -91,10 +90,23 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
             };
-            const comments = await github.paginate(github.rest.issues.listComments, issue);
-            const existing = comments.find(
-              (comment) => comment.user?.login === "github-actions[bot]" && comment.body?.includes(marker),
-            );
+            const perPage = 100;
+            let existing;
+
+            for (let page = 1; existing === undefined; page += 1) {
+              const { data: comments } = await github.rest.issues.listComments({
+                ...issue,
+                per_page: perPage,
+                page,
+              });
+              existing = comments.find(
+                (comment) => comment.user?.login === "github-actions[bot]" && comment.body?.includes(marker),
+              );
+
+              if (comments.length < perPage) {
+                break;
+              }
+            }
 
             if (existing) {
               await github.rest.issues.updateComment({
