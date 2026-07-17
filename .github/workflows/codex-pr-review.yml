@@ -84,7 +84,31 @@ jobs:
           github-token: ${{ github.token }}
           script: |
             const marker = "<!-- codex-pr-review -->";
-            const body = `${marker}\n## Codex PR review\n\n${process.env.CODEX_FINAL_MESSAGE}`;
+            const header = `${marker}\n## Codex PR review\n\n`;
+            const truncationNotice =
+              "\n\n> Review truncated because it exceeded the safe GitHub comment size.";
+            const maximumCommentBytes = 60_000;
+            const finalMessage = process.env.CODEX_FINAL_MESSAGE ?? "";
+            const maximumMessageBytes =
+              maximumCommentBytes - Buffer.byteLength(header, "utf8") - Buffer.byteLength(truncationNotice, "utf8");
+            const isTruncated = Buffer.byteLength(finalMessage, "utf8") > maximumMessageBytes;
+            let reviewMessage = finalMessage;
+
+            if (isTruncated) {
+              let reviewMessageBytes = 0;
+              reviewMessage = "";
+
+              for (const character of finalMessage) {
+                const characterBytes = Buffer.byteLength(character, "utf8");
+                if (reviewMessageBytes + characterBytes > maximumMessageBytes) {
+                  break;
+                }
+                reviewMessage += character;
+                reviewMessageBytes += characterBytes;
+              }
+            }
+
+            const body = `${header}${reviewMessage}${isTruncated ? truncationNotice : ""}`;
             const issue = {
               owner: context.repo.owner,
               repo: context.repo.repo,
