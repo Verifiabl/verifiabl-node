@@ -25,6 +25,10 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      # The published tarball must type-resolve for both CommonJS and ESM
+      # consumers. A dual-published package can pass every check above and still
+      # be unimportable from CJS TypeScript, which is how VER-236 shipped.
+      - run: npm run check:exports
 
   audit:
     runs-on: ubuntu-latest
