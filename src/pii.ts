@@ -33,7 +33,13 @@ export const PII_FIELD_ORDER = tuple([
 
 export type PiiFieldName = (typeof PII_FIELD_ORDER)[number];
 
-/** Per-field length ceiling, enforced by both formatPii and piiFieldsSchema. */
+/**
+ * Round per-field sanity cap in UTF-16 code units, not bytes. It is not derived
+ * from QR capacity and does not bound it: 7 fields at this cap (~1800 chars)
+ * far exceeds the ~1100-char plaintext ceiling above which createBarcodeSvg
+ * cannot render at all (and ~455, above which it degrades). Total plaintext is
+ * the real budget — recheck it before adding fields.
+ */
 export const PII_FIELD_MAX_LENGTH = 256;
 
 /**
