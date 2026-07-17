@@ -74,7 +74,8 @@ jobs:
     needs: review
     runs-on: ubuntu-latest
     permissions:
-      issues: write
+      # GitHub authorises PR timeline comments through this scope for the Actions token.
+      pull-requests: write
     steps:
       - name: Update Codex review comment
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
