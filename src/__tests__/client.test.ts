@@ -12,7 +12,18 @@ const KEY_VERSION = "0f8fad5b-d9cb-469f-a165-70867728950e.1";
 const REQUEST: RegisterNonPiiRequest = {
   schema: "au.payslip.v1",
   issuedAt: "2026-06-11T00:00:00Z",
-  payslipNonPii: { periodStart: "2026-05-01", periodEnd: "2026-05-31", gross: "9000.00" },
+  // Balances: 900000 - 225000 (paygw) = 675000.
+  payslipNonPii: {
+    periodStart: "2026-05-01",
+    periodEnd: "2026-05-31",
+    paymentDate: "2026-06-04",
+    currency: "AUD",
+    grossCents: 900_000,
+    paygwCents: 225_000,
+    netCents: 675_000,
+    ytdGrossCents: 900_000,
+    ytdPaygwCents: 225_000,
+  },
   encryptionMetadata: {
     iv: "AAAAAAAAAAAAAAAA",
     tag: "AAAAAAAAAAAAAAAAAAAAAA",
@@ -31,7 +42,17 @@ const REGISTER_AND_BUILD_BARCODE_REQUEST: RegisterAndBuildBarcodeRequest = {
 const WIRE_REQUEST = {
   schema: "au.payslip.v1",
   issued_at: "2026-06-11T00:00:00Z",
-  payslip_non_pii: { period_start: "2026-05-01", period_end: "2026-05-31", gross: "9000.00" },
+  payslip_non_pii: {
+    period_start: "2026-05-01",
+    period_end: "2026-05-31",
+    payment_date: "2026-06-04",
+    currency: "AUD",
+    gross_cents: 900_000,
+    paygw_cents: 225_000,
+    net_cents: 675_000,
+    ytd_gross_cents: 900_000,
+    ytd_paygw_cents: 225_000,
+  },
   encryption_metadata: {
     iv: "AAAAAAAAAAAAAAAA",
     tag: "AAAAAAAAAAAAAAAAAAAAAA",
@@ -200,27 +221,95 @@ describe("VerifiablClient with static auth", () => {
     );
   });
 
-  it("does not let passthrough payslipNonPii keys override the mapped period dates", async () => {
+  // The schema is closed, so there is no passthrough to fight over any more: an
+  // unrecognised key is a local error rather than something the API rejects with
+  // a 400 (and it is what stops PII reaching the record).
+  it("rejects an unknown payslipNonPii key without calling the API", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await expect(
+      client.registerNonPii({
+        ...REQUEST,
+        payslipNonPii: {
+          ...REQUEST.payslipNonPii,
+          employeeName: "Alice Smith",
+        } as unknown as RegisterNonPiiRequest["payslipNonPii"],
+      }),
+    ).rejects.toThrow();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("maps every canonical field to its snake_case wire name", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
 
     await client.registerNonPii({
       ...REQUEST,
       payslipNonPii: {
-        periodStart: "2026-05-01",
-        periodEnd: "2026-05-31",
-        // A stray snake_case key in the provider passthrough must not win.
-        period_start: "1999-01-01",
-        gross: "9000.00",
+        ...REQUEST.payslipNonPii,
+        taxableGrossCents: 900_000,
+        stslWithholdingCents: 25_000,
+        employmentBasis: "full_time",
+        earnings: [
+          { type: "ordinary", amountCents: 880_000 },
+          {
+            type: "allowance",
+            allowanceType: "other",
+            otherCategory: "uniform",
+            amountCents: 20_000,
+          },
+        ],
+        superannuation: [
+          { contributionType: "superannuation_guarantee", amountCents: 99_000, usi: "STA0100AU" },
+        ],
+        ytd: { taxableCents: 900_000 },
       },
     });
 
-    const body = requestBody(firstFetchCall(fetch)) as {
-      payslip_non_pii: { period_start: string; period_end: string; gross: string };
-    };
-    expect(body.payslip_non_pii.period_start).toBe("2026-05-01");
-    expect(body.payslip_non_pii.period_end).toBe("2026-05-31");
-    expect(body.payslip_non_pii.gross).toBe("9000.00");
+    const body = requestBody(firstFetchCall(fetch)) as { payslip_non_pii: Record<string, unknown> };
+    expect(body.payslip_non_pii).toEqual({
+      period_start: "2026-05-01",
+      period_end: "2026-05-31",
+      payment_date: "2026-06-04",
+      currency: "AUD",
+      gross_cents: 900_000,
+      paygw_cents: 225_000,
+      net_cents: 675_000,
+      ytd_gross_cents: 900_000,
+      ytd_paygw_cents: 225_000,
+      taxable_gross_cents: 900_000,
+      stsl_withholding_cents: 25_000,
+      employment_basis: "full_time",
+      earnings: [
+        { type: "ordinary", amount_cents: 880_000 },
+        {
+          type: "allowance",
+          allowance_type: "other",
+          other_category: "uniform",
+          amount_cents: 20_000,
+        },
+      ],
+      superannuation: [
+        { contribution_type: "superannuation_guarantee", amount_cents: 99_000, usi: "STA0100AU" },
+      ],
+      ytd: { taxable_cents: 900_000 },
+    });
+  });
+
+  // The SDK's value is catching the mistake locally: an unbalanced payslip must
+  // never reach the network.
+  it("rejects a payslip that does not satisfy the accounting identity", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await expect(
+      client.registerNonPii({
+        ...REQUEST,
+        payslipNonPii: { ...REQUEST.payslipNonPii, netCents: 999_999 },
+      }),
+    ).rejects.toThrow(/netCents must equal/);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("lets explicit issuer base URL overrides win over the environment", async () => {
