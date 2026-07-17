@@ -38,7 +38,7 @@ export type PiiFieldName = (typeof PII_FIELD_ORDER)[number];
  * from QR capacity and does not bound it: 7 fields at this cap (~1800 chars)
  * far exceeds the ~1100-char plaintext ceiling above which createBarcodeSvg
  * cannot render at all (and ~455, above which it degrades). Total plaintext is
- * the real budget — recheck it before adding fields.
+ * the real budget, so recheck it before adding fields.
  */
 export const PII_FIELD_MAX_LENGTH = 256;
 
@@ -137,7 +137,7 @@ function findPiiViolations(fields: PiiFields): PiiFieldViolation[] {
  *
  * The result is what you encrypt with `encryptPii` before embedding it in
  * a barcode. Throws {@link PiiValidationError} if any field contains a pipe
- * or control character or exceeds the length limit — each such value must be
+ * or control character or exceeds the length limit. Each such value must be
  * corrected at the source, as the format has no escape mechanism. Throws
  * `ZodError` for structural problems (unknown field, non-string value).
  */
