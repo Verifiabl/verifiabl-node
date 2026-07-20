@@ -46,6 +46,7 @@
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome check --write .",
+    "check:ci": "biome ci .",
     "typecheck": "tsc --noEmit",
     "bench": "npm run build && node scripts/bench-png.mjs",
     "prepublishOnly": "npm run typecheck && npm run test && npm run build && npm run check:exports",

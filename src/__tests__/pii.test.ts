@@ -1,4 +1,4 @@
-import { formatPii, parsePii, piiFieldsSchema, PiiValidationError } from "../pii.js";
+import { formatPii, PiiValidationError, parsePii, piiFieldsSchema } from "../pii.js";
 
 describe("formatPii", () => {
   it("formats the documented example exactly", () => {
