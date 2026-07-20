@@ -19,6 +19,7 @@ import {
   registerNonPiiRequestSchema,
   registrationFromWire,
   registrationToWire,
+  SUPPORTED_PAYSLIP_SCHEMA,
   type VerifiablErrorBody,
   type VerifiablErrorCode,
   verifiablErrorBodySchema,
@@ -261,9 +262,24 @@ export class VerifiablClient {
     const results = new Array<BatchRecordResult | undefined>(records.length);
     const sendable: { index: number; record: BatchRecordRequest }[] = [];
     records.forEach((record, index) => {
+      if (record.schema !== SUPPORTED_PAYSLIP_SCHEMA) {
+        // Safe to echo: the envelope already pinned this to the schema-id format,
+        // so it cannot carry anything but a version identifier.
+        results[index] = {
+          status: "error",
+          code: "VALIDATION_FAILED",
+          detail: `unsupported schema '${record.schema}'`,
+          verifiablReference: record.verifiablReference,
+          ...(record.externalId !== undefined ? { externalId: record.externalId } : {}),
+        };
+        return;
+      }
       const parsed = payslipNonPiiSchema.safeParse(record.payslipNonPii);
       if (parsed.success) {
-        sendable.push({ index, record: { ...record, payslipNonPii: parsed.data } });
+        sendable.push({
+          index,
+          record: { ...record, schema: record.schema, payslipNonPii: parsed.data },
+        });
       } else {
         results[index] = localBatchValidationError(record, parsed.error);
       }

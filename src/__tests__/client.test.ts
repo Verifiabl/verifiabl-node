@@ -297,6 +297,30 @@ describe("VerifiablClient with static auth", () => {
     });
   });
 
+  // A YYYY-MM-DD regex would pass these; the API validates real calendar dates,
+  // so accepting them locally would just move the failure to registration.
+  it("rejects a date that cannot exist", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    for (const paymentDate of ["2026-02-31", "2026-13-01", "2027-02-29"]) {
+      await expect(
+        client.registerNonPii({
+          ...REQUEST,
+          payslipNonPii: { ...REQUEST.payslipNonPii, paymentDate },
+        }),
+      ).rejects.toThrow();
+    }
+    expect(fetch).not.toHaveBeenCalled();
+
+    // A real leap day is fine.
+    await client.registerNonPii({
+      ...REQUEST,
+      payslipNonPii: { ...REQUEST.payslipNonPii, paymentDate: "2028-02-29" },
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   // An empty array is not "no itemisation": it would otherwise skip the
   // sum-to-gross check and register an itemisation that says nothing.
   it("rejects an empty earnings array against a non-zero gross", async () => {
@@ -756,6 +780,38 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
       status: "created",
       verifiablReference: VERIFIABL_REF_B,
     });
+  });
+
+  // An unsupported version is one record's problem, exactly as at the API: it
+  // must not throw the batch, and the SDK cannot validate a payload it has no
+  // schema for.
+  it("reports an unsupported schema version per record", async () => {
+    const fetch = mockFetch(200, {
+      results: [{ status: "created", verifiabl_reference: VERIFIABL_REF_B }],
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch({
+      records: [
+        {
+          ...REQUEST,
+          schema: "au.payslip.v2" as RegisterNonPiiBatchRequest["records"][number]["schema"],
+          verifiablReference: VERIFIABL_REF_A,
+        },
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_B },
+      ],
+    });
+
+    expect(requestBody(firstFetchCall(fetch))).toEqual({
+      records: [{ verifiabl_reference: VERIFIABL_REF_B, ...WIRE_REQUEST }],
+    });
+    expect(result.results[0]).toMatchObject({
+      status: "error",
+      code: "VALIDATION_FAILED",
+      detail: "unsupported schema 'au.payslip.v2'",
+      verifiablReference: VERIFIABL_REF_A,
+    });
+    expect(result.results[1]).toMatchObject({ status: "created" });
   });
 
   it("does not call the API when every record fails locally", async () => {

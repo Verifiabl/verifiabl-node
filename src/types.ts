@@ -6,7 +6,6 @@ function tuple<const T extends readonly string[]>(value: T): T {
 }
 
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Key version contract: `<provider-id>.<n>` where provider-id is your
@@ -226,10 +225,13 @@ export type EarningsLine = z.infer<typeof earningsLineSchema>;
 const payslipNonPiiFields = z
   .object({
     // ---- Core: required on every payslip. ----
-    periodStart: z.string().regex(ISO_DATE_RE, "periodStart must be YYYY-MM-DD"),
-    periodEnd: z.string().regex(ISO_DATE_RE, "periodEnd must be YYYY-MM-DD"),
+    // z.iso.date, not a YYYY-MM-DD regex: it is what the API validates with, and
+    // it rejects a date that cannot exist (2026-02-31, 2027-02-29) rather than
+    // letting it through to fail at registration.
+    periodStart: z.iso.date({ error: "periodStart must be a real date in YYYY-MM-DD format" }),
+    periodEnd: z.iso.date({ error: "periodEnd must be a real date in YYYY-MM-DD format" }),
     /** Legally mandatory on a pay slip (Fair Work reg 3.46(1)(d)). */
-    paymentDate: z.string().regex(ISO_DATE_RE, "paymentDate must be YYYY-MM-DD"),
+    paymentDate: z.iso.date({ error: "paymentDate must be a real date in YYYY-MM-DD format" }),
     currency: z.literal("AUD"),
     /** Total gross, before salary sacrifice (per STP2). */
     grossCents: cents,
@@ -363,8 +365,14 @@ export type PayslipNonPii = z.infer<typeof payslipNonPiiSchema>;
 
 const basePayslipRegistrationSchema = z
   .object({
-    /** Payslip schema identifier, e.g. "au.payslip.v1". */
-    schema: payslipSchemaIdSchema,
+    /**
+     * Payslip schema identifier. A literal, exactly as the API pins it on the
+     * single-registration endpoints: `payslipNonPii` below IS the au.payslip.v1
+     * shape, so accepting another identifier here would impose AU rules on a
+     * payload that does not claim to be AU. When a second version ships, this
+     * becomes a discriminated union keyed on `schema`, one member per version.
+     */
+    schema: z.literal("au.payslip.v1"),
     /**
      * ISO 8601 UTC datetime the payslip was issued. The API only accepts
      * UTC ("Z") timestamps; convert local times first, e.g. with
@@ -636,8 +644,14 @@ const batchRecordEnvelopeSchema = basePayslipRegistrationSchema
     verifiablReference: verifiablReferenceSchema,
     externalId: externalIdSchema.optional(),
     payslipNonPii: z.unknown(),
+    // Format-checked here, version-checked per record, as the API does: an
+    // unsupported version is one record's error, not the whole batch's.
+    schema: payslipSchemaIdSchema,
   })
   .strict();
+
+/** The only payslip schema version this SDK can validate and map. */
+export const SUPPORTED_PAYSLIP_SCHEMA = "au.payslip.v1";
 
 export const registerNonPiiBatchEnvelopeSchema = z
   .object({
