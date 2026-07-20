@@ -297,6 +297,21 @@ describe("VerifiablClient with static auth", () => {
     });
   });
 
+  // An empty array is not "no itemisation": it would otherwise skip the
+  // sum-to-gross check and register an itemisation that says nothing.
+  it("rejects an empty earnings array against a non-zero gross", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await expect(
+      client.registerNonPii({
+        ...REQUEST,
+        payslipNonPii: { ...REQUEST.payslipNonPii, earnings: [] },
+      }),
+    ).rejects.toThrow(/earnings must itemise/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   // The SDK's value is catching the mistake locally: an unbalanced payslip must
   // never reach the network.
   it("rejects a payslip that does not satisfy the accounting identity", async () => {
@@ -701,6 +716,66 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
       ],
     };
   }
+
+  // Batch promises that one bad record never fails the whole batch, so a record
+  // the SDK rejects locally must not cost the caller the rest of the pay run.
+  it("registers the good records and reports the bad one, in input order", async () => {
+    const fetch = mockFetch(200, {
+      results: [{ status: "created", verifiabl_reference: VERIFIABL_REF_B }],
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch({
+      records: [
+        {
+          ...REQUEST,
+          verifiablReference: VERIFIABL_REF_A,
+          externalId: "payslip-1",
+          // Does not reconcile: rejected locally, never sent.
+          payslipNonPii: { ...REQUEST.payslipNonPii, netCents: 999_999 },
+        },
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_B },
+      ],
+    });
+
+    // Only the conforming record went to the API.
+    expect(requestBody(firstFetchCall(fetch))).toEqual({
+      records: [{ verifiabl_reference: VERIFIABL_REF_B, ...WIRE_REQUEST }],
+    });
+
+    // results[i] still lines up with records[i].
+    expect(result.results).toHaveLength(2);
+    expect(result.results[0]).toMatchObject({
+      status: "error",
+      code: "VALIDATION_FAILED",
+      verifiablReference: VERIFIABL_REF_A,
+      externalId: "payslip-1",
+    });
+    expect(result.results[0]?.detail).toContain("netCents must equal");
+    expect(result.results[1]).toEqual({
+      status: "created",
+      verifiablReference: VERIFIABL_REF_B,
+    });
+  });
+
+  it("does not call the API when every record fails locally", async () => {
+    const fetch = mockFetch(200, { results: [] });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch({
+      records: [
+        {
+          ...REQUEST,
+          verifiablReference: VERIFIABL_REF_A,
+          payslipNonPii: { ...REQUEST.payslipNonPii, netCents: 1 },
+        },
+      ],
+    });
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0]).toMatchObject({ status: "error", code: "VALIDATION_FAILED" });
+  });
 
   it("posts the batch to the batch endpoint with the wire body and maps the response", async () => {
     const fetch = mockFetch(200, batchResponseBody());

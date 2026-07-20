@@ -344,7 +344,10 @@ export const payslipNonPiiSchema = payslipNonPiiFields.superRefine((value, ctx) 
     });
   }
 
-  if (value.earnings && value.earnings.length > 0) {
+  // Present means complete: an empty array would otherwise skip the check and
+  // register an itemisation that says nothing while gross is non-zero. Omit
+  // `earnings` entirely if you are not itemising.
+  if (value.earnings !== undefined) {
     const itemised = sumAmounts(value.earnings);
     if (itemised !== value.grossCents) {
       ctx.addIssue({
@@ -601,12 +604,14 @@ const externalIdSchema = z
   .max(MAX_EXTERNAL_ID_LENGTH)
   .regex(/^[\x20-\x7e]+$/);
 
-const batchRecordRequestSchema = basePayslipRegistrationSchema
+export const batchRecordRequestSchema = basePayslipRegistrationSchema
   .extend({
     verifiablReference: verifiablReferenceSchema,
     externalId: externalIdSchema.optional(),
   })
   .strict();
+
+export type BatchRecordRequest = z.infer<typeof batchRecordRequestSchema>;
 
 export const registerNonPiiBatchRequestSchema = z
   .object({
@@ -618,6 +623,57 @@ export const registerNonPiiBatchRequestSchema = z
   .strict();
 
 export type RegisterNonPiiBatchRequest = z.infer<typeof registerNonPiiBatchRequestSchema>;
+
+/**
+ * Batch record with the payslip body left unvalidated, mirroring the API's own
+ * batch envelope exactly: reference, schema id, timestamp and encryption
+ * metadata are envelope-level and a bad one fails the request, while
+ * `payslipNonPii` is checked per record so one non-conforming payslip becomes
+ * that record's error result rather than costing the caller the whole pay run.
+ */
+const batchRecordEnvelopeSchema = basePayslipRegistrationSchema
+  .extend({
+    verifiablReference: verifiablReferenceSchema,
+    externalId: externalIdSchema.optional(),
+    payslipNonPii: z.unknown(),
+  })
+  .strict();
+
+export const registerNonPiiBatchEnvelopeSchema = z
+  .object({
+    records: z
+      .array(batchRecordEnvelopeSchema)
+      .min(1, "records must contain at least one record")
+      .max(MAX_BATCH_RECORDS, `records must contain at most ${MAX_BATCH_RECORDS} records`),
+  })
+  .strict();
+
+export type BatchRecordEnvelope = z.infer<typeof batchRecordEnvelopeSchema>;
+
+/**
+ * The error result for a record whose payslip the SDK rejected, in the same
+ * shape the API returns for a record it rejects, so callers handle one type.
+ * The detail carries the zod issue paths and messages, which name the field and
+ * the expected shape but never the supplied value, so it is safe to log.
+ */
+export function localBatchValidationError(
+  record: BatchRecordEnvelope,
+  error: z.ZodError,
+): BatchRecordResult {
+  return {
+    status: "error",
+    code: "VALIDATION_FAILED",
+    detail: error.issues
+      .slice(0, 5)
+      .map((issue) => {
+        const path = issue.path.join(".");
+        return path ? `${path}: ${issue.message}` : issue.message;
+      })
+      .join("; "),
+    verifiablReference: record.verifiablReference,
+    ...(record.externalId !== undefined ? { externalId: record.externalId } : {}),
+  };
+}
 
 /**
  * Per-record outcome statuses the API returns today: "created" for a newly

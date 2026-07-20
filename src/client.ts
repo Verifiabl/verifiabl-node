@@ -1,5 +1,9 @@
 import { resolveEnvironment, type VerifiablEnvironment } from "./payload.js";
 import {
+  type BatchRecordRequest,
+  type BatchRecordResult,
+  localBatchValidationError,
+  payslipNonPiiSchema,
   type RegisterAndBuildBarcodeRequest,
   type RegisterAndBuildBarcodeResponse,
   type RegisterNonPiiBatchRequest,
@@ -9,8 +13,8 @@ import {
   registerAndBuildBarcodeFromWire,
   registerAndBuildBarcodeRequestSchema,
   registerAndBuildBarcodeToWire,
+  registerNonPiiBatchEnvelopeSchema,
   registerNonPiiBatchFromWire,
-  registerNonPiiBatchRequestSchema,
   registerNonPiiBatchToWire,
   registerNonPiiRequestSchema,
   registrationFromWire,
@@ -248,8 +252,55 @@ export class VerifiablClient {
     request: RegisterNonPiiBatchRequest,
     options: VerifiablRequestOptions = {},
   ): Promise<RegisterNonPiiBatchResponse> {
-    const body = registerNonPiiBatchToWire(registerNonPiiBatchRequestSchema.parse(request));
-    return this.post("/v1/registerNonPIIBatch", body, options, registerNonPiiBatchFromWire);
+    // Envelope first (reference, schema id, timestamp, encryption metadata): a
+    // bad one fails the request, as it does at the API. The payslip body is then
+    // checked per record, so one non-conforming payslip becomes that record's
+    // error result instead of costing the caller the rest of the pay run. A
+    // record rejected here is never sent.
+    const { records } = registerNonPiiBatchEnvelopeSchema.parse(request);
+    const results = new Array<BatchRecordResult | undefined>(records.length);
+    const sendable: { index: number; record: BatchRecordRequest }[] = [];
+    records.forEach((record, index) => {
+      const parsed = payslipNonPiiSchema.safeParse(record.payslipNonPii);
+      if (parsed.success) {
+        sendable.push({ index, record: { ...record, payslipNonPii: parsed.data } });
+      } else {
+        results[index] = localBatchValidationError(record, parsed.error);
+      }
+    });
+
+    if (sendable.length > 0) {
+      const body = registerNonPiiBatchToWire({ records: sendable.map((entry) => entry.record) });
+      const response = await this.post(
+        "/v1/registerNonPIIBatch",
+        body,
+        options,
+        registerNonPiiBatchFromWire,
+      );
+      response.results.forEach((result, position) => {
+        const entry = sendable[position];
+        if (entry) {
+          results[entry.index] = result;
+        }
+      });
+    }
+
+    // results[i] must line up with records[i]. A hole can only mean the API
+    // returned fewer results than we sent, so say that rather than hand back a
+    // sparse array.
+    return {
+      results: results.map((result, index) => {
+        return (
+          result ?? {
+            status: "error",
+            code: "INTERNAL_ERROR",
+            detail: `no result returned for record at index ${index}`,
+            verifiablReference: sendable.find((entry) => entry.index === index)?.record
+              .verifiablReference,
+          }
+        );
+      }) as BatchRecordResult[],
+    };
   }
 
   private async post<T>(
