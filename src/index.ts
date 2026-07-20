@@ -34,9 +34,9 @@ export {
   type PiiFields,
   type PiiFieldViolation,
   type PiiFieldViolationReason,
-  PiiValidationError,
   parsePii,
   piiFieldsSchema,
+  PiiValidationError,
 } from "./pii.js";
 
 export {
