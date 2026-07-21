@@ -849,7 +849,10 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     });
 
     expect(result.results).toHaveLength(2);
-    expect(result.results[0]).toMatchObject({ status: "created", verifiablReference: VERIFIABL_REF_A });
+    expect(result.results[0]).toMatchObject({
+      status: "created",
+      verifiablReference: VERIFIABL_REF_A,
+    });
     expect(result.results[1]).toEqual({
       status: "error",
       code: "INTERNAL_ERROR",
