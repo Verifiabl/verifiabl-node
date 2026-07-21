@@ -6,7 +6,6 @@ function tuple<const T extends readonly string[]>(value: T): T {
 }
 
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Key version contract: `<provider-id>.<n>` where provider-id is your
@@ -57,27 +56,323 @@ export const encryptionMetadataSchema = z
 
 export type EncryptionMetadata = z.infer<typeof encryptionMetadataSchema>;
 
+/** Signed integer minor units. Money is never a float: a float cannot represent it exactly. */
+const cents = z.int();
+
+/** A quantity that is not money (hours, days). */
+const quantity = z.number().nonnegative().finite();
+
 /**
- * Non-PII payslip data. `periodStart`/`periodEnd` are required (YYYY-MM-DD).
- *
- * Any other fields are passed through to the API verbatim, under the exact
- * keys you supply: only `periodStart`/`periodEnd` are SDK-defined and
- * translated. Provider-specific fields (e.g. line items) use whatever names
- * your payslip schema specifies, which are typically snake_case on the wire.
+ * ABR checksum (abr.business.gov.au/Help/AbnFormat): subtract 1 from the first
+ * digit, weight each digit, and the sum must divide by 89. Catches a typo'd or
+ * fabricated identifier here rather than at the API.
  */
-export const payslipNonPiiSchema = z
+const ABN_WEIGHTS = [10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
+
+function isChecksumValidAbn(value: string): boolean {
+  const weighted = [...value].reduce(
+    (sum, character, index) =>
+      sum + (Number(character) - (index === 0 ? 1 : 0)) * (ABN_WEIGHTS[index] ?? 0),
+    0,
+  );
+  return weighted % 89 === 0;
+}
+
+const abnSchema = z
+  .string()
+  .regex(/^\d{11}$/, "ABN must be 11 digits")
+  .refine(isChecksumValidAbn, "ABN checksum is invalid");
+
+/**
+ * Unique Superannuation Identifier, APRA products only: a fund ABN plus a
+ * 3-digit product suffix, or a SPIN (e.g. STA0100AU). A bare 11-digit ABN is
+ * not accepted: that is the SMSF form, and an SMSF ABN resolves publicly to a
+ * fund name that often carries the member's name. Register SMSF contributions
+ * without a fund identifier.
+ */
+const usiSchema = z
+  .string()
+  .regex(
+    /^(\d{14}|[A-Z]{3}\d{4}[A-Z]{2})$/,
+    "USI must be a fund ABN plus 3-digit product suffix (14 digits) or a SPIN (e.g. STA0100AU)",
+  )
+  .refine(
+    (value) => !/^\d{14}$/.test(value) || isChecksumValidAbn(value.slice(0, 11)),
+    "USI's leading 11 digits must be a checksum-valid ABN",
+  );
+
+/**
+ * ATO STP Phase 2 paid-leave codes. There is deliberately no family-and-domestic
+ * violence category: Fair Work reg 3.48 forbids identifying FDV leave on a pay
+ * slip, so it is reported as ordinary hours, another payment type or (only at
+ * the employee's request) another kind of leave.
+ */
+export const paidLeaveTypes = tuple([
+  "cash_out_in_service",
+  "unused_on_termination",
+  "paid_parental",
+  "workers_compensation",
+  "ancillary_defence",
+  "other_paid_leave",
+]);
+
+/** ATO STP Phase 2 allowance codes (CD/AD/LD/MD/RD/TD/KN/QN/OD). */
+export const allowanceTypes = tuple([
+  "cents_per_km",
+  "award_transport",
+  "laundry",
+  "overtime_meal",
+  "travel",
+  "tools",
+  "tasks",
+  "qualifications",
+  "other",
+]);
+
+/** The ATO's descriptor categories for an `other` (OD) allowance. */
+export const otherAllowanceCategories = tuple([
+  "home_office",
+  "non_deductible",
+  "transport_fares",
+  "uniform",
+  "private_vehicle",
+  "general",
+]);
+
+/** Post-tax deductions. PAYG withholding is NOT one: it is `paygwCents`. */
+export const deductionTypes = tuple([
+  "union_professional_fees",
+  "workplace_giving",
+  "child_support_deduction",
+  "child_support_garnishee",
+  "other_post_tax",
+]);
+
+export const salarySacrificeTypes = tuple(["super", "other"]);
+
+/** Employer-side only: an after-tax member contribution is a deduction. */
+export const superContributionTypes = tuple([
+  "superannuation_guarantee",
+  "resc",
+  "salary_sacrifice",
+]);
+
+export const payFrequencies = tuple(["weekly", "fortnightly", "monthly", "quarterly"]);
+
+/** STP2 employment-basis codes. Independent of `engagementType`. */
+export const employmentBases = tuple([
+  "full_time",
+  "part_time",
+  "casual",
+  "labour_hire",
+  "voluntary_agreement",
+  "death_beneficiary",
+  "non_employee",
+]);
+
+export const engagementTypes = tuple(["permanent", "fixed_term"]);
+
+/** Earnings categories carrying no sub-code. */
+const plainEarningsTypes = tuple([
+  "ordinary",
+  "overtime",
+  "bonus_commission",
+  "directors_fees",
+  "lump_sum",
+  "return_to_work",
+]);
+
+/**
+ * One earnings line. A leave line must carry a leave code and an allowance line
+ * an allowance code; neither can carry the other's. Earnings itemise
+ * `grossCents`; they are not additional to it.
+ */
+const earningsLineSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("paid_leave"),
+      leaveType: z.enum(paidLeaveTypes),
+      amountCents: cents,
+      units: quantity.optional(),
+      rateCents: cents.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("allowance"),
+      allowanceType: z.enum(allowanceTypes),
+      /** Required on an `other` allowance, forbidden on any other. */
+      otherCategory: z.enum(otherAllowanceCategories).optional(),
+      amountCents: cents,
+      units: quantity.optional(),
+      rateCents: cents.optional(),
+    })
+    .strict(),
+  ...plainEarningsTypes.map((type) =>
+    z
+      .object({
+        type: z.literal(type),
+        amountCents: cents,
+        units: quantity.optional(),
+        rateCents: cents.optional(),
+      })
+      .strict(),
+  ),
+]);
+
+export type EarningsLine = z.infer<typeof earningsLineSchema>;
+
+const payslipNonPiiFields = z
   .object({
-    periodStart: z.string().regex(ISO_DATE_RE),
-    periodEnd: z.string().regex(ISO_DATE_RE),
+    // ---- Core: required on every payslip. ----
+    // z.iso.date, not a YYYY-MM-DD regex: it is what the API validates with, and
+    // it rejects a date that cannot exist (2026-02-31, 2027-02-29) rather than
+    // letting it through to fail at registration.
+    periodStart: z.iso.date({ error: "periodStart must be a real date in YYYY-MM-DD format" }),
+    periodEnd: z.iso.date({ error: "periodEnd must be a real date in YYYY-MM-DD format" }),
+    /** Legally mandatory on a pay slip (Fair Work reg 3.46(1)(d)). */
+    paymentDate: z.iso.date({ error: "paymentDate must be a real date in YYYY-MM-DD format" }),
+    currency: z.literal("AUD"),
+    /** Total gross, before salary sacrifice (per STP2). */
+    grossCents: cents,
+    /** PAYG withholding: its own component, never also a `deductions` line. */
+    paygwCents: cents,
+    netCents: cents,
+    /** Year to date over the AU financial year, as at and including this payslip. */
+    ytdGrossCents: cents,
+    ytdPaygwCents: cents,
+
+    // ---- Optional. ----
+    payFrequency: z.enum(payFrequencies).optional(),
+    employmentBasis: z.enum(employmentBases).optional(),
+    engagementType: z.enum(engagementTypes).optional(),
+    hourly: z
+      .object({ ordinaryRateCents: cents, hours: quantity, amountCents: cents })
+      .strict()
+      .optional(),
+    annualRateCents: cents.optional(),
+    /** The printed post-sacrifice/taxable gross, where the payslip shows one. */
+    taxableGrossCents: cents.optional(),
+    /** The printed HELP/STSL component: a non-additive part of `paygwCents`. */
+    stslWithholdingCents: cents.optional(),
+    /** Itemisation of gross. If present, must sum to `grossCents` exactly. */
+    earnings: z.array(earningsLineSchema).optional(),
+    salarySacrifice: z
+      .array(z.object({ type: z.enum(salarySacrificeTypes), amountCents: cents }).strict())
+      .optional(),
+    /** Post-tax only. */
+    deductions: z
+      .array(z.object({ type: z.enum(deductionTypes), amountCents: cents }).strict())
+      .optional(),
+    /** Funds are identified structurally (USI/ABN) or not at all, never by name. */
+    superannuation: z
+      .array(
+        z
+          .object({
+            contributionType: z.enum(superContributionTypes),
+            amountCents: cents,
+            usi: usiSchema.optional(),
+            fundAbn: abnSchema.optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+    /** Non-taxable: not part of gross, but paid out in net. */
+    reimbursementsCents: cents.optional(),
+    ytd: z
+      .object({
+        taxableCents: cents.optional(),
+        superCents: cents.optional(),
+        nonTaxableCents: cents.optional(),
+        postTaxDeductionsCents: cents.optional(),
+        reimbursementsCents: cents.optional(),
+      })
+      .strict()
+      .optional(),
   })
-  .catchall(z.unknown());
+  .strict();
+
+const sumAmounts = (lines: readonly { amountCents: number }[] | undefined): number =>
+  (lines ?? []).reduce((total, line) => total + line.amountCents, 0);
+
+/**
+ * Non-PII payslip data: the canonical `au.payslip.v1` schema.
+ *
+ * Closed and free-text-free by design, so no field can carry a person's name.
+ * Every rule the API enforces is enforced here too, so an integration mistake
+ * fails locally with a clear message instead of as a 400 from the API.
+ */
+export const payslipNonPiiSchema = payslipNonPiiFields.superRefine((value, ctx) => {
+  if (value.periodEnd < value.periodStart) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["periodEnd"],
+      message: "periodEnd must not be before periodStart",
+    });
+  }
+
+  for (const [index, line] of (value.earnings ?? []).entries()) {
+    if (line.type !== "allowance") continue;
+    if (line.allowanceType === "other" && line.otherCategory === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["earnings", index, "otherCategory"],
+        message: "otherCategory is required on an 'other' allowance",
+      });
+    } else if (line.allowanceType !== "other" && line.otherCategory !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["earnings", index, "otherCategory"],
+        message: "otherCategory applies only to allowanceType 'other'",
+      });
+    }
+  }
+
+  // The accounting identity the API enforces, in exact integer arithmetic. Gross
+  // is pre-sacrifice and PAYGW is not a deduction, so each component is counted
+  // exactly once.
+  const expectedNet =
+    value.grossCents -
+    sumAmounts(value.salarySacrifice) -
+    value.paygwCents -
+    sumAmounts(value.deductions) +
+    (value.reimbursementsCents ?? 0);
+
+  if (value.netCents !== expectedNet) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["netCents"],
+      message: `netCents must equal grossCents - salarySacrifice - paygwCents - deductions + reimbursementsCents (expected ${expectedNet}, got ${value.netCents})`,
+    });
+  }
+
+  // Present means complete: an empty array would otherwise skip the check and
+  // register an itemisation that says nothing while gross is non-zero. Omit
+  // `earnings` entirely if you are not itemising.
+  if (value.earnings !== undefined) {
+    const itemised = sumAmounts(value.earnings);
+    if (itemised !== value.grossCents) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["earnings"],
+        message: `earnings must itemise grossCents in full (expected ${value.grossCents}, got ${itemised})`,
+      });
+    }
+  }
+});
 
 export type PayslipNonPii = z.infer<typeof payslipNonPiiSchema>;
 
 const basePayslipRegistrationSchema = z
   .object({
-    /** Payslip schema identifier, e.g. "au.payslip.v1". */
-    schema: payslipSchemaIdSchema,
+    /**
+     * Payslip schema identifier. A literal, exactly as the API pins it on the
+     * single-registration endpoints: `payslipNonPii` below IS the au.payslip.v1
+     * shape, so accepting another identifier here would impose AU rules on a
+     * payload that does not claim to be AU. When a second version ships, this
+     * becomes a discriminated union keyed on `schema`, one member per version.
+     */
+    schema: z.literal("au.payslip.v1"),
     /**
      * ISO 8601 UTC datetime the payslip was issued. The API only accepts
      * UTC ("Z") timestamps; convert local times first, e.g. with
@@ -151,12 +446,95 @@ function encryptionMetadataToWire(metadata: EncryptionMetadata): Record<string, 
   return { iv: metadata.iv, tag: metadata.tag, key_version: metadata.keyVersion };
 }
 
+/** Include a key only when the value was supplied, so optionals stay absent rather than null. */
+function when<T>(value: T | undefined, key: string): Record<string, T> {
+  return value === undefined ? {} : ({ [key]: value } as Record<string, T>);
+}
+
+function earningsLineToWire(line: EarningsLine): Record<string, unknown> {
+  return {
+    type: line.type,
+    ...(line.type === "paid_leave" ? { leave_type: line.leaveType } : {}),
+    ...(line.type === "allowance"
+      ? { allowance_type: line.allowanceType, ...when(line.otherCategory, "other_category") }
+      : {}),
+    amount_cents: line.amountCents,
+    ...when(line.units, "units"),
+    ...when(line.rateCents, "rate_cents"),
+  };
+}
+
+/**
+ * Map the canonical payslip to its snake_case wire form. The schema is closed,
+ * so every field is mapped explicitly: there is no passthrough, and an unmapped
+ * field would be a bug here rather than something the API silently accepts.
+ */
 function payslipNonPiiToWire(data: PayslipNonPii): Record<string, unknown> {
-  const { periodStart, periodEnd, ...rest } = data;
-  // Spread provider-specific passthrough fields first so the SDK-mapped
-  // period_start/period_end always win, even if a caller put a stray
-  // snake_case "period_start"/"period_end" in payslipNonPii.
-  return { ...rest, period_start: periodStart, period_end: periodEnd };
+  return {
+    period_start: data.periodStart,
+    period_end: data.periodEnd,
+    payment_date: data.paymentDate,
+    currency: data.currency,
+    gross_cents: data.grossCents,
+    paygw_cents: data.paygwCents,
+    net_cents: data.netCents,
+    ytd_gross_cents: data.ytdGrossCents,
+    ytd_paygw_cents: data.ytdPaygwCents,
+    ...when(data.payFrequency, "pay_frequency"),
+    ...when(data.employmentBasis, "employment_basis"),
+    ...when(data.engagementType, "engagement_type"),
+    ...(data.hourly === undefined
+      ? {}
+      : {
+          hourly: {
+            ordinary_rate_cents: data.hourly.ordinaryRateCents,
+            hours: data.hourly.hours,
+            amount_cents: data.hourly.amountCents,
+          },
+        }),
+    ...when(data.annualRateCents, "annual_rate_cents"),
+    ...when(data.taxableGrossCents, "taxable_gross_cents"),
+    ...when(data.stslWithholdingCents, "stsl_withholding_cents"),
+    ...(data.earnings === undefined ? {} : { earnings: data.earnings.map(earningsLineToWire) }),
+    ...(data.salarySacrifice === undefined
+      ? {}
+      : {
+          salary_sacrifice: data.salarySacrifice.map((line) => ({
+            type: line.type,
+            amount_cents: line.amountCents,
+          })),
+        }),
+    ...(data.deductions === undefined
+      ? {}
+      : {
+          deductions: data.deductions.map((line) => ({
+            type: line.type,
+            amount_cents: line.amountCents,
+          })),
+        }),
+    ...(data.superannuation === undefined
+      ? {}
+      : {
+          superannuation: data.superannuation.map((line) => ({
+            contribution_type: line.contributionType,
+            amount_cents: line.amountCents,
+            ...when(line.usi, "usi"),
+            ...when(line.fundAbn, "fund_abn"),
+          })),
+        }),
+    ...when(data.reimbursementsCents, "reimbursements_cents"),
+    ...(data.ytd === undefined
+      ? {}
+      : {
+          ytd: {
+            ...when(data.ytd.taxableCents, "taxable_cents"),
+            ...when(data.ytd.superCents, "super_cents"),
+            ...when(data.ytd.nonTaxableCents, "non_taxable_cents"),
+            ...when(data.ytd.postTaxDeductionsCents, "post_tax_deductions_cents"),
+            ...when(data.ytd.reimbursementsCents, "reimbursements_cents"),
+          },
+        }),
+  };
 }
 
 /** Map a validated registration request to the snake_case wire body. */
@@ -234,12 +612,14 @@ const externalIdSchema = z
   .max(MAX_EXTERNAL_ID_LENGTH)
   .regex(/^[\x20-\x7e]+$/);
 
-const batchRecordRequestSchema = basePayslipRegistrationSchema
+export const batchRecordRequestSchema = basePayslipRegistrationSchema
   .extend({
     verifiablReference: verifiablReferenceSchema,
     externalId: externalIdSchema.optional(),
   })
   .strict();
+
+export type BatchRecordRequest = z.infer<typeof batchRecordRequestSchema>;
 
 export const registerNonPiiBatchRequestSchema = z
   .object({
@@ -251,6 +631,63 @@ export const registerNonPiiBatchRequestSchema = z
   .strict();
 
 export type RegisterNonPiiBatchRequest = z.infer<typeof registerNonPiiBatchRequestSchema>;
+
+/**
+ * Batch record with the payslip body left unvalidated, mirroring the API's own
+ * batch envelope exactly: reference, schema id, timestamp and encryption
+ * metadata are envelope-level and a bad one fails the request, while
+ * `payslipNonPii` is checked per record so one non-conforming payslip becomes
+ * that record's error result rather than costing the caller the whole pay run.
+ */
+const batchRecordEnvelopeSchema = basePayslipRegistrationSchema
+  .extend({
+    verifiablReference: verifiablReferenceSchema,
+    externalId: externalIdSchema.optional(),
+    payslipNonPii: z.unknown(),
+    // Format-checked here, version-checked per record, as the API does: an
+    // unsupported version is one record's error, not the whole batch's.
+    schema: payslipSchemaIdSchema,
+  })
+  .strict();
+
+/** The only payslip schema version this SDK can validate and map. */
+export const SUPPORTED_PAYSLIP_SCHEMA = "au.payslip.v1";
+
+export const registerNonPiiBatchEnvelopeSchema = z
+  .object({
+    records: z
+      .array(batchRecordEnvelopeSchema)
+      .min(1, "records must contain at least one record")
+      .max(MAX_BATCH_RECORDS, `records must contain at most ${MAX_BATCH_RECORDS} records`),
+  })
+  .strict();
+
+export type BatchRecordEnvelope = z.infer<typeof batchRecordEnvelopeSchema>;
+
+/**
+ * The error result for a record whose payslip the SDK rejected, in the same
+ * shape the API returns for a record it rejects, so callers handle one type.
+ * The detail carries the zod issue paths and messages, which name the field and
+ * the expected shape but never the supplied value, so it is safe to log.
+ */
+export function localBatchValidationError(
+  record: BatchRecordEnvelope,
+  error: z.ZodError,
+): BatchRecordResult {
+  return {
+    status: "error",
+    code: "VALIDATION_FAILED",
+    detail: error.issues
+      .slice(0, 5)
+      .map((issue) => {
+        const path = issue.path.join(".");
+        return path ? `${path}: ${issue.message}` : issue.message;
+      })
+      .join("; "),
+    verifiablReference: record.verifiablReference,
+    ...(record.externalId !== undefined ? { externalId: record.externalId } : {}),
+  };
+}
 
 /**
  * Per-record outcome statuses the API returns today: "created" for a newly

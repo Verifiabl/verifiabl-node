@@ -12,7 +12,18 @@ const KEY_VERSION = "0f8fad5b-d9cb-469f-a165-70867728950e.1";
 const REQUEST: RegisterNonPiiRequest = {
   schema: "au.payslip.v1",
   issuedAt: "2026-06-11T00:00:00Z",
-  payslipNonPii: { periodStart: "2026-05-01", periodEnd: "2026-05-31", gross: "9000.00" },
+  // Balances: 900000 - 225000 (paygw) = 675000.
+  payslipNonPii: {
+    periodStart: "2026-05-01",
+    periodEnd: "2026-05-31",
+    paymentDate: "2026-06-04",
+    currency: "AUD",
+    grossCents: 900_000,
+    paygwCents: 225_000,
+    netCents: 675_000,
+    ytdGrossCents: 900_000,
+    ytdPaygwCents: 225_000,
+  },
   encryptionMetadata: {
     iv: "AAAAAAAAAAAAAAAA",
     tag: "AAAAAAAAAAAAAAAAAAAAAA",
@@ -31,7 +42,17 @@ const REGISTER_AND_BUILD_BARCODE_REQUEST: RegisterAndBuildBarcodeRequest = {
 const WIRE_REQUEST = {
   schema: "au.payslip.v1",
   issued_at: "2026-06-11T00:00:00Z",
-  payslip_non_pii: { period_start: "2026-05-01", period_end: "2026-05-31", gross: "9000.00" },
+  payslip_non_pii: {
+    period_start: "2026-05-01",
+    period_end: "2026-05-31",
+    payment_date: "2026-06-04",
+    currency: "AUD",
+    gross_cents: 900_000,
+    paygw_cents: 225_000,
+    net_cents: 675_000,
+    ytd_gross_cents: 900_000,
+    ytd_paygw_cents: 225_000,
+  },
   encryption_metadata: {
     iv: "AAAAAAAAAAAAAAAA",
     tag: "AAAAAAAAAAAAAAAAAAAAAA",
@@ -200,27 +221,134 @@ describe("VerifiablClient with static auth", () => {
     );
   });
 
-  it("does not let passthrough payslipNonPii keys override the mapped period dates", async () => {
+  // The schema is closed, so there is no passthrough to fight over any more: an
+  // unrecognised key is a local error rather than something the API rejects with
+  // a 400 (and it is what stops PII reaching the record).
+  it("rejects an unknown payslipNonPii key without calling the API", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await expect(
+      client.registerNonPii({
+        ...REQUEST,
+        payslipNonPii: {
+          ...REQUEST.payslipNonPii,
+          employeeName: "Alice Smith",
+        } as unknown as RegisterNonPiiRequest["payslipNonPii"],
+      }),
+    ).rejects.toThrow();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("maps every canonical field to its snake_case wire name", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
 
     await client.registerNonPii({
       ...REQUEST,
       payslipNonPii: {
-        periodStart: "2026-05-01",
-        periodEnd: "2026-05-31",
-        // A stray snake_case key in the provider passthrough must not win.
-        period_start: "1999-01-01",
-        gross: "9000.00",
+        ...REQUEST.payslipNonPii,
+        taxableGrossCents: 900_000,
+        stslWithholdingCents: 25_000,
+        employmentBasis: "full_time",
+        earnings: [
+          { type: "ordinary", amountCents: 880_000 },
+          {
+            type: "allowance",
+            allowanceType: "other",
+            otherCategory: "uniform",
+            amountCents: 20_000,
+          },
+        ],
+        superannuation: [
+          { contributionType: "superannuation_guarantee", amountCents: 99_000, usi: "STA0100AU" },
+        ],
+        ytd: { taxableCents: 900_000 },
       },
     });
 
-    const body = requestBody(firstFetchCall(fetch)) as {
-      payslip_non_pii: { period_start: string; period_end: string; gross: string };
-    };
-    expect(body.payslip_non_pii.period_start).toBe("2026-05-01");
-    expect(body.payslip_non_pii.period_end).toBe("2026-05-31");
-    expect(body.payslip_non_pii.gross).toBe("9000.00");
+    const body = requestBody(firstFetchCall(fetch)) as { payslip_non_pii: Record<string, unknown> };
+    expect(body.payslip_non_pii).toEqual({
+      period_start: "2026-05-01",
+      period_end: "2026-05-31",
+      payment_date: "2026-06-04",
+      currency: "AUD",
+      gross_cents: 900_000,
+      paygw_cents: 225_000,
+      net_cents: 675_000,
+      ytd_gross_cents: 900_000,
+      ytd_paygw_cents: 225_000,
+      taxable_gross_cents: 900_000,
+      stsl_withholding_cents: 25_000,
+      employment_basis: "full_time",
+      earnings: [
+        { type: "ordinary", amount_cents: 880_000 },
+        {
+          type: "allowance",
+          allowance_type: "other",
+          other_category: "uniform",
+          amount_cents: 20_000,
+        },
+      ],
+      superannuation: [
+        { contribution_type: "superannuation_guarantee", amount_cents: 99_000, usi: "STA0100AU" },
+      ],
+      ytd: { taxable_cents: 900_000 },
+    });
+  });
+
+  // A YYYY-MM-DD regex would pass these; the API validates real calendar dates,
+  // so accepting them locally would just move the failure to registration.
+  it("rejects a date that cannot exist", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    for (const paymentDate of ["2026-02-31", "2026-13-01", "2027-02-29"]) {
+      await expect(
+        client.registerNonPii({
+          ...REQUEST,
+          payslipNonPii: { ...REQUEST.payslipNonPii, paymentDate },
+        }),
+      ).rejects.toThrow();
+    }
+    expect(fetch).not.toHaveBeenCalled();
+
+    // A real leap day is fine.
+    await client.registerNonPii({
+      ...REQUEST,
+      payslipNonPii: { ...REQUEST.payslipNonPii, paymentDate: "2028-02-29" },
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  // An empty array is not "no itemisation": it would otherwise skip the
+  // sum-to-gross check and register an itemisation that says nothing.
+  it("rejects an empty earnings array against a non-zero gross", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await expect(
+      client.registerNonPii({
+        ...REQUEST,
+        payslipNonPii: { ...REQUEST.payslipNonPii, earnings: [] },
+      }),
+    ).rejects.toThrow(/earnings must itemise/);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  // The SDK's value is catching the mistake locally: an unbalanced payslip must
+  // never reach the network.
+  it("rejects a payslip that does not satisfy the accounting identity", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await expect(
+      client.registerNonPii({
+        ...REQUEST,
+        payslipNonPii: { ...REQUEST.payslipNonPii, netCents: 999_999 },
+      }),
+    ).rejects.toThrow(/netCents must equal/);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("lets explicit issuer base URL overrides win over the environment", async () => {
@@ -612,6 +740,124 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
       ],
     };
   }
+
+  // Batch promises that one bad record never fails the whole batch, so a record
+  // the SDK rejects locally must not cost the caller the rest of the pay run.
+  it("registers the good records and reports the bad one, in input order", async () => {
+    const fetch = mockFetch(200, {
+      results: [{ status: "created", verifiabl_reference: VERIFIABL_REF_B }],
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch({
+      records: [
+        {
+          ...REQUEST,
+          verifiablReference: VERIFIABL_REF_A,
+          externalId: "payslip-1",
+          // Does not reconcile: rejected locally, never sent.
+          payslipNonPii: { ...REQUEST.payslipNonPii, netCents: 999_999 },
+        },
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_B },
+      ],
+    });
+
+    // Only the conforming record went to the API.
+    expect(requestBody(firstFetchCall(fetch))).toEqual({
+      records: [{ verifiabl_reference: VERIFIABL_REF_B, ...WIRE_REQUEST }],
+    });
+
+    // results[i] still lines up with records[i].
+    expect(result.results).toHaveLength(2);
+    expect(result.results[0]).toMatchObject({
+      status: "error",
+      code: "VALIDATION_FAILED",
+      verifiablReference: VERIFIABL_REF_A,
+      externalId: "payslip-1",
+    });
+    expect(result.results[0]?.detail).toContain("netCents must equal");
+    expect(result.results[1]).toEqual({
+      status: "created",
+      verifiablReference: VERIFIABL_REF_B,
+    });
+  });
+
+  // An unsupported version is one record's problem, exactly as at the API: it
+  // must not throw the batch, and the SDK cannot validate a payload it has no
+  // schema for.
+  it("reports an unsupported schema version per record", async () => {
+    const fetch = mockFetch(200, {
+      results: [{ status: "created", verifiabl_reference: VERIFIABL_REF_B }],
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch({
+      records: [
+        {
+          ...REQUEST,
+          schema: "au.payslip.v2" as RegisterNonPiiBatchRequest["records"][number]["schema"],
+          verifiablReference: VERIFIABL_REF_A,
+        },
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_B },
+      ],
+    });
+
+    expect(requestBody(firstFetchCall(fetch))).toEqual({
+      records: [{ verifiabl_reference: VERIFIABL_REF_B, ...WIRE_REQUEST }],
+    });
+    expect(result.results[0]).toMatchObject({
+      status: "error",
+      code: "VALIDATION_FAILED",
+      detail: "unsupported schema 'au.payslip.v2'",
+      verifiablReference: VERIFIABL_REF_A,
+    });
+    expect(result.results[1]).toMatchObject({ status: "created" });
+  });
+
+  it("does not call the API when every record fails locally", async () => {
+    const fetch = mockFetch(200, { results: [] });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch({
+      records: [
+        {
+          ...REQUEST,
+          verifiablReference: VERIFIABL_REF_A,
+          payslipNonPii: { ...REQUEST.payslipNonPii, netCents: 1 },
+        },
+      ],
+    });
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0]).toMatchObject({ status: "error", code: "VALIDATION_FAILED" });
+  });
+
+  // If the API returns fewer results than we sent, the missing slots must still
+  // be correlatable: fill them from the record's own reference, not undefined.
+  it("fills a missing API result from the sent record's reference", async () => {
+    const fetch = mockFetch(200, {
+      results: [{ status: "created", verifiabl_reference: VERIFIABL_REF_A }],
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch({
+      records: [
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_A },
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_B, externalId: "payslip-2" },
+      ],
+    });
+
+    expect(result.results).toHaveLength(2);
+    expect(result.results[0]).toMatchObject({ status: "created", verifiablReference: VERIFIABL_REF_A });
+    expect(result.results[1]).toEqual({
+      status: "error",
+      code: "INTERNAL_ERROR",
+      detail: "no result returned for record at index 1",
+      verifiablReference: VERIFIABL_REF_B,
+      externalId: "payslip-2",
+    });
+  });
 
   it("posts the batch to the batch endpoint with the wire body and maps the response", async () => {
     const fetch = mockFetch(200, batchResponseBody());
