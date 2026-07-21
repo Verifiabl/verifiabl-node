@@ -18,9 +18,12 @@ npm ci
 ## Review gates (run these; no network required)
 
 ```bash
-npm run lint         # Biome lint
+npm run check:ci     # Biome lint + formatting + import order, exactly as CI runs it
 npm run typecheck    # tsc --noEmit
 npm test             # Jest
 ```
+
+`npm run lint` is lint-only and will pass on formatting or import-order drift that
+`check:ci` fails on; `npm run check` fixes both in place.
 
 Optionally `npm run build` (tsup) to confirm the published bundle compiles.
