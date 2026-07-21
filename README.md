@@ -1,4 +1,4 @@
-# verifiabl
+# @verifiabl/issuer
 
 Official Node.js SDK for issuing Verifiabl payslip QR codes.
 
@@ -9,7 +9,7 @@ Verifiabl is for accredited payroll providers. You receive sandbox credentials a
 ## Installation
 
 ```bash
-npm install verifiabl
+npm install @verifiabl/issuer
 ```
 
 Requires Node.js 20+. The example below renders an SVG badge, which needs no extra dependencies. To render a PNG instead (slower, and it pulls in a native renderer), also install:
@@ -23,7 +23,7 @@ npm install @resvg/resvg-js
 This is the self-managed flow: register the payslip, encrypt the personal details locally, and generate the QR code yourself. You need four values from onboarding: your OAuth client ID and secret, your encryption key, and your key version.
 
 ```ts
-import { VerifiablClient, formatPii, encryptPii, createBarcodeSvg } from "verifiabl";
+import { VerifiablClient, formatPii, encryptPii, createBarcodeSvg } from "@verifiabl/issuer";
 
 const client = new VerifiablClient({
   environment: "sandbox",
@@ -96,7 +96,7 @@ PNGs default to truecolour. Pass `{ palette: true }` for smaller files when you 
 For pay runs, register up to 1000 records in one request with `registerNonPiiBatch`. The provider generates each Verifiabl reference up-front with `generateVerifiablReference` and includes it on each record, so the whole batch can go in one round trip. Results come back in the same order as the input records (`results[i]` is the outcome of `records[i]`); one bad record never fails the whole batch.
 
 ```ts
-import { encryptPii, formatPii, generateVerifiablReference } from "verifiabl";
+import { encryptPii, formatPii, generateVerifiablReference } from "@verifiabl/issuer";
 
 const issuedAt = new Date().toISOString();
 const prepared = payslips.map((payslip) => {
@@ -136,7 +136,7 @@ Set `environment` to `production` (default) or `sandbox`. Pass the same value to
 Failed requests throw `VerifiablApiError` with a stable `code` and a `requestId` to quote to support. Auth failures throw `VerifiablAuthError`.
 
 ```ts
-import { VerifiablApiError } from "verifiabl";
+import { VerifiablApiError } from "@verifiabl/issuer";
 
 try {
   await client.registerNonPii(request);
