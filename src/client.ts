@@ -301,22 +301,28 @@ export class VerifiablClient {
       });
     }
 
-    // results[i] must line up with records[i]. A hole can only mean the API
-    // returned fewer results than we sent, so say that rather than hand back a
-    // sparse array.
-    return {
-      results: results.map((result, index) => {
-        return (
-          result ?? {
-            status: "error",
-            code: "INTERNAL_ERROR",
-            detail: `no result returned for record at index ${index}`,
-            verifiablReference: sendable.find((entry) => entry.index === index)?.record
-              .verifiablReference,
-          }
-        );
-      }) as BatchRecordResult[],
-    };
+    // results[i] must line up with records[i]. A hole can only be a record we
+    // sent that the API returned no result for, so fill it from that record's
+    // own input rather than hand back a sparse array or a result with no
+    // reference to correlate on.
+    // Array.from over the length, not results.map: results is a sparse array, and
+    // map would skip the holes rather than fill them.
+    const sentByIndex = new Map(sendable.map((entry) => [entry.index, entry.record]));
+    const filled: BatchRecordResult[] = Array.from({ length: records.length }, (_, index) => {
+      const result = results[index];
+      if (result !== undefined) {
+        return result;
+      }
+      const record = sentByIndex.get(index);
+      return {
+        status: "error",
+        code: "INTERNAL_ERROR",
+        detail: `no result returned for record at index ${index}`,
+        verifiablReference: record?.verifiablReference ?? "",
+        ...(record?.externalId !== undefined ? { externalId: record.externalId } : {}),
+      };
+    });
+    return { results: filled };
   }
 
   private async post<T>(

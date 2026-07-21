@@ -833,6 +833,32 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     expect(result.results[0]).toMatchObject({ status: "error", code: "VALIDATION_FAILED" });
   });
 
+  // If the API returns fewer results than we sent, the missing slots must still
+  // be correlatable: fill them from the record's own reference, not undefined.
+  it("fills a missing API result from the sent record's reference", async () => {
+    const fetch = mockFetch(200, {
+      results: [{ status: "created", verifiabl_reference: VERIFIABL_REF_A }],
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch({
+      records: [
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_A },
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_B, externalId: "payslip-2" },
+      ],
+    });
+
+    expect(result.results).toHaveLength(2);
+    expect(result.results[0]).toMatchObject({ status: "created", verifiablReference: VERIFIABL_REF_A });
+    expect(result.results[1]).toEqual({
+      status: "error",
+      code: "INTERNAL_ERROR",
+      detail: "no result returned for record at index 1",
+      verifiablReference: VERIFIABL_REF_B,
+      externalId: "payslip-2",
+    });
+  });
+
   it("posts the batch to the batch endpoint with the wire body and maps the response", async () => {
     const fetch = mockFetch(200, batchResponseBody());
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
