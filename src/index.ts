@@ -70,6 +70,7 @@ export {
   type RegisterNonPiiRequest,
   type RegisterNonPiiResponse,
   SCHEMA_RE,
+  supportedCurrencies,
   type VerifiablErrorBody,
   type VerifiablErrorCode,
   type VerifiablErrorDetail,

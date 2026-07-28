@@ -172,6 +172,25 @@ export const employmentBases = tuple([
 
 export const engagementTypes = tuple(["permanent", "fixed_term"]);
 
+/**
+ * ISO 4217 currencies with a minor-unit exponent of 2, which is what keeps every
+ * `*Cents` field literally cents. JPY (exponent 0) and BHD (exponent 3) are
+ * excluded on purpose: the same integer would mean a different scale and
+ * silently misstate pay.
+ */
+export const supportedCurrencies = tuple([
+  "AUD",
+  "NZD",
+  "USD",
+  "GBP",
+  "EUR",
+  "CAD",
+  "SGD",
+  "HKD",
+  "CHF",
+  "ZAR",
+]);
+
 /** Earnings categories carrying no sub-code. */
 const plainEarningsTypes = tuple([
   "ordinary",
@@ -232,7 +251,7 @@ const payslipNonPiiFields = z
     periodEnd: z.iso.date({ error: "periodEnd must be a real date in YYYY-MM-DD format" }),
     /** Legally mandatory on a pay slip (Fair Work reg 3.46(1)(d)). */
     paymentDate: z.iso.date({ error: "paymentDate must be a real date in YYYY-MM-DD format" }),
-    currency: z.literal("AUD"),
+    currency: z.enum(supportedCurrencies),
     /** Total gross, before salary sacrifice (per STP2). */
     grossCents: cents,
     /** PAYG withholding: its own component, never also a `deductions` line. */
