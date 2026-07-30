@@ -28,9 +28,13 @@ export {
 } from "./payload.js";
 export {
   formatPii,
+  PII_FIELD_MAX_LENGTH,
   PII_FIELD_ORDER,
   type PiiFieldName,
   type PiiFields,
+  type PiiFieldViolation,
+  type PiiFieldViolationReason,
+  PiiValidationError,
   parsePii,
   piiFieldsSchema,
 } from "./pii.js";
@@ -70,6 +74,7 @@ export {
   type RegisterNonPiiRequest,
   type RegisterNonPiiResponse,
   SCHEMA_RE,
+  supportedCurrencies,
   type VerifiablErrorBody,
   type VerifiablErrorCode,
   type VerifiablErrorDetail,

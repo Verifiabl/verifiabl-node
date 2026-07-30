@@ -49,7 +49,21 @@ const { encryptedPii, encryptionMetadata } = encryptPii(pii, key, keyVersion);
 const { verifiablReference } = await client.registerNonPii({
   schema: "au.payslip.v1",
   issuedAt: new Date().toISOString(),
-  payslipNonPii: { periodStart: "2026-05-01", periodEnd: "2026-05-31" },
+  // Canonical au.payslip.v1: money is integer cents, and net must reconcile as
+  // net = gross - salarySacrifice - paygw - deductions + reimbursements.
+  // `currency` is one of AUD, NZD, USD, GBP, EUR, CAD, SGD, HKD, CHF or ZAR: the
+  // ISO 4217 codes with a minor-unit exponent of 2, so cents are really cents.
+  payslipNonPii: {
+    periodStart: "2026-05-01",
+    periodEnd: "2026-05-31",
+    paymentDate: "2026-06-04",
+    currency: "AUD",
+    grossCents: 900_000,
+    paygwCents: 225_000,
+    netCents: 675_000,
+    ytdGrossCents: 5_400_000,
+    ytdPaygwCents: 1_350_000,
+  },
   encryptionMetadata,
 });
 
@@ -99,7 +113,7 @@ const { results } = await client.registerNonPiiBatch({
     verifiablReference,
     schema: "au.payslip.v1",
     issuedAt,
-    payslipNonPii: { periodStart: payslip.periodStart, periodEnd: payslip.periodEnd },
+    payslipNonPii: payslip.nonPii,
     encryptionMetadata,
   })),
 });

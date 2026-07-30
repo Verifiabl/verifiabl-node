@@ -1,5 +1,9 @@
 import { resolveEnvironment, type VerifiablEnvironment } from "./payload.js";
 import {
+  type BatchRecordRequest,
+  type BatchRecordResult,
+  localBatchValidationError,
+  payslipNonPiiSchema,
   type RegisterAndBuildBarcodeRequest,
   type RegisterAndBuildBarcodeResponse,
   type RegisterNonPiiBatchRequest,
@@ -9,12 +13,13 @@ import {
   registerAndBuildBarcodeFromWire,
   registerAndBuildBarcodeRequestSchema,
   registerAndBuildBarcodeToWire,
+  registerNonPiiBatchEnvelopeSchema,
   registerNonPiiBatchFromWire,
-  registerNonPiiBatchRequestSchema,
   registerNonPiiBatchToWire,
   registerNonPiiRequestSchema,
   registrationFromWire,
   registrationToWire,
+  SUPPORTED_PAYSLIP_SCHEMA,
   type VerifiablErrorBody,
   type VerifiablErrorCode,
   verifiablErrorBodySchema,
@@ -248,8 +253,76 @@ export class VerifiablClient {
     request: RegisterNonPiiBatchRequest,
     options: VerifiablRequestOptions = {},
   ): Promise<RegisterNonPiiBatchResponse> {
-    const body = registerNonPiiBatchToWire(registerNonPiiBatchRequestSchema.parse(request));
-    return this.post("/v1/registerNonPIIBatch", body, options, registerNonPiiBatchFromWire);
+    // Envelope first (reference, schema id, timestamp, encryption metadata): a
+    // bad one fails the request, as it does at the API. The payslip body is then
+    // checked per record, so one non-conforming payslip becomes that record's
+    // error result instead of costing the caller the rest of the pay run. A
+    // record rejected here is never sent.
+    const { records } = registerNonPiiBatchEnvelopeSchema.parse(request);
+    const results = new Array<BatchRecordResult | undefined>(records.length);
+    const sendable: { index: number; record: BatchRecordRequest }[] = [];
+    records.forEach((record, index) => {
+      if (record.schema !== SUPPORTED_PAYSLIP_SCHEMA) {
+        // Safe to echo: the envelope already pinned this to the schema-id format,
+        // so it cannot carry anything but a version identifier.
+        results[index] = {
+          status: "error",
+          code: "VALIDATION_FAILED",
+          detail: `unsupported schema '${record.schema}'`,
+          verifiablReference: record.verifiablReference,
+          ...(record.externalId !== undefined ? { externalId: record.externalId } : {}),
+        };
+        return;
+      }
+      const parsed = payslipNonPiiSchema.safeParse(record.payslipNonPii);
+      if (parsed.success) {
+        sendable.push({
+          index,
+          record: { ...record, schema: record.schema, payslipNonPii: parsed.data },
+        });
+      } else {
+        results[index] = localBatchValidationError(record, parsed.error);
+      }
+    });
+
+    if (sendable.length > 0) {
+      const body = registerNonPiiBatchToWire({ records: sendable.map((entry) => entry.record) });
+      const response = await this.post(
+        "/v1/registerNonPIIBatch",
+        body,
+        options,
+        registerNonPiiBatchFromWire,
+      );
+      response.results.forEach((result, position) => {
+        const entry = sendable[position];
+        if (entry) {
+          results[entry.index] = result;
+        }
+      });
+    }
+
+    // results[i] must line up with records[i]. A hole can only be a record we
+    // sent that the API returned no result for, so fill it from that record's
+    // own input rather than hand back a sparse array or a result with no
+    // reference to correlate on.
+    // Array.from over the length, not results.map: results is a sparse array, and
+    // map would skip the holes rather than fill them.
+    const sentByIndex = new Map(sendable.map((entry) => [entry.index, entry.record]));
+    const filled: BatchRecordResult[] = Array.from({ length: records.length }, (_, index) => {
+      const result = results[index];
+      if (result !== undefined) {
+        return result;
+      }
+      const record = sentByIndex.get(index);
+      return {
+        status: "error",
+        code: "INTERNAL_ERROR",
+        detail: `no result returned for record at index ${index}`,
+        verifiablReference: record?.verifiablReference ?? "",
+        ...(record?.externalId !== undefined ? { externalId: record.externalId } : {}),
+      };
+    });
+    return { results: filled };
   }
 
   private async post<T>(

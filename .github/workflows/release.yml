@@ -5,18 +5,26 @@ name: Release
 # Auth uses npm "trusted publishing" (OIDC), with no long-lived token secret.
 # One-time setup on npmjs.com after the first manual publish of "verifiabl":
 #   verifiabl package Settings → Trusted Publisher → GitHub Actions
-#   repository: Verifiabl/verifiabl-node, workflow: release.yml
+#   repository: Verifiabl/verifiabl-node, workflow: release.yml,
+#   environment: npm-publish
+#
+# The npm-publish GitHub environment (repo Settings → Environments) requires a
+# reviewer approval, so publishing a GitHub release alone cannot push to npm
+# without a human confirming the deployment.
 on:
   release:
     types: [published]
 
 permissions:
   contents: read
-  id-token: write # OIDC token for npm provenance + trusted publishing
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      contents: read
+      id-token: write # OIDC token for npm provenance + trusted publishing
     steps:
       # Default checkout (no `ref:`). On `release` events actions/checkout
       # >=6.0.2 keeps the tag ref so npm provenance gets a SourceRepositoryRef.
