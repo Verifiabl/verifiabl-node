@@ -40,14 +40,23 @@ function parseAsset(pixelWidth: SupportedPngPixelWidth): ParsedFrameAsset {
  * through {@link frameRaster}.
  */
 export function parseFrameContainer(container: Buffer): ParsedFrameAsset {
-  if (container.toString("ascii", 0, 4) !== "VFR1") {
+  if (container.length < 14 || container.toString("ascii", 0, 4) !== "VFR1") {
     throw new Error("corrupt frame asset: bad magic");
   }
   const width = container.readUInt16BE(4);
   const height = container.readUInt16BE(6);
   const paletteCount = container.readUInt16BE(8);
+  if (width <= 0 || height <= 0) {
+    throw new Error("corrupt frame asset: unexpected dimensions");
+  }
+  if (paletteCount < 1 || paletteCount > 256) {
+    throw new Error("corrupt frame asset: implausible palette size");
+  }
   const paletteStart = 10;
   const deflatedLengthOffset = paletteStart + paletteCount * 4;
+  if (deflatedLengthOffset + 4 > container.length) {
+    throw new Error("corrupt frame asset: truncated header");
+  }
   const deflatedLength = container.readUInt32BE(deflatedLengthOffset);
   const deflatedStart = deflatedLengthOffset + 4;
   if (deflatedStart + deflatedLength !== container.length) {

@@ -41,4 +41,20 @@ describe("parseFrameContainer", () => {
     bytes.writeUInt16BE(5, 4); // claim width 5 for a 2-pixel payload
     expect(() => parseFrameContainer(bytes)).toThrow("pixel count mismatch");
   });
+
+  it("rejects a container too short to hold a header", () => {
+    expect(() => parseFrameContainer(Buffer.from("VFR1", "ascii"))).toThrow("bad magic");
+  });
+
+  it("rejects an implausible palette size", () => {
+    const bytes = container(1, [0]);
+    bytes.writeUInt16BE(257, 8);
+    expect(() => parseFrameContainer(bytes)).toThrow("implausible palette size");
+  });
+
+  it("rejects a palette that runs past the container", () => {
+    const bytes = container(1, [0]);
+    bytes.writeUInt16BE(256, 8); // palette would extend well past the buffer
+    expect(() => parseFrameContainer(bytes)).toThrow("truncated header");
+  });
 });
