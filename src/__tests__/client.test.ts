@@ -321,6 +321,33 @@ describe("VerifiablClient with static auth", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  // Every supported currency has an ISO 4217 minor-unit exponent of 2, so the
+  // `*Cents` fields stay literally cents. JPY (exponent 0) would reinterpret the
+  // same integer at a hundredfold different scale.
+  it("accepts a non-AUD exponent-2 currency and rejects one with another exponent", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await client.registerNonPii({
+      ...REQUEST,
+      payslipNonPii: { ...REQUEST.payslipNonPii, currency: "NZD" },
+    });
+    expect(requestBody(firstFetchCall(fetch))).toMatchObject({
+      payslip_non_pii: { currency: "NZD" },
+    });
+
+    await expect(
+      client.registerNonPii({
+        ...REQUEST,
+        payslipNonPii: {
+          ...REQUEST.payslipNonPii,
+          currency: "JPY",
+        } as unknown as RegisterNonPiiRequest["payslipNonPii"],
+      }),
+    ).rejects.toThrow();
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   // An empty array is not "no itemisation": it would otherwise skip the
   // sum-to-gross check and register an itemisation that says nothing.
   it("rejects an empty earnings array against a non-zero gross", async () => {

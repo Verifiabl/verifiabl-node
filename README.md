@@ -55,6 +55,8 @@ const { verifiablReference } = await client.registerNonPii({
   issuedAt: new Date().toISOString(),
   // Canonical au.payslip.v1: money is integer cents, and net must reconcile as
   // net = gross - salarySacrifice - paygw - deductions + reimbursements.
+  // `currency` is one of AUD, NZD, USD, GBP, EUR, CAD, SGD, HKD, CHF or ZAR: the
+  // ISO 4217 codes with a minor-unit exponent of 2, so cents are really cents.
   payslipNonPii: {
     periodStart: "2026-05-01",
     periodEnd: "2026-05-31",
