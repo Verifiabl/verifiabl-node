@@ -318,10 +318,9 @@ const payslipNonPiiFields = z
  * Every rule the API enforces is enforced here too, so an integration mistake
  * fails locally with a clear message instead of as a 400 from the API.
  *
- * The API constrains shape, not arithmetic: it attests that a document is the
- * one you registered, and leaves the numbers to you and to the lender reading
- * them. So neither side checks that net reconciles with its components, that an
- * itemisation sums to gross, or that a pay period runs forwards.
+ * The API validates the structure of the payload, but not the amounts, and this
+ * schema does the same. Neither one calculates net pay from gross pay, adds the
+ * earnings lines, or compares periodStart with periodEnd.
  */
 export const payslipNonPiiSchema = payslipNonPiiFields.superRefine((value, ctx) => {
   for (const [index, line] of (value.earnings ?? []).entries()) {
