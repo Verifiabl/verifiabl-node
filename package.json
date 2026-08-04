@@ -1,5 +1,5 @@
 {
-  "name": "verifiabl",
+  "name": "@verifiabl/issuer",
   "version": "0.16.0",
   "description": "Official Verifiabl Node.js SDK for issuing payslip QR codes, formatting PII, AES-256-GCM encryption helpers, and typed issuer API calls.",
   "license": "MIT",
