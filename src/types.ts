@@ -274,7 +274,7 @@ const payslipNonPiiFields = z
     taxableGrossCents: cents.optional(),
     /** The printed HELP/STSL component: a non-additive part of `paygwCents`. */
     stslWithholdingCents: cents.optional(),
-    /** Itemisation of gross. If present, must sum to `grossCents` exactly. */
+    /** Itemisation of gross. */
     earnings: z.array(earningsLineSchema).optional(),
     salarySacrifice: z
       .array(z.object({ type: z.enum(salarySacrificeTypes), amountCents: cents }).strict())
@@ -311,25 +311,19 @@ const payslipNonPiiFields = z
   })
   .strict();
 
-const sumAmounts = (lines: readonly { amountCents: number }[] | undefined): number =>
-  (lines ?? []).reduce((total, line) => total + line.amountCents, 0);
-
 /**
  * Non-PII payslip data: the canonical `au.payslip.v1` schema.
  *
  * Closed and free-text-free by design, so no field can carry a person's name.
  * Every rule the API enforces is enforced here too, so an integration mistake
  * fails locally with a clear message instead of as a 400 from the API.
+ *
+ * The API constrains shape, not arithmetic: it attests that a document is the
+ * one you registered, and leaves the numbers to you and to the lender reading
+ * them. So neither side checks that net reconciles with its components, that an
+ * itemisation sums to gross, or that a pay period runs forwards.
  */
 export const payslipNonPiiSchema = payslipNonPiiFields.superRefine((value, ctx) => {
-  if (value.periodEnd < value.periodStart) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["periodEnd"],
-      message: "periodEnd must not be before periodStart",
-    });
-  }
-
   for (const [index, line] of (value.earnings ?? []).entries()) {
     if (line.type !== "allowance") continue;
     if (line.allowanceType === "other" && line.otherCategory === undefined) {
@@ -343,38 +337,6 @@ export const payslipNonPiiSchema = payslipNonPiiFields.superRefine((value, ctx) 
         code: "custom",
         path: ["earnings", index, "otherCategory"],
         message: "otherCategory applies only to allowanceType 'other'",
-      });
-    }
-  }
-
-  // The accounting identity the API enforces, in exact integer arithmetic. Gross
-  // is pre-sacrifice and PAYGW is not a deduction, so each component is counted
-  // exactly once.
-  const expectedNet =
-    value.grossCents -
-    sumAmounts(value.salarySacrifice) -
-    value.paygwCents -
-    sumAmounts(value.deductions) +
-    (value.reimbursementsCents ?? 0);
-
-  if (value.netCents !== expectedNet) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["netCents"],
-      message: `netCents must equal grossCents - salarySacrifice - paygwCents - deductions + reimbursementsCents (expected ${expectedNet}, got ${value.netCents})`,
-    });
-  }
-
-  // Present means complete: an empty array would otherwise skip the check and
-  // register an itemisation that says nothing while gross is non-zero. Omit
-  // `earnings` entirely if you are not itemising.
-  if (value.earnings !== undefined) {
-    const itemised = sumAmounts(value.earnings);
-    if (itemised !== value.grossCents) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["earnings"],
-        message: `earnings must itemise grossCents in full (expected ${value.grossCents}, got ${itemised})`,
       });
     }
   }

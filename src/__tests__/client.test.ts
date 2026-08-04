@@ -348,34 +348,32 @@ describe("VerifiablClient with static auth", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  // An empty array is not "no itemisation": it would otherwise skip the
-  // sum-to-gross check and register an itemisation that says nothing.
-  it("rejects an empty earnings array against a non-zero gross", async () => {
+  // Verifiabl attests the document, not the arithmetic. An implausible payslip
+  // is still a real issued document, so the SDK sends the issuer's figures as
+  // given rather than adjudicating them locally.
+  it("sends figures that do not reconcile, as issued", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
 
-    await expect(
-      client.registerNonPii({
-        ...REQUEST,
-        payslipNonPii: { ...REQUEST.payslipNonPii, earnings: [] },
-      }),
-    ).rejects.toThrow(/earnings must itemise/);
-    expect(fetch).not.toHaveBeenCalled();
-  });
+    await client.registerNonPii({
+      ...REQUEST,
+      payslipNonPii: {
+        ...REQUEST.payslipNonPii,
+        netCents: 999_999,
+        earnings: [{ type: "ordinary", amountCents: 1 }],
+        periodStart: "2026-05-31",
+        periodEnd: "2026-05-01",
+      },
+    });
 
-  // The SDK's value is catching the mistake locally: an unbalanced payslip must
-  // never reach the network.
-  it("rejects a payslip that does not satisfy the accounting identity", async () => {
-    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
-
-    await expect(
-      client.registerNonPii({
-        ...REQUEST,
-        payslipNonPii: { ...REQUEST.payslipNonPii, netCents: 999_999 },
-      }),
-    ).rejects.toThrow(/netCents must equal/);
-    expect(fetch).not.toHaveBeenCalled();
+    expect(requestBody(firstFetchCall(fetch))).toMatchObject({
+      payslip_non_pii: {
+        net_cents: 999_999,
+        earnings: [{ type: "ordinary", amount_cents: 1 }],
+        period_start: "2026-05-31",
+        period_end: "2026-05-01",
+      },
+    });
   });
 
   it("lets explicit issuer base URL overrides win over the environment", async () => {
@@ -782,8 +780,9 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
           ...REQUEST,
           verifiablReference: VERIFIABL_REF_A,
           externalId: "payslip-1",
-          // Does not reconcile: rejected locally, never sent.
-          payslipNonPii: { ...REQUEST.payslipNonPii, netCents: 999_999 },
+          // Money is integer cents, so a fractional amount is rejected locally
+          // and never sent.
+          payslipNonPii: { ...REQUEST.payslipNonPii, grossCents: 900_000.55 },
         },
         { ...REQUEST, verifiablReference: VERIFIABL_REF_B },
       ],
@@ -802,7 +801,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
       verifiablReference: VERIFIABL_REF_A,
       externalId: "payslip-1",
     });
-    expect(result.results[0]?.detail).toContain("netCents must equal");
+    expect(result.results[0]?.detail).toContain("grossCents");
     expect(result.results[1]).toEqual({
       status: "created",
       verifiablReference: VERIFIABL_REF_B,
@@ -850,7 +849,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
         {
           ...REQUEST,
           verifiablReference: VERIFIABL_REF_A,
-          payslipNonPii: { ...REQUEST.payslipNonPii, netCents: 1 },
+          payslipNonPii: { ...REQUEST.payslipNonPii, netCents: 675_000.55 },
         },
       ],
     });

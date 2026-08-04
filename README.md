@@ -49,8 +49,8 @@ const { encryptedPii, encryptionMetadata } = encryptPii(pii, key, keyVersion);
 const { verifiablReference } = await client.registerNonPii({
   schema: "au.payslip.v1",
   issuedAt: new Date().toISOString(),
-  // Canonical au.payslip.v1: money is integer cents, and net must reconcile as
-  // net = gross - salarySacrifice - paygw - deductions + reimbursements.
+  // Canonical au.payslip.v1: money is integer cents. The figures are yours as
+  // issued; Verifiabl attests the document, it does not check your arithmetic.
   // `currency` is one of AUD, NZD, USD, GBP, EUR, CAD, SGD, HKD, CHF or ZAR: the
   // ISO 4217 codes with a minor-unit exponent of 2, so cents are really cents.
   payslipNonPii: {
