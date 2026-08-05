@@ -361,8 +361,6 @@ describe("VerifiablClient with static auth", () => {
         ...REQUEST.payslipNonPii,
         netCents: 999_999,
         earnings: [{ type: "ordinary", amountCents: 1 }],
-        periodStart: "2026-05-31",
-        periodEnd: "2026-05-01",
       },
     });
 
@@ -370,10 +368,25 @@ describe("VerifiablClient with static auth", () => {
       payslip_non_pii: {
         net_cents: 999_999,
         earnings: [{ type: "ordinary", amount_cents: 1 }],
-        period_start: "2026-05-31",
-        period_end: "2026-05-01",
       },
     });
+  });
+
+  it("rejects a period that ends before it starts, before the request is sent", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await expect(
+      client.registerNonPii({
+        ...REQUEST,
+        payslipNonPii: {
+          ...REQUEST.payslipNonPii,
+          periodStart: "2026-05-31",
+          periodEnd: "2026-05-01",
+        },
+      }),
+    ).rejects.toThrow(/periodEnd must not be before periodStart/);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("lets explicit issuer base URL overrides win over the environment", async () => {

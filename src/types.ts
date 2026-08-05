@@ -319,10 +319,21 @@ const payslipNonPiiFields = z
  * fails locally with a clear message instead of as a 400 from the API.
  *
  * The API validates the structure of the payload, but not the amounts, and this
- * schema does the same. Neither one calculates net pay from gross pay, adds the
- * earnings lines, or compares periodStart with periodEnd.
+ * schema does the same. Neither one calculates net pay from gross pay or adds
+ * the earnings lines. Both still require periodEnd to be on or after
+ * periodStart, which is coherence of the document rather than a view on the pay:
+ * no correctly-issued payslip has a period that ends before it starts.
  */
 export const payslipNonPiiSchema = payslipNonPiiFields.superRefine((value, ctx) => {
+  // ISO dates, so a lexicographic compare is a chronological one.
+  if (value.periodEnd < value.periodStart) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["periodEnd"],
+      message: "periodEnd must not be before periodStart",
+    });
+  }
+
   for (const [index, line] of (value.earnings ?? []).entries()) {
     if (line.type !== "allowance") continue;
     if (line.allowanceType === "other" && line.otherCategory === undefined) {
