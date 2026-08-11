@@ -60,7 +60,6 @@ export {
   type BatchRecordResult,
   type BatchRecordStatus,
   type EncryptionMetadata,
-  KEY_VERSION_RE,
   KNOWN_BATCH_RECORD_STATUSES,
   KNOWN_VERIFIABL_ERROR_CODES,
   type KnownBatchRecordStatus,

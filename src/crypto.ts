@@ -1,5 +1,4 @@
 import { createCipheriv, randomBytes } from "node:crypto";
-import { KEY_VERSION_RE } from "./types.js";
 
 /**
  * PII encryption helper.
@@ -10,7 +9,8 @@ import { KEY_VERSION_RE } from "./types.js";
  * shape from a formatted PII string and your provider key.
  *
  * Each provider has its own encryption key, so a ciphertext can only be
- * decrypted with the key of the provider that issued it.
+ * decrypted with the key of the provider that issued it. Verifiabl finds
+ * the right key at verification time; no key identifier is sent.
  *
  * Key handling rules (ISO 27001-aligned, these are your obligations as a
  * provider):
@@ -30,7 +30,6 @@ export interface EncryptedPii {
   encryptionMetadata: {
     iv: string;
     tag: string;
-    keyVersion: string;
   };
 }
 
@@ -46,20 +45,10 @@ function base64Url(buf: Buffer): string {
  *
  * @param plaintext The formatted string from `formatPii`.
  * @param key Your 32-byte provider encryption key.
- * @param keyVersion The key version assigned during onboarding:
- *   `<provider-id>.<n>`, where provider-id is your provider ID and n starts
- *   at 1 and increments each time you rotate your key (e.g.
- *   "0f8fad5b-d9cb-469f-a165-70867728950e.1").
  */
-export function encryptPii(plaintext: string, key: Buffer, keyVersion: string): EncryptedPii {
+export function encryptPii(plaintext: string, key: Buffer): EncryptedPii {
   if (key.length !== KEY_BYTES) {
     throw new Error(`Encryption key must be exactly ${KEY_BYTES} bytes (AES-256)`);
-  }
-  if (!KEY_VERSION_RE.test(keyVersion)) {
-    throw new Error(
-      "keyVersion must be '<provider-id>.<n>' (lowercase provider ID, rotation counter from 1), " +
-        'e.g. "0f8fad5b-d9cb-469f-a165-70867728950e.1"',
-    );
   }
 
   const iv = randomBytes(IV_BYTES);
@@ -72,7 +61,6 @@ export function encryptPii(plaintext: string, key: Buffer, keyVersion: string): 
     encryptionMetadata: {
       iv: base64Url(iv),
       tag: base64Url(tag),
-      keyVersion,
     },
   };
 }
