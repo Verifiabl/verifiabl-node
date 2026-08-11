@@ -16,7 +16,7 @@ Requires Node.js 20+. No native dependencies: both the SVG and PNG renderers are
 
 ## Getting started
 
-This is the self-managed flow: register the payslip, encrypt the personal details locally, and generate the QR code yourself. You need four values from onboarding: your OAuth client ID and secret, your encryption key, and your key version.
+This is the self-managed flow: register the payslip, encrypt the personal details locally, and generate the QR code yourself. You need three values from onboarding: your OAuth client ID and secret, and your encryption key.
 
 ```ts
 import { VerifiablClient, formatPii, encryptPii, createBarcodeSvg } from "@verifiabl/issuer";
@@ -29,9 +29,8 @@ const client = new VerifiablClient({
   },
 });
 
-// Your 32-byte key and key version, from onboarding. Load the key from a secrets manager.
+// Your 32-byte key, from onboarding. Load it from a secrets manager.
 const key = Buffer.from(process.env.VERIFIABL_ENCRYPTION_KEY_BASE64!, "base64");
-const keyVersion = process.env.VERIFIABL_KEY_VERSION!; // e.g. "0f8fad5b-...e.1"
 
 // 1. Format and encrypt the employee's details locally.
 const pii = formatPii({
@@ -43,7 +42,7 @@ const pii = formatPii({
   accountNumber: "12345678",
   accountName: "Jane A Doe",
 });
-const { encryptedPii, encryptionMetadata } = encryptPii(pii, key, keyVersion);
+const { encryptedPii, encryptionMetadata } = encryptPii(pii, key);
 
 // 2. Register the non-PII data. Verifiabl returns a Verifiabl reference.
 const { verifiablReference } = await client.registerNonPii({
@@ -98,11 +97,7 @@ import { encryptPii, formatPii, generateVerifiablReference } from "@verifiabl/is
 const issuedAt = new Date().toISOString();
 const prepared = payslips.map((payslip) => {
   const verifiablReference = generateVerifiablReference();
-  const { encryptedPii, encryptionMetadata } = encryptPii(
-    formatPii(payslip.pii),
-    key,
-    keyVersion,
-  );
+  const { encryptedPii, encryptionMetadata } = encryptPii(formatPii(payslip.pii), key);
   // Keep `encryptedPii` alongside the reference locally: you need both to render the barcode.
   return { verifiablReference, encryptedPii, encryptionMetadata, payslip };
 });

@@ -7,21 +7,7 @@ function tuple<const T extends readonly string[]>(value: T): T {
 
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
 
-/**
- * Key version contract: `<provider-id>.<n>` where provider-id is your
- * lowercase provider ID and n increments on each key rotation, starting at
- * 1. Verifiabl looks up the matching encryption key by this value at
- * verification time. Note this provider ID is distinct from your OAuth
- * `clientId`.
- */
-export const KEY_VERSION_RE =
-  /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.[1-9][0-9]{0,5}$/;
-
 export const SCHEMA_RE = /^[a-z]{2}\.[a-z]+\.v\d+$/;
-
-export const keyVersionSchema = z.string().regex(KEY_VERSION_RE, {
-  error: "keyVersion must be '<provider-id>.<n>' (lowercase provider ID, rotation counter from 1)",
-});
 
 export const payslipSchemaIdSchema = z.string().regex(SCHEMA_RE, {
   error: "schema must be in format 'xx.type.vN' (e.g. 'au.payslip.v1')",
@@ -49,8 +35,6 @@ export const encryptionMetadataSchema = z
     iv: z.string().length(16).regex(BASE64URL_RE),
     /** 128-bit GCM auth tag, exactly 22 base64url characters. */
     tag: z.string().length(22).regex(BASE64URL_RE),
-    /** Provider key version identifier in deployed `<provider-id>.<n>` format. */
-    keyVersion: keyVersionSchema,
   })
   .strict();
 
@@ -432,7 +416,7 @@ export type RegisterAndBuildBarcodeResponse = z.infer<typeof registerAndBuildBar
  * ------------------------------------------------------------------ */
 
 function encryptionMetadataToWire(metadata: EncryptionMetadata): Record<string, unknown> {
-  return { iv: metadata.iv, tag: metadata.tag, key_version: metadata.keyVersion };
+  return { iv: metadata.iv, tag: metadata.tag };
 }
 
 /** Include a key only when the value was supplied, so optionals stay absent rather than null. */

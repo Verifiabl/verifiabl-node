@@ -7,7 +7,6 @@ import type {
 
 const VERIFIABL_REF = "AbCdEfGhIjKlMnOpQrStUv";
 const CIPHERTEXT = "Zm9v";
-const KEY_VERSION = "0f8fad5b-d9cb-469f-a165-70867728950e.1";
 
 const REQUEST: RegisterNonPiiRequest = {
   schema: "au.payslip.v1",
@@ -27,7 +26,6 @@ const REQUEST: RegisterNonPiiRequest = {
   encryptionMetadata: {
     iv: "AAAAAAAAAAAAAAAA",
     tag: "AAAAAAAAAAAAAAAAAAAAAA",
-    keyVersion: KEY_VERSION,
   },
 };
 
@@ -56,7 +54,6 @@ const WIRE_REQUEST = {
   encryption_metadata: {
     iv: "AAAAAAAAAAAAAAAA",
     tag: "AAAAAAAAAAAAAAAAAAAAAA",
-    key_version: KEY_VERSION,
   },
 };
 
@@ -732,15 +729,18 @@ describe("VerifiablClient with static auth", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("rejects key versions outside the deployed contract before sending", async () => {
+  it("rejects the retired keyVersion field before sending", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
     await expect(
       client.registerNonPii({
         ...REQUEST,
-        encryptionMetadata: { ...REQUEST.encryptionMetadata, keyVersion: "v1" },
+        encryptionMetadata: {
+          ...REQUEST.encryptionMetadata,
+          keyVersion: "0f8fad5b-d9cb-469f-a165-70867728950e.1",
+        } as never,
       }),
-    ).rejects.toThrow("provider-id");
+    ).rejects.toThrow();
     expect(fetch).not.toHaveBeenCalled();
   });
 
