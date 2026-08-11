@@ -16,7 +16,7 @@ Requires Node.js 20+. No native dependencies: both the SVG and PNG renderers are
 
 ## Getting started
 
-This is the self-managed flow: register the payslip, encrypt the personal details locally, and generate the QR code yourself. You need four values from onboarding: your OAuth client ID and secret, your encryption key, and your key version.
+This is the self-managed flow: register the payslip, encrypt the personal details locally, and generate the QR code yourself. You need three values from onboarding: your OAuth client ID and secret, and your encryption key.
 
 ```ts
 import { VerifiablClient, formatPii, encryptPii, createBarcodeSvg } from "@verifiabl/issuer";
