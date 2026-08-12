@@ -59,6 +59,8 @@ function isSupportedPixelWidth(value: number): value is SupportedPngPixelWidth {
  * `createBarcodeSvg` (continuously scalable), or scale at placement time: PDF
  * toolchains set the physical size independently of the pixel size.
  *
+ * Rejects with `QrCapacityError` when the encrypted PII is too long to encode.
+ *
  * @param pixelWidth Output bitmap width in pixels (default: 720).
  */
 export async function createBarcodePng(

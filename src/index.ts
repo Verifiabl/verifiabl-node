@@ -53,6 +53,9 @@ export {
   type BarcodeSvgOptions,
   type BarcodeSvgResult,
   createBarcodeSvg,
+  QrCapacityError,
+  type QrCapacityErrorDetail,
+  type QrCapacityFailureReason,
 } from "./qr/styled.js";
 
 export {

@@ -1,6 +1,6 @@
 import { SUPPORTED_PNG_PIXEL_WIDTHS } from "../qr/frame.js";
 import { createBarcodePng } from "../qr/png.js";
-import { createBarcodeSvg } from "../qr/styled.js";
+import { createBarcodeSvg, QrCapacityError } from "../qr/styled.js";
 
 const PARTS = {
   verifiablReference: "AbCdEfGhIjKlMnOpQrStUv",
@@ -51,6 +51,15 @@ describe("createBarcodePng", () => {
     expect(png.errorCorrectionLevel).toBe(svg.errorCorrectionLevel);
     expect(png.modulePx).toBe(svg.modulePx);
     expect(png.degraded).toBe(svg.degraded);
+  });
+
+  it("rejects with the typed QrCapacityError when the PII is too long", async () => {
+    const parts = { ...PARTS, encryptedPii: "a".repeat(3000) };
+    await expect(createBarcodePng(parts, {}, 480)).rejects.toBeInstanceOf(QrCapacityError);
+    await expect(createBarcodePng(parts, {}, 480)).rejects.toMatchObject({
+      reason: "qr-capacity",
+      badgeWidth: 480,
+    });
   });
 
   it("rejects unsupported pixel widths", async () => {
