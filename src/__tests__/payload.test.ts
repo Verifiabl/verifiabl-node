@@ -36,12 +36,30 @@ describe("buildBarcodePayload", () => {
 });
 
 describe("buildScanUrl", () => {
-  it("wraps the payload in the production /v/ URL with URL encoding", () => {
+  it("puts the reference in the path and the ciphertext in the fragment", () => {
     const url = buildScanUrl({ verifiablReference: VERIFIABL_REF, encryptedPii: CIPHERTEXT });
-    expect(url).toBe(
-      `${DEFAULT_SCAN_BASE_URL}/v/${encodeURIComponent(`1|${VERIFIABL_REF}|${CIPHERTEXT}`)}`,
+    expect(url).toBe(`${DEFAULT_SCAN_BASE_URL}/v/${VERIFIABL_REF}#1.${CIPHERTEXT}`);
+  });
+
+  // The ciphertext must never sit in a part of the URL that a client sends to a
+  // server, or it lands in request logs we do not control (VER-369).
+  it("keeps the ciphertext out of everything the server receives", () => {
+    const url = new URL(
+      buildScanUrl({ verifiablReference: VERIFIABL_REF, encryptedPii: CIPHERTEXT }),
     );
-    expect(url).toContain("%7C"); // pipes must be encoded
+
+    expect(url.pathname).not.toContain(CIPHERTEXT);
+    expect(url.search).toBe("");
+    expect(url.hash).toBe(`#1.${CIPHERTEXT}`);
+  });
+
+  // Scanners linkify only what parses as a URI. ZXing rejects any payload whose
+  // characters fall outside this set, which is why the separator is "." and not
+  // the wire format's "|".
+  it("uses only URI-safe characters so scanners still offer tap-to-open", () => {
+    const url = buildScanUrl({ verifiablReference: VERIFIABL_REF, encryptedPii: CIPHERTEXT });
+
+    expect(url).toMatch(/^[-._~:/?#[\]@!$&'()*+,;=%A-Za-z0-9]+$/);
   });
 
   it("uses the sandbox scan URL when environment is sandbox", () => {

@@ -89,8 +89,9 @@ export const SANDBOX_SCAN_BASE_URL = ENVIRONMENTS.sandbox.scanBaseUrl;
 /**
  * Build the v1 barcode payload: `1|<verifiablReference>|<ciphertext>`.
  *
- * This is the bare wire format. For QR codes intended to be scanned by
- * phones, prefer `buildScanUrl`, which wraps this payload in the public
+ * This is the bare wire format, and the value to write into the PDF's XMP
+ * metadata. For QR codes intended to be scanned by phones, prefer
+ * `buildScanUrl`, which carries the same reference and ciphertext as a public
  * scan-redirect URL.
  */
 export function buildBarcodePayload({ verifiablReference, encryptedPii }: BarcodeParts): string {
@@ -136,18 +137,25 @@ export interface ScanUrlOptions {
 /**
  * Build the URL encoded into Verifiabl QR codes:
  *
- *   https://verify.verifiabl.io/v/<urlencoded "1|verifiablReference|ciphertext">
+ *   https://verify.verifiabl.io/v/<verifiablReference>#1.<ciphertext>
  *
  * The scan URL sends scanners to Verifiabl instead of exposing raw
  * ciphertext in a phone camera preview.
+ *
+ * The ciphertext rides in the fragment, which no client transmits to a server,
+ * so it cannot reach a request log at Verifiabl or at any intermediary. Every
+ * character stays inside the URI-safe set (base64url plus `.`), which is what
+ * keeps scanners treating this as a URL and offering tap-to-open rather than
+ * showing it as plain text.
  */
 export function buildScanUrl(parts: BarcodeParts, options: ScanUrlOptions = {}): string {
   const environment = normaliseEnvironment(options.environment ?? "production");
   const baseUrl = normaliseScanBaseUrl(
     options.scanBaseUrl ?? resolveEnvironment(environment).scanBaseUrl,
   );
-  const payload = buildBarcodePayload(parts);
-  return `${baseUrl}/v/${encodeURIComponent(payload)}`;
+  const id = verifiablReferenceSchema.parse(parts.verifiablReference);
+  const ciphertext = ciphertextSchema.parse(parts.encryptedPii);
+  return `${baseUrl}/v/${id}#1.${ciphertext}`;
 }
 
 function normaliseScanBaseUrl(scanBaseUrl: string): string {
