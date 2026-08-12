@@ -275,9 +275,11 @@ describe("styled QR scannability", () => {
 
   it("decoded URL round-trips to the original payload", () => {
     const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
-    const scanned = decode(parts);
-    const encodedPayload = scanned.slice(scanned.lastIndexOf("/") + 1);
-    expect(decodeURIComponent(encodedPayload)).toBe(buildBarcodePayload(parts));
+    const scanned = new URL(decode(parts));
+    const reference = scanned.pathname.slice(scanned.pathname.lastIndexOf("/") + 1);
+    const ciphertext = scanned.hash.slice("#1.".length);
+
+    expect(`1|${reference}|${ciphertext}`).toBe(buildBarcodePayload(parts));
   });
 
   it("decodes the encrypted docs PII example at the minimum raster width", () => {
