@@ -279,6 +279,8 @@ function renderDefaultHeader(textColor: string): string {
  * Takes the Verifiabl reference from `client.registerNonPii` and the encrypted PII
  * ciphertext from `encryptPii`, then returns a standalone SVG suitable for
  * embedding in a payslip PDF.
+ *
+ * Throws {@link QrCapacityError} when the encrypted PII is too long to encode.
  */
 export function createBarcodeSvg(
   parts: BarcodeParts,
@@ -346,12 +348,67 @@ export interface SelectedQrRendering {
 }
 
 /**
+ * Which capacity limit the QR content exceeded.
+ *
+ * - `qr-capacity`: the content is longer than any QR version holds, at any
+ *   error-correction level. A wider badge does not help.
+ * - `frame-fit`: the content encodes, but only into a symbol whose modules fall
+ *   below the scannable floor inside the fixed frame at this width. A wider
+ *   badge can carry it.
+ */
+export type QrCapacityFailureReason = "qr-capacity" | "frame-fit";
+
+/** What the renderer was asked for when it ran out of capacity. */
+export interface QrCapacityErrorDetail {
+  reason: QrCapacityFailureReason;
+  /** Length of the QR content (the scan URL) in characters. */
+  contentLength: number;
+  /** Badge width attempted, in SVG user units (SVG) or pixels (PNG). */
+  badgeWidth: number;
+}
+
+/**
+ * Thrown by {@link createBarcodeSvg} and `createBarcodePng` when the QR content
+ * does not fit. The PII behind it is caller-supplied, so this is rejected input
+ * rather than a renderer fault: catch it to report the length back to the
+ * caller instead of failing the surrounding operation.
+ */
+export class QrCapacityError extends Error {
+  readonly reason: QrCapacityFailureReason;
+  readonly contentLength: number;
+  readonly badgeWidth: number;
+
+  constructor(detail: QrCapacityErrorDetail) {
+    super(describeQrCapacityFailure(detail));
+    this.name = "QrCapacityError";
+    this.reason = detail.reason;
+    this.contentLength = detail.contentLength;
+    this.badgeWidth = detail.badgeWidth;
+    Object.setPrototypeOf(this, QrCapacityError.prototype);
+  }
+}
+
+function describeQrCapacityFailure(detail: QrCapacityErrorDetail): string {
+  if (detail.reason === "qr-capacity") {
+    return (
+      `The QR content (scan URL) is too large to encode in a QR code at any error-correction ` +
+      `level (${detail.contentLength} characters). Shorten the PII fields and try again.`
+    );
+  }
+  return (
+    `The PII is too long to render a scannable barcode in the branded frame at width ` +
+    `${detail.badgeWidth}, even at the lowest error correction. Shorten the PII fields and try ` +
+    `again.`
+  );
+}
+
+/**
  * Walk the degradation ladder and pick the rendering that fits the fixed
  * frame: the highest error-correction level (starting from the caller's
  * ceiling) whose modules still clear MIN_MODULE_PX at this width. The frame's
- * outer width and height never change. Hard-errors if even the lowest level
- * cannot fit, so an over-long payload fails loudly at issuance instead of
- * producing an unscannable code.
+ * outer width and height never change. Throws {@link QrCapacityError} if even
+ * the lowest level cannot fit, so an over-long payload fails loudly at issuance
+ * instead of producing an unscannable code.
  */
 export function selectQrRendering(
   content: string,
@@ -382,16 +439,8 @@ export function selectQrRendering(
     }
     densestSize = size;
   }
-  if (densestSize === null) {
-    throw new Error(
-      `The QR content (scan URL) is too large to encode in a QR code at any error-correction ` +
-        `level (${content.length} characters). Shorten the PII fields and try again.`,
-    );
-  }
-  throw new Error(
-    `The PII is too long to render a scannable barcode in the branded frame at width ${badgeWidth}, ` +
-      `even at the lowest error correction. Shorten the PII fields and try again.`,
-  );
+  const reason: QrCapacityFailureReason = densestSize === null ? "qr-capacity" : "frame-fit";
+  throw new QrCapacityError({ reason, contentLength: content.length, badgeWidth });
 }
 
 function validateBadgeWidth(value: number, name: string): number {

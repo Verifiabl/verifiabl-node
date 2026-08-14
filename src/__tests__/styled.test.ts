@@ -1,6 +1,6 @@
 import QRCode from "qrcode";
 import { buildScanUrl } from "../payload.js";
-import { createBarcodeSvg } from "../qr/styled.js";
+import { createBarcodeSvg, QrCapacityError } from "../qr/styled.js";
 
 const VERIFIABL_REF = "AbCdEfGhIjKlMnOpQrStUv";
 const CIPHERTEXT = "Zm9vYmFyYmF6cXV4XzEyMzQ1Njc4OTBhYmNkZWZnaGlqa2xtbm9w";
@@ -164,19 +164,44 @@ describe("createBarcodeSvg", () => {
 
   it("hard-errors when PII cannot fit the fixed frame even at the lowest level", () => {
     // Too dense to clear the floor even at L, but still within QR capacity.
-    expect(() => createBarcodeSvg({ ...PARTS, encryptedPii: "a".repeat(1600) })).toThrow(
+    const parts = { ...PARTS, encryptedPii: "a".repeat(1600) };
+    expect(() => createBarcodeSvg(parts)).toThrow(
       /too long to render a scannable barcode in the branded frame/,
     );
+
+    const error = capacityErrorFrom(() => createBarcodeSvg(parts));
+    expect(error).toBeInstanceOf(Error);
+    expect(error.name).toBe("QrCapacityError");
+    expect(error.reason).toBe("frame-fit");
+    expect(error.contentLength).toBe(buildScanUrl(parts).length);
+    expect(error.badgeWidth).toBe(480);
   });
 
   it("throws a clear error when PII exceeds QR code capacity entirely", () => {
     // Beyond what any QR version can hold at any level: the qrcode library
     // would otherwise throw a cryptic 'data too big' error deep in the renderer.
-    expect(() => createBarcodeSvg({ ...PARTS, encryptedPii: "a".repeat(3000) })).toThrow(
-      /too large to encode in a QR code/,
-    );
+    const parts = { ...PARTS, encryptedPii: "a".repeat(3000) };
+    expect(() => createBarcodeSvg(parts)).toThrow(/too large to encode in a QR code/);
+
+    const error = capacityErrorFrom(() => createBarcodeSvg(parts, { width: 720 }));
+    expect(error).toBeInstanceOf(Error);
+    expect(error.name).toBe("QrCapacityError");
+    expect(error.reason).toBe("qr-capacity");
+    expect(error.contentLength).toBe(buildScanUrl(parts).length);
+    expect(error.badgeWidth).toBe(720);
   });
 });
+
+/** Run the renderer and hand back the QrCapacityError it is expected to throw. */
+function capacityErrorFrom(render: () => unknown): QrCapacityError {
+  try {
+    render();
+  } catch (error) {
+    if (error instanceof QrCapacityError) return error;
+    throw error;
+  }
+  throw new Error("Expected the renderer to throw QrCapacityError");
+}
 
 function isFinderModule(row: number, col: number, size: number): boolean {
   const finderSize = 7;

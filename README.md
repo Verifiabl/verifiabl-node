@@ -139,6 +139,20 @@ try {
 }
 ```
 
+The barcode renderers throw `QrCapacityError` when the QR code cannot hold the encrypted PII. Catch this error and shorten the PII fields. The error gives three properties. `contentLength` is the number of characters in the scan URL. `badgeWidth` is the width that you gave to the renderer. `reason` is `frame-fit` or `qr-capacity`. For `frame-fit`, a larger width can hold the same content. For `qr-capacity`, no QR code can hold the content at any width.
+
+```ts
+import { createBarcodePng, QrCapacityError } from "@verifiabl/issuer";
+
+try {
+  const { png } = await createBarcodePng({ verifiablReference, encryptedPii }, {}, 720);
+} catch (err) {
+  if (err instanceof QrCapacityError) {
+    console.error(err.reason, err.contentLength);
+  }
+}
+```
+
 ## Security
 
 Employee PII is encrypted on your infrastructure and never reaches Verifiabl. Keep your encryption key and OAuth secret in a secrets manager. See the [security model](https://docs.verifiabl.io/architecture) for the full detail.
