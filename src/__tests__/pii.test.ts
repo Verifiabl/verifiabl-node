@@ -46,6 +46,12 @@ describe("formatPii", () => {
     expect(() => formatPii({ position: "Dev\u0085Ops" })).toThrow(PiiValidationError);
   });
 
+  it("rejects the line separators that are not control characters", () => {
+    // U+2028 and U+2029 are Zl/Zp, so a Cc-only check would let them through.
+    expect(() => formatPii({ address: "12 Example St\u2028Sydney" })).toThrow(PiiValidationError);
+    expect(() => formatPii({ address: "12 Example St\u2029Sydney" })).toThrow(PiiValidationError);
+  });
+
   it("names the offending field and reason without echoing the value", () => {
     try {
       formatPii({ employeeName: "Jane", accountName: "ACME|Trading" });

@@ -49,20 +49,27 @@ export type PiiFieldName = (typeof PII_FIELD_ORDER)[number];
  */
 export const PII_FIELD_MAX_LENGTH = 256;
 
+// U+2028 and U+2029 are separators, not Cc, so a Cc-only test misses them even
+// though they break a field just as a newline would.
+const DISALLOWED_CHARACTERS = /[\p{Cc}\p{Zl}\p{Zp}]/u;
+
 /**
- * Allow-list for a single PII field value: any printable character except
- * the pipe delimiter and control characters. Pipes would corrupt the
- * positional layout; control characters have no place in PII fields.
+ * Allow-list for a single PII field value: any printable character except the
+ * pipe delimiter, control characters and line separators. Pipes would corrupt
+ * the positional layout; the rest have no place in PII fields.
  */
 function isPrintableWithoutPipe(value: string): boolean {
   if (value.includes("|")) return false;
-  return !/\p{Cc}/u.test(value);
+  return !DISALLOWED_CHARACTERS.test(value);
 }
 
 const piiFieldSchema = z
   .string()
   .max(PII_FIELD_MAX_LENGTH, `PII field exceeds ${PII_FIELD_MAX_LENGTH} characters`)
-  .refine(isPrintableWithoutPipe, "PII field must not contain '|' or control characters");
+  .refine(
+    isPrintableWithoutPipe,
+    "PII field must not contain '|', control characters or line separators",
+  );
 
 export const piiFieldsSchema = z
   .object({
@@ -90,7 +97,7 @@ export interface PiiFieldViolation {
 
 const VIOLATION_DESCRIPTIONS: Record<PiiFieldViolationReason, string> = {
   pipe: "must not contain '|'",
-  "control-character": "must not contain control characters",
+  "control-character": "must not contain control characters or line separators",
   "too-long": `exceeds ${PII_FIELD_MAX_LENGTH} characters`,
 };
 
@@ -133,7 +140,7 @@ function findPiiViolations(fields: PiiFields): PiiFieldViolation[] {
       violations.push({ field, reason: "too-long" });
     } else if (value.includes("|")) {
       violations.push({ field, reason: "pipe" });
-    } else if (/\p{Cc}/u.test(value)) {
+    } else if (DISALLOWED_CHARACTERS.test(value)) {
       violations.push({ field, reason: "control-character" });
     }
   }
