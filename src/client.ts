@@ -51,22 +51,20 @@ export class VerifiablApiError extends Error {
 }
 
 const IV_REUSE_MESSAGE =
-  "The iv in encryption_metadata is already registered to your issuer. AES-256-GCM " +
-  "requires a unique iv for every record encrypted under one key, so encrypt the " +
-  "payslip again with encryptPii, which draws a fresh iv on every call, and resend " +
-  "the record with the new encryption metadata. A barcode already rendered from the " +
-  "previous ciphertext must be rebuilt from the new one.";
+  "The iv in encryption_metadata is already registered to your issuer. Encrypt the " +
+  "payslip again with encryptPii to get a new iv, then resend the record with the " +
+  "new encryption metadata. Rebuild any barcode that you rendered from the previous " +
+  "ciphertext. Resending the record unchanged gives the same result.";
 
 /**
  * Thrown when the API rejects a registration because its
  * `encryptionMetadata.iv` is already registered to your issuer. A subclass of
  * {@link VerifiablApiError}, so existing handling still catches it.
  *
- * `encryptPii` draws a fresh iv on every call, so reaching this means the
- * integration reused encryption metadata across records (for example by storing
- * it and replaying it with new content). Retrying the same request cannot
- * succeed: re-encrypt and resend, and rebuild any barcode already rendered from
- * the previous ciphertext.
+ * Encrypt the payslip again with `encryptPii` to get a new iv, resend the
+ * record with the new encryption metadata, and rebuild any barcode that you
+ * rendered from the previous ciphertext. Resending the same request gives the
+ * same result.
  */
 export class VerifiablIvReuseError extends VerifiablApiError {
   constructor(status: number, body: VerifiablErrorBody | undefined, requestId?: string) {

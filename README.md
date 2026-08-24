@@ -141,7 +141,7 @@ try {
 
 ### Reused encryption IV
 
-Registration rejects an IV that your issuer has already used. AES-256-GCM needs a unique IV for every record encrypted under one key, so a repeat is an integration fault, not a transient failure. `encryptPii` draws a fresh IV on every call, so this happens only if you store the `encryptionMetadata` and send it again with different content.
+Registration rejects an IV that your issuer has already used. `encryptPii` draws a fresh IV on every call, so this occurs when stored `encryptionMetadata` is sent again with different content.
 
 Single registrations throw `VerifiablIvReuseError`, a subclass of `VerifiablApiError` with the code `IV_REUSED`. Batch records come back as an error result that `isIvReuseResult` matches. In both cases, encrypt the payslip again with `encryptPii` and resend the record with the new encryption metadata. A barcode that you already rendered from the previous ciphertext must be rebuilt from the new one. Do not send the same record again without changes: the result stays the same.
 

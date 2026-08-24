@@ -43,11 +43,10 @@ function base64Url(buf: Buffer): string {
  * The GCM authentication tag, returned in `encryption_metadata`, lets the
  * verifier detect any tampering with the ciphertext at scan time.
  *
- * Every call draws a fresh random iv, which is what keeps AES-256-GCM safe
- * under one key. Never store the returned `encryptionMetadata` and send it
- * again with different content: registration rejects a repeated iv, and the
- * SDK surfaces that as `VerifiablIvReuseError` (or, in a batch, an error
- * result matched by `isIvReuseResult`).
+ * Every call draws a fresh random iv. Do not store the returned
+ * `encryptionMetadata` and send it again with different content: registration
+ * rejects a repeated iv, and the SDK surfaces that as `VerifiablIvReuseError`
+ * (or, in a batch, an error result matched by `isIvReuseResult`).
  *
  * @param plaintext The formatted string from `formatPii`.
  * @param key Your 32-byte provider encryption key.

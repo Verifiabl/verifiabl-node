@@ -703,12 +703,10 @@ export const IV_REUSED_CODE = "IV_REUSED";
  * `encryptionMetadata.iv` is already registered to your issuer, either against
  * a stored record or against another record in the same batch.
  *
- * AES-256-GCM requires a unique iv for every record encrypted under one key, so
- * this reports a fault in the calling integration rather than a transient
- * failure. Encrypt the payslip again with `encryptPii`, which draws a fresh iv
- * on every call, and resend the record with the new `encryptionMetadata`. A
- * barcode already rendered from the previous ciphertext must be rebuilt from
- * the new one. Resending the record unchanged gives the same result.
+ * Encrypt the payslip again with `encryptPii` to get a new iv, then resend the
+ * record with the new `encryptionMetadata`. Rebuild any barcode that you
+ * rendered from the previous ciphertext. Resending the record unchanged gives
+ * the same result.
  */
 export function isIvReuseResult(result: BatchRecordResult): boolean {
   return result.status === "error" && result.code === IV_REUSED_CODE;
