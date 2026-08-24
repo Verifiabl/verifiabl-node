@@ -2,6 +2,7 @@ import { resolveEnvironment, type VerifiablEnvironment } from "./payload.js";
 import {
   type BatchRecordRequest,
   type BatchRecordResult,
+  IV_REUSED_CODE,
   localBatchValidationError,
   payslipNonPiiSchema,
   type RegisterAndBuildBarcodeRequest,
@@ -47,6 +48,41 @@ export class VerifiablApiError extends Error {
     this.body = body;
     this.requestId = requestId;
   }
+}
+
+const IV_REUSE_MESSAGE =
+  "The iv in encryption_metadata is already registered to your issuer. Encrypt the " +
+  "payslip again with encryptPii to get a new iv, then resend the record with the " +
+  "new encryption metadata. Rebuild any barcode that you rendered from the previous " +
+  "ciphertext. Resending the record unchanged gives the same result.";
+
+/**
+ * Thrown when the API rejects a registration because its
+ * `encryptionMetadata.iv` is already registered to your issuer. A subclass of
+ * {@link VerifiablApiError}, so existing handling still catches it.
+ *
+ * Encrypt the payslip again with `encryptPii` to get a new iv, resend the
+ * record with the new encryption metadata, and rebuild any barcode that you
+ * rendered from the previous ciphertext. Resending the same request gives the
+ * same result.
+ */
+export class VerifiablIvReuseError extends VerifiablApiError {
+  constructor(status: number, body: VerifiablErrorBody | undefined, requestId?: string) {
+    super(status, body, requestId);
+    this.name = "VerifiablIvReuseError";
+    this.message = IV_REUSE_MESSAGE;
+  }
+}
+
+function createApiError(
+  status: number,
+  body: VerifiablErrorBody | undefined,
+  requestId: string | undefined,
+): VerifiablApiError {
+  if (body?.code === IV_REUSED_CODE) {
+    return new VerifiablIvReuseError(status, body, requestId);
+  }
+  return new VerifiablApiError(status, body, requestId);
 }
 
 /**
@@ -220,6 +256,9 @@ export class VerifiablClient {
   /**
    * Register non-PII payslip data and decryption metadata. Returns the
    * Verifiabl reference to embed in a locally generated barcode.
+   *
+   * Throws {@link VerifiablIvReuseError} when the iv has already been
+   * registered by this issuer.
    */
   async registerNonPii(
     request: RegisterNonPiiRequest,
@@ -232,6 +271,9 @@ export class VerifiablClient {
   /**
    * Register non-PII payslip data and have the API build the barcode.
    * Sends the encrypted PII alongside the non-PII data.
+   *
+   * Throws {@link VerifiablIvReuseError} when the iv has already been
+   * registered by this issuer.
    */
   async registerAndBuildBarcode(
     request: RegisterAndBuildBarcodeRequest,
@@ -248,6 +290,9 @@ export class VerifiablClient {
    * fields as `registerNonPii`. Results come back in the same order as the
    * input records (`results[i]` is the outcome of `records[i]`); one bad record
    * never fails the batch.
+   *
+   * A record whose iv is already registered by this issuer, or repeated within
+   * this batch, comes back as an error result that `isIvReuseResult` matches.
    */
   async registerNonPiiBatch(
     request: RegisterNonPiiBatchRequest,
@@ -343,7 +388,7 @@ export class VerifiablClient {
 
     if (!response.ok) {
       const errorBody = await readErrorBody(response);
-      throw new VerifiablApiError(response.status, errorBody, extractRequestId(response.headers));
+      throw createApiError(response.status, errorBody, extractRequestId(response.headers));
     }
 
     return parseResponse(await readJsonBody(response));

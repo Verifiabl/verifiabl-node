@@ -1,9 +1,15 @@
-import { VerifiablApiError, VerifiablAuthError, VerifiablClient } from "../client.js";
+import {
+  VerifiablApiError,
+  VerifiablAuthError,
+  VerifiablClient,
+  VerifiablIvReuseError,
+} from "../client.js";
 import type {
   RegisterAndBuildBarcodeRequest,
   RegisterNonPiiBatchRequest,
   RegisterNonPiiRequest,
 } from "../types.js";
+import { isIvReuseResult } from "../types.js";
 
 const VERIFIABL_REF = "AbCdEfGhIjKlMnOpQrStUv";
 const CIPHERTEXT = "Zm9v";
@@ -426,6 +432,55 @@ describe("VerifiablClient with static auth", () => {
       status: 401,
       code: "UNAUTHORIZED",
     });
+  });
+
+  it("throws VerifiablIvReuseError when the API rejects a reused iv", async () => {
+    const fetch = mockFetch(409, {
+      error: "Conflict",
+      code: "IV_REUSED",
+      detail:
+        "encryption_metadata.iv has already been used by this issuer; re-encrypt the record with a fresh iv",
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const err: unknown = await client.registerNonPii(REQUEST).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(VerifiablIvReuseError);
+    // The subclass must stay catchable by existing VerifiablApiError handling.
+    expect(err).toBeInstanceOf(VerifiablApiError);
+    expect(err).toMatchObject({
+      name: "VerifiablIvReuseError",
+      status: 409,
+      code: "IV_REUSED",
+      body: { detail: expect.stringContaining("fresh iv") },
+    });
+    // The remedy has to be in the message: "Conflict" alone tells nobody what to do.
+    expect((err as Error).message).toContain("encryptPii");
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws VerifiablIvReuseError from registerAndBuildBarcode too", async () => {
+    const fetch = mockFetch(409, { error: "Conflict", code: "IV_REUSED" });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await expect(
+      client.registerAndBuildBarcode(REGISTER_AND_BUILD_BARCODE_REQUEST),
+    ).rejects.toBeInstanceOf(VerifiablIvReuseError);
+  });
+
+  it("leaves a reference conflict as a plain VerifiablApiError", async () => {
+    const fetch = mockFetch(409, {
+      error: "Conflict",
+      code: "CONFLICT",
+      detail: "verifiabl_reference already registered with different data",
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const err: unknown = await client.registerNonPii(REQUEST).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(VerifiablApiError);
+    expect(err).not.toBeInstanceOf(VerifiablIvReuseError);
+    expect(err).toMatchObject({ name: "VerifiablApiError", status: 409, code: "CONFLICT" });
   });
 
   it("surfaces wire field_errors as camelCase fieldErrors on the error body", async () => {
@@ -1013,6 +1068,62 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
       code: "CONFLICT",
       detail: "verifiabl_reference already registered with different data",
     });
+  });
+
+  // A reused iv is per-record at the API, so it must not throw the batch and
+  // must stay distinguishable from a reference conflict on the same 409 family.
+  it("surfaces a reused iv as a per-record error result", async () => {
+    const VERIFIABL_REF_C = "ZyXwVuTsRqPoNmLkJiHgFe";
+    const fetch = mockFetch(200, {
+      results: [
+        { status: "created", verifiabl_reference: VERIFIABL_REF_A },
+        {
+          status: "error",
+          verifiabl_reference: VERIFIABL_REF_B,
+          code: "IV_REUSED",
+          detail:
+            "encryption_metadata.iv has already been used by this issuer; re-encrypt the record with a fresh iv",
+          external_id: "payslip-2",
+        },
+        {
+          status: "error",
+          verifiabl_reference: VERIFIABL_REF_C,
+          code: "IV_REUSED",
+          detail:
+            "duplicate encryption_metadata.iv within batch; re-encrypt the record with a fresh iv",
+        },
+      ],
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch({
+      records: [
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_A },
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_B, externalId: "payslip-2" },
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_C },
+      ],
+    });
+
+    expect(result.results.map(isIvReuseResult)).toEqual([false, true, true]);
+    expect(result.results[1]).toEqual({
+      status: "error",
+      verifiablReference: VERIFIABL_REF_B,
+      externalId: "payslip-2",
+      code: "IV_REUSED",
+      detail:
+        "encryption_metadata.iv has already been used by this issuer; re-encrypt the record with a fresh iv",
+    });
+    expect(result.results[2]?.detail).toContain("within batch");
+  });
+
+  it("does not treat a reference conflict as iv reuse", async () => {
+    const fetch = mockFetch(200, batchResponseBody());
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    const result = await client.registerNonPiiBatch(BATCH_REQUEST);
+
+    expect(result.results.map((entry) => entry.code)).toEqual([undefined, "CONFLICT"]);
+    expect(result.results.some(isIvReuseResult)).toBe(false);
   });
 
   it("passes through batch statuses this SDK version does not know", async () => {
