@@ -25,6 +25,14 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: npm run scanner:pack -- artifacts/scanner-pack
+        if: matrix.node-version == 22
+      - uses: actions/upload-artifact@v4
+        if: matrix.node-version == 22
+        with:
+          name: verifiabl-node-scanner-pack
+          path: artifacts/scanner-pack
+          if-no-files-found: error
       # The published tarball must type-resolve for both CommonJS and ESM
       # consumers. A dual-published package can pass every check above and still
       # be unimportable from CJS TypeScript, which is how VER-236 shipped.

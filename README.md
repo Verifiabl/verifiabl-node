@@ -113,6 +113,30 @@ for (const { verifiablReference, encryptedPii } of records) {
 
 PNGs are lossless 8-bit palette images, the smallest encoding for the badge's low colour count.
 
+### Scanner test pack
+
+Generate synthetic v2 symbols for screen, print, fold, photocopy, camera, and hardware-scanner tests:
+
+```bash
+npm run scanner:pack -- ./artifacts/ver-460
+```
+
+Open `artifacts/ver-460/index.html` for screen or print tests. The pack includes PNG files and a
+`manifest.json` file. The manifest records each exact scan URL, XMP payload, ciphertext byte value,
+QR version, and error-correction level. All fixture details are synthetic. Do not replace them with
+customer data. CI also publishes the same pack as the `verifiabl-node-scanner-pack` workflow
+artifact.
+
+## Development shell
+
+The pinned Nix shell supplies Node.js 22 and npm:
+
+```bash
+nix develop
+npm ci
+npm test
+```
+
 ## Batch registration
 
 For pay runs, register up to 1000 records in one request with `registerNonPiiBatch`. The provider generates each Verifiabl reference up-front with `generateVerifiablReference` and includes it on each record, so the whole batch can go in one round trip. Results come back in the same order as the input records (`results[i]` is the outcome of `records[i]`); one bad record never fails the whole batch.
