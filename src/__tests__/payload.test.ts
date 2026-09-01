@@ -78,20 +78,20 @@ describe("buildScanUrl", () => {
     expect(url).toMatch(/^[-._~:/?#[\]@!$&'()*+,;=%A-Za-z0-9]+$/);
   });
 
-  it("builds the opt-in v2 root-domain URL with canonical Base32", () => {
+  it("builds the opt-in v2 short-host URL with canonical Base32", () => {
     const url = buildScanUrl(
       { verifiablReference: VERIFIABL_REF, encryptedPii: "Zm9vYmFy" },
       { format: "v2" },
     );
-    expect(url).toBe(`https://verifiabl.io/v/${VERIFIABL_REF}#2.MZXW6YTBOI`);
+    expect(url).toBe(`https://v.verifiabl.io/v/${VERIFIABL_REF}#2.MZXW6YTBOI`);
   });
 
-  it("uses the v2 sandbox root domain", () => {
+  it("uses the v2 sandbox short host", () => {
     const url = buildScanUrl(
       { verifiablReference: VERIFIABL_REF, encryptedPii: "Zm9vYmFy" },
       { format: "v2", environment: "sandbox" },
     );
-    expect(url).toBe(`https://sandbox.verifiabl.io/v/${VERIFIABL_REF}#2.MZXW6YTBOI`);
+    expect(url).toBe(`https://v.sandbox.verifiabl.io/v/${VERIFIABL_REF}#2.MZXW6YTBOI`);
   });
 
   it("uses the sandbox scan URL when environment is sandbox", () => {

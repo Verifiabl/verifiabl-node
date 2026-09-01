@@ -76,13 +76,13 @@ const ENVIRONMENTS: Record<VerifiablEnvironment, ResolvedEnvironmentOrigins> = {
   production: Object.freeze({
     issuerBaseUrl: "https://register.verifiabl.io",
     scanBaseUrl: "https://verify.verifiabl.io",
-    v2ScanBaseUrl: "https://verifiabl.io",
+    v2ScanBaseUrl: "https://v.verifiabl.io",
     tokenUrl: "https://auth.verifiabl.io/oauth/token",
   }),
   sandbox: Object.freeze({
     issuerBaseUrl: "https://register.sandbox.verifiabl.io",
     scanBaseUrl: "https://verify.sandbox.verifiabl.io",
-    v2ScanBaseUrl: "https://sandbox.verifiabl.io",
+    v2ScanBaseUrl: "https://v.sandbox.verifiabl.io",
     tokenUrl: "https://auth.sandbox.verifiabl.io/oauth/token",
   }),
 };

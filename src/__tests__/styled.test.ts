@@ -45,7 +45,7 @@ describe("createBarcodeSvg", () => {
       throw new Error("expected byte/alphanumeric segments");
     }
     expect(Buffer.from(prefix.data).toString("utf8")).toBe(
-      `https://verifiabl.io/v/${VERIFIABL_REF}#2.`,
+      `https://v.verifiabl.io/v/${VERIFIABL_REF}#2.`,
     );
     expect(ciphertext.data).toMatch(/^[A-Z2-7]+$/);
     expect(createBarcodeSvg(PARTS, { format: "v2" }).content).toBe(encoding.content);

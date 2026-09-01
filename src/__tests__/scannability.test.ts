@@ -288,7 +288,7 @@ describe("styled QR scannability", () => {
     const scanned = decode(parts, { format: "v2" }, MIN_TESTED_RASTER_WIDTH);
 
     expect(scanned).toBe(expected.content);
-    expect(scanned).toMatch(/^https:\/\/verifiabl\.io\/v\/[A-Za-z0-9_-]{22}#2\.[A-Z2-7]+$/);
+    expect(scanned).toMatch(/^https:\/\/v\.verifiabl\.io\/v\/[A-Za-z0-9_-]{22}#2\.[A-Z2-7]+$/);
     expect(expected.errorCorrectionLevel).toBe("M");
     expect(expected.qrVersion).toBeGreaterThan(0);
   });
