@@ -451,7 +451,7 @@ export function selectQrRendering(
   for (const errorCorrectionLevel of ladder) {
     let qr: ReturnType<typeof QRCode.create>;
     try {
-      qr = QRCode.create(data, { errorCorrectionLevel });
+      qr = createQr(data, errorCorrectionLevel);
     } catch (error) {
       // The qrcode library throws "...too big to be stored..." when the content
       // exceeds capacity at this level; a lower level holds more, so try it.
@@ -473,6 +473,100 @@ export function selectQrRendering(
   const reason: QrCapacityFailureReason = densestSize === null ? "qr-capacity" : "frame-fit";
   const measuredLength = contentLength ?? (typeof data === "string" ? data.length : 0);
   throw new QrCapacityError({ reason, contentLength: measuredLength, badgeWidth });
+}
+
+function createQr(
+  data: string | QRCodeSegment[],
+  errorCorrectionLevel: BarcodeErrorCorrectionLevel,
+): ReturnType<typeof QRCode.create> {
+  if (typeof data === "string") return QRCode.create(data, { errorCorrectionLevel });
+
+  // qrcode@1.x uses an asymmetric N4 calculation and a different tie order
+  // from ISO/IEC 18004:2024. Select the mask with the standard score used by
+  // the .NET encoder so both SDKs produce the same mixed-mode matrix.
+  const maskOrder = [2, 3, 7, 4, 6, 5, 0, 1] as const;
+  let best: ReturnType<typeof QRCode.create> | undefined;
+  let lowestPenalty = Number.POSITIVE_INFINITY;
+  for (const maskPattern of maskOrder) {
+    const candidate = QRCode.create(data, { errorCorrectionLevel, maskPattern });
+    const penalty = qrPenalty(candidate.modules.data, candidate.modules.size);
+    if (penalty < lowestPenalty) {
+      best = candidate;
+      lowestPenalty = penalty;
+    }
+  }
+  if (best === undefined) throw new Error("QR mask selection failed");
+  return best;
+}
+
+function qrPenalty(modules: Uint8Array, size: number): number {
+  const at = (row: number, col: number): number =>
+    row < 0 || col < 0 || row >= size || col >= size ? 0 : (modules[row * size + col] ?? 0);
+  let sameColor = 0;
+  for (let outer = 0; outer < size; outer++) {
+    for (const vertical of [false, true]) {
+      let previous = -1;
+      let run = 0;
+      for (let inner = 0; inner < size; inner++) {
+        const value = vertical ? at(inner, outer) : at(outer, inner);
+        if (value === previous) {
+          run++;
+        } else {
+          if (run >= 5) sameColor += 3 + run - 5;
+          previous = value;
+          run = 1;
+        }
+      }
+      if (run >= 5) sameColor += 3 + run - 5;
+    }
+  }
+
+  let blocks = 0;
+  for (let row = 0; row < size - 1; row++) {
+    for (let col = 0; col < size - 1; col++) {
+      const value = at(row, col);
+      if (
+        at(row, col + 1) === value &&
+        at(row + 1, col) === value &&
+        at(row + 1, col + 1) === value
+      ) {
+        blocks += 3;
+      }
+    }
+  }
+
+  let finderPatterns = 0;
+  const isFinder = (read: (offset: number) => number, start: number): boolean =>
+    read(start) === 1 &&
+    read(start + 1) === 0 &&
+    read(start + 2) === 1 &&
+    read(start + 3) === 1 &&
+    read(start + 4) === 1 &&
+    read(start + 5) === 0 &&
+    read(start + 6) === 1;
+  const allLight = (read: (offset: number) => number, start: number, length: number): boolean => {
+    for (let offset = 0; offset < length; offset++) {
+      if (read(start + offset) !== 0) return false;
+    }
+    return true;
+  };
+  for (let outer = 0; outer < size; outer++) {
+    for (const vertical of [false, true]) {
+      const read = (offset: number): number => (vertical ? at(offset, outer) : at(outer, offset));
+      for (let start = 0; start <= size - 7; start++) {
+        if (!isFinder(read, start)) continue;
+        const left4Right1 = allLight(read, start - 4, 4) && read(start + 7) === 0;
+        const left1Right4 = read(start - 1) === 0 && allLight(read, start + 7, 4);
+        if (left4Right1 || left1Right4) finderPatterns += 40;
+      }
+    }
+  }
+
+  let dark = 0;
+  for (const module of modules) dark += module;
+  const total = size * size;
+  const balance = 10 * Math.floor(Math.abs(dark - Math.floor(total / 2)) / Math.floor(total / 20));
+  return sameColor + blocks + finderPatterns + balance;
 }
 
 function validateBadgeWidth(value: number, name: string): number {
