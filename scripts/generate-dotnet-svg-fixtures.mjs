@@ -18,15 +18,16 @@ if (!outDir) {
 
 const PARTS = {
   verifiablReference: "u0FE9WLIS7GYKQnpJPygBw",
-  encryptedPii: "Ab3".repeat(80) + "Zz19-_",
+  encryptedPii: "Ab3".repeat(80) + "Zz19-w",
 };
 
 const CASES = [
-  { name: "default-480", options: {} },
+  { name: "default-480", options: { format: "v2" } },
   {
     name: "sandbox-q-720",
-    options: { environment: "sandbox", maxErrorCorrection: "Q", width: 720 },
+    options: { format: "v2", environment: "sandbox", maxErrorCorrection: "Q", width: 720 },
   },
+  { name: "v1-default-480", options: { format: "v1" } },
 ];
 
 const meta = {};
