@@ -1,4 +1,4 @@
-import { formatPii, PiiValidationError, parsePii, piiFieldsSchema } from "../pii.js";
+import { formatPii, formatPiiV2, PiiValidationError, parsePii, piiFieldsSchema } from "../pii.js";
 
 describe("formatPii", () => {
   it("formats the documented example exactly", () => {
@@ -83,6 +83,47 @@ describe("formatPii", () => {
   it("accepts unicode names", () => {
     expect(formatPii({ employeeName: "Zoë O'Brien-Nguyễn" })).toContain("Zoë O'Brien-Nguyễn");
   });
+});
+
+describe("formatPiiV2", () => {
+  const core = {
+    employeeName: "Zoë Nguyễn",
+    position: "Ingénieure",
+    department: "R&D",
+    employerAbn: "53004085616",
+    bsb: "062-000",
+    accountNumber: "12345678",
+    accountName: "Zoë Nguyễn",
+  };
+
+  it("writes exact P2 bytes with an empty final address when absent", () => {
+    expect(Buffer.from(formatPiiV2(core), "utf8")).toEqual(
+      Buffer.from("P2|Zoë Nguyễn|Ingénieure|R&D|53004085616|062-000|12345678|Zoë Nguyễn|", "utf8"),
+    );
+  });
+
+  it("preserves a realistic international address verbatim", () => {
+    const address = "12 Rue de l’Église, Apt 4B, 75005 Paris, France 🇫🇷";
+    expect(formatPiiV2({ ...core, address })).toBe(
+      `P2|Zoë Nguyễn|Ingénieure|R&D|53004085616|062-000|12345678|Zoë Nguyễn|${address}`,
+    );
+  });
+
+  it("accepts exactly 320 UTF-8 bytes and rejects one over", () => {
+    const boundary = `${"東京".repeat(53)}AB`;
+    expect(Buffer.byteLength(boundary, "utf8")).toBe(320);
+    expect(formatPiiV2({ ...core, address: boundary }).endsWith(`|${boundary}`)).toBe(true);
+    expect(() => formatPiiV2({ ...core, address: `${boundary}C` })).toThrow(
+      "exceeds 320 UTF-8 bytes",
+    );
+  });
+
+  it.each([
+    "bad|address",
+    "bad\naddress",
+    "bad\u200Baddress",
+  ])("rejects delimiter, control, and format characters: %j", (address) =>
+    expect(() => formatPiiV2({ ...core, address })).toThrow(PiiValidationError));
 });
 
 describe("parsePii", () => {

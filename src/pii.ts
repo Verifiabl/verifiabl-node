@@ -31,7 +31,7 @@ export const PII_FIELD_ORDER = tuple([
   "accountName",
 ]);
 
-export type PiiFieldName = (typeof PII_FIELD_ORDER)[number];
+export type PiiFieldName = (typeof PII_FIELD_ORDER)[number] | "address";
 
 /**
  * Round per-field sanity cap in UTF-16 code units, not bytes. It is not derived
@@ -57,6 +57,26 @@ const piiFieldSchema = z
   .max(PII_FIELD_MAX_LENGTH, `PII field exceeds ${PII_FIELD_MAX_LENGTH} characters`)
   .refine(isPrintableWithoutPipe, "PII field must not contain '|' or control characters");
 
+/** Maximum UTF-8 size of the optional P2 address. */
+export const PII_ADDRESS_MAX_BYTES = 320;
+
+function isP2Text(value: string): boolean {
+  return !value.includes("|") && !/[\p{Cc}\p{Cf}]/u.test(value);
+}
+
+const p2FieldSchema = z
+  .string()
+  .max(PII_FIELD_MAX_LENGTH, `PII field exceeds ${PII_FIELD_MAX_LENGTH} characters`)
+  .refine(isP2Text, "PII field must not contain '|', control, or format characters");
+
+const addressSchema = z
+  .string()
+  .refine(isP2Text, "Address must not contain '|', control, or format characters")
+  .refine(
+    (value) => Buffer.byteLength(value, "utf8") <= PII_ADDRESS_MAX_BYTES,
+    `Address exceeds ${PII_ADDRESS_MAX_BYTES} UTF-8 bytes`,
+  );
+
 export const piiFieldsSchema = z
   .object({
     employeeName: piiFieldSchema.optional(),
@@ -71,8 +91,28 @@ export const piiFieldsSchema = z
 
 export type PiiFields = z.infer<typeof piiFieldsSchema>;
 
+export const piiV2FieldsSchema = z
+  .object({
+    employeeName: p2FieldSchema.optional(),
+    position: p2FieldSchema.optional(),
+    department: p2FieldSchema.optional(),
+    employerAbn: p2FieldSchema.optional(),
+    bsb: p2FieldSchema.optional(),
+    accountNumber: p2FieldSchema.optional(),
+    accountName: p2FieldSchema.optional(),
+    address: addressSchema.optional(),
+  })
+  .strict();
+
+export type PiiV2Fields = z.infer<typeof piiV2FieldsSchema>;
+
 /** Why a PII field value cannot be encoded in the P1 wire format. */
-export type PiiFieldViolationReason = "pipe" | "control-character" | "too-long";
+export type PiiFieldViolationReason =
+  | "pipe"
+  | "control-character"
+  | "format-character"
+  | "too-long"
+  | "too-many-bytes";
 
 /** A single field `formatPii` refused to encode, and why. */
 export interface PiiFieldViolation {
@@ -83,7 +123,9 @@ export interface PiiFieldViolation {
 const VIOLATION_DESCRIPTIONS: Record<PiiFieldViolationReason, string> = {
   pipe: "must not contain '|'",
   "control-character": "must not contain control characters",
+  "format-character": "must not contain format characters",
   "too-long": `exceeds ${PII_FIELD_MAX_LENGTH} characters`,
+  "too-many-bytes": `exceeds ${PII_ADDRESS_MAX_BYTES} UTF-8 bytes`,
 };
 
 /**
@@ -149,6 +191,37 @@ export function formatPii(fields: PiiFields): string {
   const validated = piiFieldsSchema.parse(fields);
   const segments = PII_FIELD_ORDER.map((name) => validated[name] ?? "");
   return `P1|${segments.join("|")}`;
+}
+
+/**
+ * Opt-in P2 writer. The optional address is preserved verbatim and is always
+ * represented by the final field (empty when absent). Validation happens
+ * before callers pass the returned plaintext to encryption.
+ */
+export function formatPiiV2(fields: PiiV2Fields): string {
+  const violations: PiiFieldViolation[] = [];
+  if (typeof fields === "object" && fields !== null) {
+    for (const field of [...PII_FIELD_ORDER, "address"] as const) {
+      const value = fields[field];
+      if (typeof value !== "string") continue;
+      if (field !== "address" && value.length > PII_FIELD_MAX_LENGTH) {
+        violations.push({ field, reason: "too-long" });
+      } else if (field === "address" && Buffer.byteLength(value, "utf8") > PII_ADDRESS_MAX_BYTES) {
+        violations.push({ field, reason: "too-many-bytes" });
+      } else if (value.includes("|")) {
+        violations.push({ field, reason: "pipe" });
+      } else if (/\p{Cc}/u.test(value)) {
+        violations.push({ field, reason: "control-character" });
+      } else if (/\p{Cf}/u.test(value)) {
+        violations.push({ field, reason: "format-character" });
+      }
+    }
+  }
+  if (violations.length > 0) throw new PiiValidationError(violations);
+
+  const validated = piiV2FieldsSchema.parse(fields);
+  const segments = PII_FIELD_ORDER.map((name) => validated[name] ?? "");
+  return `P2|${[...segments, validated.address ?? ""].join("|")}`;
 }
 
 /**

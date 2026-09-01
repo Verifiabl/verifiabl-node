@@ -1,9 +1,18 @@
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
+import { decodeCanonicalBase64url, encodeBase32 } from "./base32.js";
 
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
 
 export type VerifiablEnvironment = "production" | "sandbox";
+
+/** Printed barcode format. V1 remains the default until the issuer cutover. */
+export type BarcodeFormat = "v1" | "v2";
+
+export interface BarcodePayloadOptions {
+  /** Opt in to the v2 Base32 payload. Defaults to `v1`. */
+  format?: BarcodeFormat;
+}
 
 /**
  * Verifiabl reference wire format: exactly 22 base64url characters. This is a
@@ -59,15 +68,21 @@ export interface EnvironmentOrigins {
 
 // Frozen so resolveEnvironment can hand back the singleton entry by reference
 // without a caller being able to mutate shared config and misroute later traffic.
-const ENVIRONMENTS: Record<VerifiablEnvironment, EnvironmentOrigins> = {
+interface ResolvedEnvironmentOrigins extends EnvironmentOrigins {
+  readonly v2ScanBaseUrl: string;
+}
+
+const ENVIRONMENTS: Record<VerifiablEnvironment, ResolvedEnvironmentOrigins> = {
   production: Object.freeze({
     issuerBaseUrl: "https://register.verifiabl.io",
     scanBaseUrl: "https://verify.verifiabl.io",
+    v2ScanBaseUrl: "https://verifiabl.io",
     tokenUrl: "https://auth.verifiabl.io/oauth/token",
   }),
   sandbox: Object.freeze({
     issuerBaseUrl: "https://register.sandbox.verifiabl.io",
     scanBaseUrl: "https://verify.sandbox.verifiabl.io",
+    v2ScanBaseUrl: "https://sandbox.verifiabl.io",
     tokenUrl: "https://auth.sandbox.verifiabl.io/oauth/token",
   }),
 };
@@ -94,10 +109,16 @@ export const SANDBOX_SCAN_BASE_URL = ENVIRONMENTS.sandbox.scanBaseUrl;
  * `buildScanUrl`, which carries the same reference and ciphertext as a public
  * scan-redirect URL.
  */
-export function buildBarcodePayload({ verifiablReference, encryptedPii }: BarcodeParts): string {
+export function buildBarcodePayload(
+  { verifiablReference, encryptedPii }: BarcodeParts,
+  options: BarcodePayloadOptions = {},
+): string {
   const id = verifiablReferenceSchema.parse(verifiablReference);
   const ciphertext = ciphertextSchema.parse(encryptedPii);
-  return `1|${id}|${ciphertext}`;
+  if (normaliseFormat(options.format ?? "v1") === "v1") {
+    return `1|${id}|${ciphertext}`;
+  }
+  return `2|${id}|${encodeBase32(decodeCanonicalBase64url(ciphertext))}`;
 }
 
 /**
@@ -123,7 +144,7 @@ export function buildBarcodePayload({ verifiablReference, encryptedPii }: Barcod
 export const PDF_PAYLOAD_XMP_NAMESPACE = "https://verifiabl.io/ns/";
 export const PDF_PAYLOAD_XMP_PROPERTY = "payload";
 
-export interface ScanUrlOptions {
+export interface ScanUrlOptions extends BarcodePayloadOptions {
   /** API environment for the public QR scan URL. Defaults to "production". */
   environment?: VerifiablEnvironment;
   /**
@@ -149,13 +170,37 @@ export interface ScanUrlOptions {
  * showing it as plain text.
  */
 export function buildScanUrl(parts: BarcodeParts, options: ScanUrlOptions = {}): string {
+  return buildScanUrlParts(parts, options).content;
+}
+
+/** The exact v2 split used by QR renderers: byte prefix, then alphanumeric Base32. */
+export interface ScanUrlParts {
+  readonly content: string;
+  readonly bytePrefix: string;
+  readonly alphanumericCiphertext?: string;
+}
+
+export function buildScanUrlParts(parts: BarcodeParts, options: ScanUrlOptions = {}): ScanUrlParts {
   const environment = normaliseEnvironment(options.environment ?? "production");
+  const format = normaliseFormat(options.format ?? "v1");
+  const origins = ENVIRONMENTS[environment];
   const baseUrl = normaliseScanBaseUrl(
-    options.scanBaseUrl ?? resolveEnvironment(environment).scanBaseUrl,
+    options.scanBaseUrl ?? (format === "v2" ? origins.v2ScanBaseUrl : origins.scanBaseUrl),
   );
   const id = verifiablReferenceSchema.parse(parts.verifiablReference);
   const ciphertext = ciphertextSchema.parse(parts.encryptedPii);
-  return `${baseUrl}/v/${id}#1.${ciphertext}`;
+  if (format === "v1") {
+    const bytePrefix = `${baseUrl}/v/${id}#1.`;
+    return { content: bytePrefix + ciphertext, bytePrefix };
+  }
+
+  const base32 = encodeBase32(decodeCanonicalBase64url(ciphertext));
+  const bytePrefix = `${baseUrl}/v/${id}#2.`;
+  return {
+    content: bytePrefix + base32,
+    bytePrefix,
+    alphanumericCiphertext: base32,
+  };
 }
 
 function normaliseScanBaseUrl(scanBaseUrl: string): string {
@@ -169,6 +214,11 @@ function normaliseScanBaseUrl(scanBaseUrl: string): string {
     throw new Error("scanBaseUrl must use https");
   }
   return url.origin;
+}
+
+function normaliseFormat(format: BarcodeFormat): BarcodeFormat {
+  if (format === "v1" || format === "v2") return format;
+  throw new Error("format must be 'v1' or 'v2'");
 }
 
 function normaliseEnvironment(environment: VerifiablEnvironment): VerifiablEnvironment {

@@ -33,6 +33,22 @@ describe("buildBarcodePayload", () => {
       buildBarcodePayload({ verifiablReference: VERIFIABL_REF, encryptedPii: "" }),
     ).toThrow();
   });
+
+  it("rejects non-canonical base64url before writing v2", () => {
+    expect(() =>
+      buildBarcodePayload(
+        { verifiablReference: VERIFIABL_REF, encryptedPii: "Zh" },
+        { format: "v2" },
+      ),
+    ).toThrow("canonical unpadded base64url");
+  });
+
+  it("builds the opt-in v2 XMP payload from exact ciphertext bytes", () => {
+    const encryptedPii = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8";
+    expect(
+      buildBarcodePayload({ verifiablReference: VERIFIABL_REF, encryptedPii }, { format: "v2" }),
+    ).toBe(`2|${VERIFIABL_REF}|AAAQEAYEAUDAOCAJBIFQYDIOB4IBCEQTCQKRMFYYDENBWHA5DYPQ`);
+  });
 });
 
 describe("buildScanUrl", () => {
@@ -60,6 +76,22 @@ describe("buildScanUrl", () => {
     const url = buildScanUrl({ verifiablReference: VERIFIABL_REF, encryptedPii: CIPHERTEXT });
 
     expect(url).toMatch(/^[-._~:/?#[\]@!$&'()*+,;=%A-Za-z0-9]+$/);
+  });
+
+  it("builds the opt-in v2 root-domain URL with canonical Base32", () => {
+    const url = buildScanUrl(
+      { verifiablReference: VERIFIABL_REF, encryptedPii: "Zm9vYmFy" },
+      { format: "v2" },
+    );
+    expect(url).toBe(`https://verifiabl.io/v/${VERIFIABL_REF}#2.MZXW6YTBOI`);
+  });
+
+  it("uses the v2 sandbox root domain", () => {
+    const url = buildScanUrl(
+      { verifiablReference: VERIFIABL_REF, encryptedPii: "Zm9vYmFy" },
+      { format: "v2", environment: "sandbox" },
+    );
+    expect(url).toBe(`https://sandbox.verifiabl.io/v/${VERIFIABL_REF}#2.MZXW6YTBOI`);
   });
 
   it("uses the sandbox scan URL when environment is sandbox", () => {

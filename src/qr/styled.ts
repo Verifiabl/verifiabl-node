@@ -1,7 +1,7 @@
-import QRCode from "qrcode";
+import QRCode, { type QRCodeSegment } from "qrcode";
 import {
   type BarcodeParts,
-  buildScanUrl,
+  buildScanUrlParts,
   type ScanUrlOptions,
   type VerifiablEnvironment,
 } from "../payload.js";
@@ -15,6 +15,8 @@ import {
  */
 
 export interface BarcodeSvgOptions {
+  /** Printed format. V2 is opt-in; defaults to `v1`. */
+  format?: ScanUrlOptions["format"];
   /** API environment for the public QR scan URL. Defaults to "production". */
   environment?: VerifiablEnvironment;
   /**
@@ -51,6 +53,8 @@ export interface BarcodeSvgResult {
    * long PII so the code still fits the fixed frame.
    */
   errorCorrectionLevel: BarcodeErrorCorrectionLevel;
+  /** QR symbol version (1-40), for scanner-fixture attribution. */
+  qrVersion: number;
   /** Rendered size of one QR module, in output pixels. */
   modulePx: number;
   /**
@@ -290,19 +294,24 @@ export function createBarcodeSvg(
   const badgeWidth = validateBadgeWidth(width, "width");
 
   const scanOptions: ScanUrlOptions = {};
+  if (options.format !== undefined) {
+    scanOptions.format = options.format;
+  }
   if (options.environment !== undefined) {
     scanOptions.environment = options.environment;
   }
   if (options.scanBaseUrl !== undefined) {
     scanOptions.scanBaseUrl = options.scanBaseUrl;
   }
-  const content = buildScanUrl(parts, scanOptions);
+  const encoding = buildQrEncoding(parts, scanOptions);
+  const content = encoding.content;
 
   const ladder = errorCorrectionLadder(options.maxErrorCorrection ?? DEFAULT_MAX_ERROR_CORRECTION);
   const { qr, errorCorrectionLevel, size, moduleSize, modulePx, insetModules } = selectQrRendering(
-    content,
+    encoding.data,
     badgeWidth,
     ladder,
+    content.length,
   );
   const matrixData = qr.modules.data;
   const degraded = errorCorrectionLevel !== ladder[0] || modulePx < IDEAL_MODULE_PX;
@@ -333,6 +342,7 @@ export function createBarcodeSvg(
     height: round2(height),
     content,
     errorCorrectionLevel,
+    qrVersion: (size - 17) / 4,
     modulePx: round2(modulePx),
     degraded,
   };
@@ -410,17 +420,38 @@ function describeQrCapacityFailure(detail: QrCapacityErrorDetail): string {
  * the lowest level cannot fit, so an over-long payload fails loudly at issuance
  * instead of producing an unscannable code.
  */
+export interface QrEncoding {
+  readonly content: string;
+  readonly data: string | QRCodeSegment[];
+}
+
+/** Build explicit byte/alphanumeric segments for v2; v1 retains legacy encoding. */
+export function buildQrEncoding(parts: BarcodeParts, options: ScanUrlOptions): QrEncoding {
+  const built = buildScanUrlParts(parts, options);
+  if (built.alphanumericCiphertext === undefined) {
+    return { content: built.content, data: built.content };
+  }
+  return {
+    content: built.content,
+    data: [
+      { data: Buffer.from(built.bytePrefix, "utf8"), mode: "byte" },
+      { data: built.alphanumericCiphertext, mode: "alphanumeric" },
+    ],
+  };
+}
+
 export function selectQrRendering(
-  content: string,
+  data: string | QRCodeSegment[],
   badgeWidth: number,
   ladder: readonly BarcodeErrorCorrectionLevel[],
+  contentLength?: number,
 ): SelectedQrRendering {
   const scale = badgeWidth / FRAME_VIEWBOX_WIDTH;
   let densestSize: number | null = null;
   for (const errorCorrectionLevel of ladder) {
     let qr: ReturnType<typeof QRCode.create>;
     try {
-      qr = QRCode.create(content, { errorCorrectionLevel });
+      qr = QRCode.create(data, { errorCorrectionLevel });
     } catch (error) {
       // The qrcode library throws "...too big to be stored..." when the content
       // exceeds capacity at this level; a lower level holds more, so try it.
@@ -440,7 +471,8 @@ export function selectQrRendering(
     densestSize = size;
   }
   const reason: QrCapacityFailureReason = densestSize === null ? "qr-capacity" : "frame-fit";
-  throw new QrCapacityError({ reason, contentLength: content.length, badgeWidth });
+  const measuredLength = contentLength ?? (typeof data === "string" ? data.length : 0);
+  throw new QrCapacityError({ reason, contentLength: measuredLength, badgeWidth });
 }
 
 function validateBadgeWidth(value: number, name: string): number {

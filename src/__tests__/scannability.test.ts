@@ -282,6 +282,17 @@ describe("styled QR scannability", () => {
     expect(`1|${reference}|${ciphertext}`).toBe(buildBarcodePayload(parts));
   });
 
+  it("decodes the opt-in mixed-mode v2 symbol byte-exactly", () => {
+    const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
+    const expected = createBarcodeSvg(parts, { format: "v2" });
+    const scanned = decode(parts, { format: "v2" }, MIN_TESTED_RASTER_WIDTH);
+
+    expect(scanned).toBe(expected.content);
+    expect(scanned).toMatch(/^https:\/\/verifiabl\.io\/v\/[A-Za-z0-9_-]{22}#2\.[A-Z2-7]+$/);
+    expect(expected.errorCorrectionLevel).toBe("M");
+    expect(expected.qrVersion).toBeGreaterThan(0);
+  });
+
   it("decodes the encrypted docs PII example at the minimum raster width", () => {
     const { parts, plaintext } = partsFromPii(DOCS_EXAMPLE_FIELDS);
     expect(plaintext).toBe(

@@ -1,6 +1,6 @@
 import QRCode from "qrcode";
-import { buildScanUrl } from "../payload.js";
-import { createBarcodeSvg, QrCapacityError } from "../qr/styled.js";
+import { buildBarcodePayload, buildScanUrl } from "../payload.js";
+import { buildQrEncoding, createBarcodeSvg, QrCapacityError } from "../qr/styled.js";
 
 const VERIFIABL_REF = "AbCdEfGhIjKlMnOpQrStUv";
 const CIPHERTEXT = "Zm9vYmFyYmF6cXV4XzEyMzQ1Njc4OTBhYmNkZWZnaGlqa2xtbm9w";
@@ -32,6 +32,26 @@ describe("createBarcodeSvg", () => {
   it("uses the sandbox scan URL when environment is sandbox", () => {
     const { content } = createBarcodeSvg(PARTS, { environment: "sandbox" });
     expect(content).toBe(buildScanUrl(PARTS, { environment: "sandbox" }));
+  });
+
+  it("encodes v2 as an explicit byte prefix and alphanumeric ciphertext segment", () => {
+    const encoding = buildQrEncoding(PARTS, { format: "v2" });
+    expect(Array.isArray(encoding.data)).toBe(true);
+    if (!Array.isArray(encoding.data)) throw new Error("expected segmented v2 QR data");
+    expect(encoding.data).toHaveLength(2);
+    const prefix = encoding.data[0];
+    const ciphertext = encoding.data[1];
+    if (prefix?.mode !== "byte" || ciphertext?.mode !== "alphanumeric") {
+      throw new Error("expected byte/alphanumeric segments");
+    }
+    expect(Buffer.from(prefix.data).toString("utf8")).toBe(
+      `https://verifiabl.io/v/${VERIFIABL_REF}#2.`,
+    );
+    expect(ciphertext.data).toMatch(/^[A-Z2-7]+$/);
+    expect(createBarcodeSvg(PARTS, { format: "v2" }).content).toBe(encoding.content);
+    expect(buildBarcodePayload(PARTS, { format: "v2" }).split("|")[2]).toBe(
+      encoding.content.split("#2.")[1],
+    );
   });
 
   it("renders square data modules and rounded finder sections", () => {

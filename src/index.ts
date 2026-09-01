@@ -1,3 +1,4 @@
+export { encodeBase32 } from "./base32.js";
 export {
   VerifiablApiError,
   type VerifiablAuth,
@@ -13,7 +14,9 @@ export {
 } from "./client.js";
 export { type EncryptedPii, encryptPii } from "./crypto.js";
 export {
+  type BarcodeFormat,
   type BarcodeParts,
+  type BarcodePayloadOptions,
   buildBarcodePayload,
   buildScanUrl,
   ciphertextSchema,
@@ -29,15 +32,19 @@ export {
 } from "./payload.js";
 export {
   formatPii,
+  formatPiiV2,
+  PII_ADDRESS_MAX_BYTES,
   PII_FIELD_MAX_LENGTH,
   PII_FIELD_ORDER,
   type PiiFieldName,
   type PiiFields,
   type PiiFieldViolation,
   type PiiFieldViolationReason,
+  type PiiV2Fields,
   PiiValidationError,
   parsePii,
   piiFieldsSchema,
+  piiV2FieldsSchema,
 } from "./pii.js";
 
 export {
