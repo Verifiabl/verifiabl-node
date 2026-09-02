@@ -691,8 +691,25 @@ export interface BatchRecordResult {
   verifiablReference: string;
   /** Echoed back when the record supplied one. */
   externalId?: string;
-  code?: string;
+  code?: VerifiablErrorCode;
   detail?: string;
+}
+
+/** Error code the API returns for a record whose iv is already registered. */
+export const IV_REUSED_CODE = "IV_REUSED";
+
+/**
+ * True when the API rejected this batch record because its
+ * `encryptionMetadata.iv` is already registered to your issuer, either against
+ * a stored record or against another record in the same batch.
+ *
+ * Encrypt the payslip again with `encryptPii` to get a new iv, then resend the
+ * record with the new `encryptionMetadata`. Rebuild any barcode that you
+ * rendered from the previous ciphertext. Resending the record unchanged gives
+ * the same result.
+ */
+export function isIvReuseResult(result: BatchRecordResult): boolean {
+  return result.status === "error" && result.code === IV_REUSED_CODE;
 }
 
 export interface RegisterNonPiiBatchResponse {
@@ -765,6 +782,8 @@ export const KNOWN_VERIFIABL_ERROR_CODES = tuple([
   "DECRYPTION_FAILED",
   "UNAUTHORIZED",
   "FORBIDDEN",
+  "CONFLICT",
+  "IV_REUSED",
   "KEY_VERSION_UNAVAILABLE",
   "INTERNAL_ERROR",
   "SERVICE_UNAVAILABLE",

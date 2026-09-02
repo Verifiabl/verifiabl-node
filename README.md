@@ -140,6 +140,34 @@ try {
 }
 ```
 
+### Reused encryption IV
+
+Registration rejects an IV that your issuer has already used. `encryptPii` draws a fresh IV on every call, so this occurs when stored `encryptionMetadata` is sent again with different content.
+
+Single registrations throw `VerifiablIvReuseError`, a subclass of `VerifiablApiError` with the code `IV_REUSED`. Batch records come back as an error result that `isIvReuseResult` matches. In both cases, encrypt the payslip again with `encryptPii` and resend the record with the new encryption metadata. A barcode that you already rendered from the previous ciphertext must be rebuilt from the new one. Do not send the same record again without changes: the result stays the same.
+
+```ts
+import { encryptPii, VerifiablIvReuseError } from "@verifiabl/issuer";
+
+try {
+  await client.registerNonPii(request);
+} catch (err) {
+  if (err instanceof VerifiablIvReuseError) {
+    // Encrypt again for a fresh IV and ciphertext, then register and render again.
+    const { encryptedPii, encryptionMetadata } = encryptPii(pii, key);
+  }
+}
+```
+
+```ts
+import { isIvReuseResult } from "@verifiabl/issuer";
+
+const { results } = await client.registerNonPiiBatch({ records });
+const toReEncrypt = results.filter(isIvReuseResult).map((result) => result.verifiablReference);
+```
+
+### Barcode capacity
+
 The barcode renderers throw `QrCapacityError` when the QR code cannot hold the encrypted PII. Catch this error and shorten the PII fields. The error gives three properties. `contentLength` is the number of characters in the scan URL. `badgeWidth` is the width that you gave to the renderer. `reason` is `frame-fit` or `qr-capacity`. For `frame-fit`, a larger width can hold the same content. For `qr-capacity`, no QR code can hold the content at any width.
 
 ```ts
