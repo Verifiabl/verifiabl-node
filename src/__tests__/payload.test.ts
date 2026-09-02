@@ -1,6 +1,7 @@
 import {
   buildBarcodePayload,
   buildScanUrl,
+  buildScanUrlParts,
   DEFAULT_SCAN_BASE_URL,
   generateVerifiablReference,
   verifiablReferenceSchema,
@@ -89,6 +90,17 @@ describe("buildScanUrl", () => {
     expect(url).toBe(`https://v.verifiabl.io/v/${VERIFIABL_REF}#2.MZXW6YTBOI`);
   });
 
+  it("returns the exact v2 QR segment split for mixed-mode encoders", () => {
+    const parts = buildScanUrlParts({
+      verifiablReference: VERIFIABL_REF,
+      encryptedPii: "Zm9vYmFy",
+    });
+
+    expect(parts.bytePrefix).toBe(`https://v.verifiabl.io/v/${VERIFIABL_REF}#2.`);
+    expect(parts.alphanumericCiphertext).toBe("MZXW6YTBOI");
+    expect(parts.content).toBe(`${parts.bytePrefix}${parts.alphanumericCiphertext}`);
+  });
+
   it("uses the v2 sandbox short host", () => {
     const url = buildScanUrl(
       { verifiablReference: VERIFIABL_REF, encryptedPii: "Zm9vYmFy" },
@@ -116,7 +128,7 @@ describe("buildScanUrl", () => {
   it("accepts a custom https scan URL origin", () => {
     const url = buildScanUrl(
       { verifiablReference: VERIFIABL_REF, encryptedPii: CIPHERTEXT },
-      { scanBaseUrl: "https://scan.local.example" },
+      { scanBaseUrl: "https://scan.local.example/path?ignored=true" },
     );
     expect(url.startsWith("https://scan.local.example/v/")).toBe(true);
   });

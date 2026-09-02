@@ -1,4 +1,4 @@
-export { encodeBase32 } from "./base32.js";
+export { encodeBase32, getBase32EncodedLength } from "./base32.js";
 export {
   VerifiablApiError,
   type VerifiablAuth,

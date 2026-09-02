@@ -3,6 +3,18 @@ import { z } from "zod";
 import { decodeCanonicalBase64url, encodeBase32 } from "./base32.js";
 
 const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
+const VERIFIABL_REFERENCE_BYTES = 16;
+const VERIFIABL_REFERENCE_LENGTH = 22;
+const MAX_CIPHERTEXT_LENGTH = 10_000;
+const CURRENT_BARCODE_FORMAT = "v2";
+const LEGACY_BARCODE_FORMAT = "v1";
+const PAYLOAD_DELIMITER = "|";
+const SCAN_PATH_PREFIX = "/v/";
+const V1_PAYLOAD_VERSION = "1";
+const V2_PAYLOAD_VERSION = "2";
+const SCAN_URL_FRAGMENT_SEPARATOR = ".";
+const V1_SCAN_URL_FRAGMENT_MARKER = `#${V1_PAYLOAD_VERSION}${SCAN_URL_FRAGMENT_SEPARATOR}`;
+const V2_SCAN_URL_FRAGMENT_MARKER = `#${V2_PAYLOAD_VERSION}${SCAN_URL_FRAGMENT_SEPARATOR}`;
 
 export type VerifiablEnvironment = "production" | "sandbox";
 
@@ -21,7 +33,10 @@ export interface BarcodePayloadOptions {
  */
 export const verifiablReferenceSchema = z
   .string()
-  .length(22, "Verifiabl reference must be exactly 22 base64url characters")
+  .length(
+    VERIFIABL_REFERENCE_LENGTH,
+    `Verifiabl reference must be exactly ${VERIFIABL_REFERENCE_LENGTH} base64url characters`,
+  )
   .regex(BASE64URL_RE, "Verifiabl reference must be base64url encoded");
 
 /**
@@ -36,14 +51,14 @@ export const verifiablReferenceSchema = z
  * reference for you and returns it.
  */
 export function generateVerifiablReference(): string {
-  return randomBytes(16).toString("base64url");
+  return randomBytes(VERIFIABL_REFERENCE_BYTES).toString("base64url");
 }
 
 /** Encrypted PII ciphertext: base64url, as produced by `encryptPii`. */
 export const ciphertextSchema = z
   .string()
   .min(1, "Ciphertext must not be empty")
-  .max(10_000, "Ciphertext exceeds maximum allowed length")
+  .max(MAX_CIPHERTEXT_LENGTH, "Ciphertext exceeds maximum allowed length")
   .regex(BASE64URL_RE, "Ciphertext must be base64url encoded");
 
 export interface BarcodeParts {
@@ -114,10 +129,12 @@ export function buildBarcodePayload(
 ): string {
   const id = verifiablReferenceSchema.parse(verifiablReference);
   const ciphertext = ciphertextSchema.parse(encryptedPii);
-  if (normaliseFormat(options.format ?? "v2") === "v1") {
-    return `1|${id}|${ciphertext}`;
+  if (normaliseFormat(options.format ?? CURRENT_BARCODE_FORMAT) === LEGACY_BARCODE_FORMAT) {
+    return [V1_PAYLOAD_VERSION, id, ciphertext].join(PAYLOAD_DELIMITER);
   }
-  return `2|${id}|${encodeBase32(decodeCanonicalBase64url(ciphertext))}`;
+  return [V2_PAYLOAD_VERSION, id, encodeBase32(decodeCanonicalBase64url(ciphertext))].join(
+    PAYLOAD_DELIMITER,
+  );
 }
 
 /**
@@ -181,20 +198,21 @@ export interface ScanUrlParts {
 
 export function buildScanUrlParts(parts: BarcodeParts, options: ScanUrlOptions = {}): ScanUrlParts {
   const environment = normaliseEnvironment(options.environment ?? "production");
-  const format = normaliseFormat(options.format ?? "v2");
+  const format = normaliseFormat(options.format ?? CURRENT_BARCODE_FORMAT);
   const origins = ENVIRONMENTS[environment];
   const baseUrl = normaliseScanBaseUrl(
-    options.scanBaseUrl ?? (format === "v2" ? origins.v2ScanBaseUrl : origins.scanBaseUrl),
+    options.scanBaseUrl ??
+      (format === CURRENT_BARCODE_FORMAT ? origins.v2ScanBaseUrl : origins.scanBaseUrl),
   );
   const id = verifiablReferenceSchema.parse(parts.verifiablReference);
   const ciphertext = ciphertextSchema.parse(parts.encryptedPii);
-  if (format === "v1") {
-    const bytePrefix = `${baseUrl}/v/${id}#1.`;
+  if (format === LEGACY_BARCODE_FORMAT) {
+    const bytePrefix = `${baseUrl}${SCAN_PATH_PREFIX}${id}${V1_SCAN_URL_FRAGMENT_MARKER}`;
     return { content: bytePrefix + ciphertext, bytePrefix };
   }
 
   const base32 = encodeBase32(decodeCanonicalBase64url(ciphertext));
-  const bytePrefix = `${baseUrl}/v/${id}#2.`;
+  const bytePrefix = `${baseUrl}${SCAN_PATH_PREFIX}${id}${V2_SCAN_URL_FRAGMENT_MARKER}`;
   return {
     content: bytePrefix + base32,
     bytePrefix,
@@ -216,7 +234,7 @@ function normaliseScanBaseUrl(scanBaseUrl: string): string {
 }
 
 function normaliseFormat(format: BarcodeFormat): BarcodeFormat {
-  if (format === "v1" || format === "v2") return format;
+  if (format === LEGACY_BARCODE_FORMAT || format === CURRENT_BARCODE_FORMAT) return format;
   throw new Error("format must be 'v1' or 'v2'");
 }
 

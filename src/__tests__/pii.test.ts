@@ -1,4 +1,11 @@
-import { formatPii, formatPiiV1, PiiValidationError, parsePii, piiFieldsSchema } from "../pii.js";
+import {
+  formatPii,
+  formatPiiV1,
+  PII_FIELD_ORDER,
+  PiiValidationError,
+  parsePii,
+  piiFieldsSchema,
+} from "../pii.js";
 
 describe("formatPii", () => {
   it("formats the documented example exactly", () => {
@@ -136,6 +143,19 @@ describe("P2 formatting", () => {
     );
   });
 
+  it("rejects malformed UTF-16 instead of changing it during encryption", () => {
+    try {
+      formatPii({ ...core, address: "bad\uD800address" });
+      throw new Error("expected formatPii to throw");
+    } catch (error) {
+      expect((error as PiiValidationError).violations).toEqual([
+        { field: "address", reason: "invalid-unicode" },
+      ]);
+    }
+
+    expect(() => formatPii({ employeeName: "bad\uDC00name" })).toThrow(PiiValidationError);
+  });
+
   it.each([
     "bad|address",
     "bad\naddress",
@@ -147,6 +167,19 @@ describe("P2 formatting", () => {
     expect(formatPiiV1(core)).toBe(
       "P1|Zoë Nguyễn|Ingénieure|R&D|53004085616|062-000|12345678|Zoë Nguyễn",
     );
+  });
+
+  it("exports the permanent current field order", () => {
+    expect(PII_FIELD_ORDER).toEqual([
+      "employeeName",
+      "position",
+      "department",
+      "employerAbn",
+      "bsb",
+      "accountNumber",
+      "accountName",
+      "address",
+    ]);
   });
 });
 
@@ -187,5 +220,10 @@ describe("parsePii", () => {
 
   it("rejects a P2 payload missing the address segment rather than reading it as P1", () => {
     expect(() => parsePii("P2|a|b|c|d|e|f|g")).toThrow("Expected 8 P2 fields but got 7");
+  });
+
+  it("rejects malformed UTF-16 in parsed P2 fields", () => {
+    expect(() => parsePii("P2|bad\uD800name|||||||")).toThrow();
+    expect(() => parsePii("P2|Jane|||||||bad\uDC00address")).toThrow();
   });
 });

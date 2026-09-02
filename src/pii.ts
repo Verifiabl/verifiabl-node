@@ -4,6 +4,12 @@ function tuple<const T extends readonly string[]>(value: T): T {
   return value;
 }
 
+const PII_FIELD_DELIMITER = "|";
+const PII_V1_VERSION = "P1";
+const PII_V2_VERSION = "P2";
+const PII_V1_PREFIX = `${PII_V1_VERSION}${PII_FIELD_DELIMITER}`;
+const PII_V2_PREFIX = `${PII_V2_VERSION}${PII_FIELD_DELIMITER}`;
+
 /**
  * Verifiabl's compact PII wire format is a pipe-delimited plaintext string.
  * It is encrypted before being embedded in the barcode and is never sent to
@@ -53,17 +59,40 @@ export const PII_ADDRESS_MAX_BYTES = 320;
 const DISALLOWED_TEXT_CHARACTERS = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
 const DISALLOWED_LEGACY_CHARACTERS = /[\p{Cc}\p{Zl}\p{Zp}]/u;
 
+function hasUnpairedSurrogate(value: string): boolean {
+  for (let index = 0; index < value.length; index++) {
+    const codeUnit = value.charCodeAt(index);
+    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        index++;
+        continue;
+      }
+      return true;
+    }
+    if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function isCurrentText(value: string): boolean {
-  return !value.includes("|") && !DISALLOWED_TEXT_CHARACTERS.test(value);
+  return (
+    !hasUnpairedSurrogate(value) &&
+    !value.includes(PII_FIELD_DELIMITER) &&
+    !DISALLOWED_TEXT_CHARACTERS.test(value)
+  );
 }
 
 function isLegacyText(value: string): boolean {
-  return !value.includes("|") && !DISALLOWED_LEGACY_CHARACTERS.test(value);
+  return !value.includes(PII_FIELD_DELIMITER) && !DISALLOWED_LEGACY_CHARACTERS.test(value);
 }
 
 const piiFieldSchema = z
   .string()
   .max(PII_FIELD_MAX_LENGTH, `PII field exceeds ${PII_FIELD_MAX_LENGTH} characters`)
+  .refine((value) => !hasUnpairedSurrogate(value), "PII field must contain valid Unicode")
   .refine(
     isCurrentText,
     "PII field must not contain '|', control characters, format characters or line separators",
@@ -71,6 +100,7 @@ const piiFieldSchema = z
 
 const addressSchema = z
   .string()
+  .refine((value) => !hasUnpairedSurrogate(value), "Address must contain valid Unicode")
   .refine(isCurrentText, "Address must not contain '|', control, format or line separators")
   .refine(
     (value) => Buffer.byteLength(value, "utf8") <= PII_ADDRESS_MAX_BYTES,
@@ -97,6 +127,7 @@ export type PiiFieldViolationReason =
   | "pipe"
   | "control-character"
   | "format-character"
+  | "invalid-unicode"
   | "too-long"
   | "too-many-bytes";
 
@@ -107,9 +138,10 @@ export interface PiiFieldViolation {
 }
 
 const VIOLATION_DESCRIPTIONS: Record<PiiFieldViolationReason, string> = {
-  pipe: "must not contain '|'",
+  pipe: `must not contain '${PII_FIELD_DELIMITER}'`,
   "control-character": "must not contain control characters or line separators",
   "format-character": "must not contain format characters",
+  "invalid-unicode": "must contain valid Unicode",
   "too-long": `exceeds ${PII_FIELD_MAX_LENGTH} characters`,
   "too-many-bytes": `exceeds ${PII_ADDRESS_MAX_BYTES} UTF-8 bytes`,
 };
@@ -136,13 +168,16 @@ export class PiiValidationError extends Error {
 }
 
 function fieldViolation(field: PiiFieldName, value: string): PiiFieldViolation | null {
+  if (hasUnpairedSurrogate(value)) {
+    return { field, reason: "invalid-unicode" };
+  }
   if (field === "address" && Buffer.byteLength(value, "utf8") > PII_ADDRESS_MAX_BYTES) {
     return { field, reason: "too-many-bytes" };
   }
   if (field !== "address" && value.length > PII_FIELD_MAX_LENGTH) {
     return { field, reason: "too-long" };
   }
-  if (value.includes("|")) {
+  if (value.includes(PII_FIELD_DELIMITER)) {
     return { field, reason: "pipe" };
   }
   if (/[\p{Cc}\p{Zl}\p{Zp}]/u.test(value)) {
@@ -190,7 +225,7 @@ export function formatPii(fields: PiiFields): string {
   }
   const validated = piiFieldsSchema.parse(fields);
   const segments = PII_FIELD_ORDER.map((name) => validated[name] ?? "");
-  return `P2|${segments.join("|")}`;
+  return PII_V2_PREFIX + segments.join(PII_FIELD_DELIMITER);
 }
 
 /**
@@ -211,7 +246,7 @@ export function formatPiiV1(fields: Omit<PiiFields, "address">): string {
   }
   const validated = piiFieldsSchema.omit({ address: true }).parse(fields);
   const segments = P1_FIELD_ORDER.map((name) => validated[name] ?? "");
-  return `P1|${segments.join("|")}`;
+  return PII_V1_PREFIX + segments.join(PII_FIELD_DELIMITER);
 }
 
 const PII_LAYOUTS: ReadonlyArray<{
@@ -219,8 +254,8 @@ const PII_LAYOUTS: ReadonlyArray<{
   order: readonly PiiFieldName[];
   currentValidation: boolean;
 }> = [
-  { version: "P1", order: P1_FIELD_ORDER, currentValidation: false },
-  { version: "P2", order: PII_FIELD_ORDER, currentValidation: true },
+  { version: PII_V1_VERSION, order: P1_FIELD_ORDER, currentValidation: false },
+  { version: PII_V2_VERSION, order: PII_FIELD_ORDER, currentValidation: true },
 ];
 
 function validateParsedValue(field: PiiFieldName, value: string, currentValidation: boolean): void {
@@ -247,12 +282,12 @@ function validateParsedValue(field: PiiFieldName, value: string, currentValidati
  */
 export function parsePii(plaintext: string): PiiFields {
   for (const { version, order, currentValidation } of PII_LAYOUTS) {
-    const prefix = `${version}|`;
+    const prefix = `${version}${PII_FIELD_DELIMITER}`;
     if (!plaintext.startsWith(prefix)) {
       continue;
     }
 
-    const values = plaintext.slice(prefix.length).split("|");
+    const values = plaintext.slice(prefix.length).split(PII_FIELD_DELIMITER);
     if (values.length !== order.length) {
       throw new Error(`Expected ${order.length} ${version} fields but got ${values.length}`);
     }
@@ -269,5 +304,5 @@ export function parsePii(plaintext: string): PiiFields {
     return result;
   }
 
-  throw new Error("Invalid PII format: expected 'P1|' or 'P2|' prefix");
+  throw new Error(`Invalid PII format: expected '${PII_V1_PREFIX}' or '${PII_V2_PREFIX}' prefix`);
 }
