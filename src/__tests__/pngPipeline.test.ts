@@ -57,7 +57,7 @@ describe("PNG pipeline visual identity", () => {
   // both baselines together.
   it("output matches the committed baseline exactly", async () => {
     const baseline = decode(readFileSync(join(__dirname, "fixtures", "badge-baseline-480.png")));
-    const { png } = await createBarcodePng(PARTS, {}, 480);
+    const { png } = await createBarcodePng(PARTS, { format: "v1" }, 480);
     const current = decode(png);
 
     expect(current.width).toBe(baseline.width);

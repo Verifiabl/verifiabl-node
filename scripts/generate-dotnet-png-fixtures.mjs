@@ -25,13 +25,13 @@ const PARTS = {
 };
 
 const CASES = [
-  { name: "png-default-720", options: { format: "v2" }, pixelWidth: 720 },
+  { name: "png-default-720", options: {}, pixelWidth: 720 },
   {
     name: "png-sandbox-q-480",
-    options: { format: "v2", environment: "sandbox", maxErrorCorrection: "Q" },
+    options: { environment: "sandbox", maxErrorCorrection: "Q" },
     pixelWidth: 480,
   },
-  { name: "png-default-1440", options: { format: "v2" }, pixelWidth: 1440 },
+  { name: "png-default-1440", options: {}, pixelWidth: 1440 },
   { name: "png-v1-default-720", options: { format: "v1" }, pixelWidth: 720 },
 ];
 

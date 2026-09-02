@@ -15,7 +15,7 @@ import {
  */
 
 export interface BarcodeSvgOptions {
-  /** Printed format. V2 is opt-in; defaults to `v1`. */
+  /** Printed format. Defaults to `v2`; select `v1` only for rollback. */
   format?: ScanUrlOptions["format"];
   /** API environment for the public QR scan URL. Defaults to "production". */
   environment?: VerifiablEnvironment;

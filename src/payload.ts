@@ -6,11 +6,11 @@ const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
 
 export type VerifiablEnvironment = "production" | "sandbox";
 
-/** Printed barcode format. V1 remains the default until the issuer cutover. */
+/** Printed barcode format. V2 is the default; select V1 only for rollback. */
 export type BarcodeFormat = "v1" | "v2";
 
 export interface BarcodePayloadOptions {
-  /** Opt in to the v2 Base32 payload. Defaults to `v1`. */
+  /** Printed format. Defaults to `v2`; select `v1` only for rollback. */
   format?: BarcodeFormat;
 }
 
@@ -102,12 +102,11 @@ export const SANDBOX_ISSUER_BASE_URL = ENVIRONMENTS.sandbox.issuerBaseUrl;
 export const SANDBOX_SCAN_BASE_URL = ENVIRONMENTS.sandbox.scanBaseUrl;
 
 /**
- * Build the v1 barcode payload: `1|<verifiablReference>|<ciphertext>`.
+ * Build the barcode payload for the PDF metadata copy.
  *
- * This is the bare wire format, and the value to write into the PDF's XMP
- * metadata. For QR codes intended to be scanned by phones, prefer
- * `buildScanUrl`, which carries the same reference and ciphertext as a public
- * scan-redirect URL.
+ * V2 is the default and writes `2|<verifiablReference>|<BASE32 ciphertext>`.
+ * Select V1 only for rollback to the legacy `1|<verifiablReference>|<ciphertext>`
+ * payload.
  */
 export function buildBarcodePayload(
   { verifiablReference, encryptedPii }: BarcodeParts,
@@ -115,7 +114,7 @@ export function buildBarcodePayload(
 ): string {
   const id = verifiablReferenceSchema.parse(verifiablReference);
   const ciphertext = ciphertextSchema.parse(encryptedPii);
-  if (normaliseFormat(options.format ?? "v1") === "v1") {
+  if (normaliseFormat(options.format ?? "v2") === "v1") {
     return `1|${id}|${ciphertext}`;
   }
   return `2|${id}|${encodeBase32(decodeCanonicalBase64url(ciphertext))}`;
@@ -126,9 +125,9 @@ export function buildBarcodePayload(
  *
  * Write the barcode payload (`buildBarcodePayload`) into the payslip PDF's XMP
  * metadata in addition to the QR code, so a verifier can read the payload even
- * when the QR itself cannot be scanned. Both hold the identical encrypted
- * `1|verifiablReference|<encrypted PII>` value; never write plaintext PII to
- * metadata, which is not encrypted.
+ * when the QR itself cannot be scanned. The metadata copy must use the same
+ * format as the QR code. Never write plaintext PII to metadata, which is not
+ * encrypted.
  *
  * Store the single payload string under the XMP property below. Write it with
  * any PDF toolchain that can set a custom XMP property; the SDK only provides
@@ -136,7 +135,7 @@ export function buildBarcodePayload(
  * `/v1/verifications/payload`.
  *
  *   XMP namespace: https://verifiabl.io/ns/   (property `payload`)
- *   value: "1|<verifiablReference>|<encrypted PII>"
+ *   current value: "2|<verifiablReference>|<BASE32 encrypted PII>"
  *
  * The namespace is permanent: it is embedded in already-issued PDFs, so it
  * must not change.
@@ -158,7 +157,7 @@ export interface ScanUrlOptions extends BarcodePayloadOptions {
 /**
  * Build the URL encoded into Verifiabl QR codes:
  *
- *   https://verify.verifiabl.io/v/<verifiablReference>#1.<ciphertext>
+ *   https://v.verifiabl.io/v/<verifiablReference>#2.<BASE32 ciphertext>
  *
  * The scan URL sends scanners to Verifiabl instead of exposing raw
  * ciphertext in a phone camera preview.
@@ -182,7 +181,7 @@ export interface ScanUrlParts {
 
 export function buildScanUrlParts(parts: BarcodeParts, options: ScanUrlOptions = {}): ScanUrlParts {
   const environment = normaliseEnvironment(options.environment ?? "production");
-  const format = normaliseFormat(options.format ?? "v1");
+  const format = normaliseFormat(options.format ?? "v2");
   const origins = ENVIRONMENTS[environment];
   const baseUrl = normaliseScanBaseUrl(
     options.scanBaseUrl ?? (format === "v2" ? origins.v2ScanBaseUrl : origins.scanBaseUrl),

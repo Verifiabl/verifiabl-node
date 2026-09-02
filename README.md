@@ -41,6 +41,7 @@ const pii = formatPii({
   bsb: "062-000",
   accountNumber: "12345678",
   accountName: "Jane A Doe",
+  address: "12 Example St, Sydney NSW 2000",
 });
 const { encryptedPii, encryptionMetadata } = encryptPii(pii, key);
 
@@ -72,31 +73,30 @@ const { svg } = createBarcodeSvg(
 );
 ```
 
-### Opt-in v2 / P2 writers
+### V2 / P2 writers
 
-V1 remains the default and permanently readable. Opt in only after Verifiabl confirms the reader,
-short scan-host route, and scanner-compatibility release gates for your environment:
+The SDK writes the current P2 plaintext and v2 barcode payload by default:
 
 ```ts
-import { buildBarcodePayload, createBarcodeSvg, encryptPii, formatPiiV2 } from "@verifiabl/issuer";
+import { buildBarcodePayload, createBarcodeSvg, encryptPii, formatPii } from "@verifiabl/issuer";
 
-const plaintext = formatPiiV2({
+const plaintext = formatPii({
   employeeName: "Zoë Nguyễn",
   position: "Ingénieure",
   address: "12 Rue de l’Église, Apt 4B, 75005 Paris, France 🇫🇷",
 });
 const { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);
 const parts = { verifiablReference, encryptedPii };
-const { svg } = createBarcodeSvg(parts, { environment: "sandbox", format: "v2" });
-const xmpPayload = buildBarcodePayload(parts, { format: "v2" });
+const { svg } = createBarcodeSvg(parts, { environment: "sandbox" });
+const xmpPayload = buildBarcodePayload(parts);
 ```
 
 P2 is exactly `P2|employeeName|position|department|employerAbn|bsb|accountNumber|accountName|address`.
 The final address is unstructured, optional, preserved verbatim, and limited to 320 UTF-8 bytes.
 Pipes, control characters, and Unicode format characters are rejected before encryption. A v2 QR
-uses the short `v.verifiabl.io` scan host (`v.sandbox.verifiabl.io` in sandbox) with `#2.<BASE32>` and an explicit byte/alphanumeric segment split; its XMP
-copy must be the matching `2|reference|BASE32`. Never mix QR and XMP versions. Rollback changes new
-writer output back to v1; readers and short-host routes remain available for already printed v2 documents.
+uses the short `v.verifiabl.io` scan host (`v.sandbox.verifiabl.io` in sandbox) with `#2.<BASE32>` and an explicit byte/alphanumeric segment split. Its XMP
+copy must be the matching `2|reference|BASE32`. Never mix QR and XMP versions. For rollback, pass
+`{ format: "v1" }` to `createBarcodeSvg`, `createBarcodePng`, `buildScanUrl`, and `buildBarcodePayload`.
 
 Prefer `createBarcodeSvg` when you can: SVG scales to any size without losing quality. Use `createBarcodePng` when your document pipeline needs a raster image; it composites the badge deterministically (no rasteriser involved), so the same record produces the byte-identical raster in every Verifiabl SDK. PNG output comes in fixed pixel widths (480, 720, 960 or 1440; the physical print size is set where you place the image in the PDF). Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
 

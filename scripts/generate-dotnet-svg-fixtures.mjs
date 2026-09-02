@@ -22,10 +22,10 @@ const PARTS = {
 };
 
 const CASES = [
-  { name: "default-480", options: { format: "v2" } },
+  { name: "default-480", options: {} },
   {
     name: "sandbox-q-720",
-    options: { format: "v2", environment: "sandbox", maxErrorCorrection: "Q", width: 720 },
+    options: { environment: "sandbox", maxErrorCorrection: "Q", width: 720 },
   },
   { name: "v1-default-480", options: { format: "v1" } },
 ];

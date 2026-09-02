@@ -32,7 +32,7 @@ export {
 } from "./payload.js";
 export {
   formatPii,
-  formatPiiV2,
+  formatPiiV1,
   PII_ADDRESS_MAX_BYTES,
   PII_FIELD_MAX_LENGTH,
   PII_FIELD_ORDER,
@@ -40,11 +40,9 @@ export {
   type PiiFields,
   type PiiFieldViolation,
   type PiiFieldViolationReason,
-  type PiiV2Fields,
   PiiValidationError,
   parsePii,
   piiFieldsSchema,
-  piiV2FieldsSchema,
 } from "./pii.js";
 
 export {
