@@ -35,7 +35,9 @@ const DENSITY_PROFILES = [
 const PNG_PIXEL_WIDTH = 720;
 
 const args = parseArgs(process.argv.slice(2));
-const outputDirectory = path.resolve(args.out ?? DEFAULT_OUT);
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const artifactsRoot = path.join(repoRoot, "artifacts");
+const outputDirectory = resolveOutputDirectory(args.out ?? DEFAULT_OUT);
 const digitalDpi = args.full ? FULL_DIGITAL_DPI : DEFAULT_DIGITAL_DPI;
 const eccCeilings = args.includeQ ? ["M", "Q"] : ["M"];
 const sdkVersion = await packageVersion();
@@ -92,6 +94,20 @@ function parseArgs(argv) {
 function printHelpAndExit() {
   console.log(`Usage: npm run qr-stress -- [--out artifacts/qr-stress] [--force]\n\nGenerates a synthetic QR stress corpus with AU-representative address cuts plus\nstress boundaries, digitally decodes each rendered QR at 19/22/25/28mm and 300\nDPI, and writes manifest/results/summary files. Pass --full to add\n150/200/600 DPI and --include-q to add an ECC Q ceiling run. Run npm run build\nfirst if invoking this script directly.`);
   process.exit(0);
+}
+
+function resolveOutputDirectory(requested) {
+  const output = path.resolve(repoRoot, requested);
+  const relative = path.relative(artifactsRoot, output);
+  if (
+    output === artifactsRoot ||
+    relative === "" ||
+    relative.startsWith("..") ||
+    path.isAbsolute(relative)
+  ) {
+    throw new Error(`Output path must be a child directory of ${artifactsRoot}: ${output}`);
+  }
+  return output;
 }
 
 async function assertMissing(directory) {
