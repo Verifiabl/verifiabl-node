@@ -28,6 +28,7 @@ const DOCS_EXAMPLE_FIELDS = {
   bsb: "062-000",
   accountNumber: "12345678",
   accountName: "Jane A Doe",
+  address: "12 Example St, Sydney NSW 2000",
 } satisfies PiiFields;
 
 const LONG_NAME_FIELDS = {
@@ -38,6 +39,7 @@ const LONG_NAME_FIELDS = {
   bsb: "062-000",
   accountNumber: "12345678",
   accountName: "Jane Alexandra Catherine Doe Smith Washington Nguyen",
+  address: "88 Harrington Street, Sydney NSW 2000",
 } satisfies PiiFields;
 
 /**
@@ -285,7 +287,7 @@ describe("styled QR scannability", () => {
   it("decodes the encrypted docs PII example at the minimum raster width", () => {
     const { parts, plaintext } = partsFromPii(DOCS_EXAMPLE_FIELDS);
     expect(plaintext).toBe(
-      "P1|Jane A. Doe|Senior Developer|Engineering|12-345-678-901|062-000|12345678|Jane A Doe",
+      "P2|Jane A. Doe|Senior Developer|Engineering|12-345-678-901|062-000|12345678|Jane A Doe|12 Example St, Sydney NSW 2000",
     );
     expect(parts.encryptedPii.length).toBeGreaterThan(plaintext.length);
     expect(decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(createBarcodeSvg(parts).content);

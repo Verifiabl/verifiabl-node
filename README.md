@@ -41,6 +41,7 @@ const pii = formatPii({
   bsb: "062-000",
   accountNumber: "12345678",
   accountName: "Jane A Doe",
+  address: "12 Example St, Sydney NSW 2000",
 });
 const { encryptedPii, encryptionMetadata } = encryptPii(pii, key);
 
