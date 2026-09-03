@@ -32,6 +32,7 @@ const DENSITY_PROFILES = [
   "long-fields",
   "dense-fields",
 ];
+const FINDER_STYLES = ["rounded", "square"];
 const PNG_PIXEL_WIDTH = 720;
 
 const args = parseArgs(process.argv.slice(2));
@@ -129,15 +130,22 @@ function buildFixtures() {
     for (const addressScript of scripts) {
       for (const density of DENSITY_PROFILES) {
         for (const maxErrorCorrection of eccCeilings) {
-          fixtures.push({
-            id: ["p2", density, addressScript, `addr-${addressBytes}`, `ecc-${maxErrorCorrection}`].join("-"),
-            format: "v2",
-            density,
-            addressScript,
-            addressBytes,
-            maxErrorCorrection,
-            fields: fieldsFor(density, addressBytes, addressScript),
-          });
+          for (const finderStyle of FINDER_STYLES) {
+            const payloadId = ["p2", density, addressScript, `addr-${addressBytes}`, `ecc-${maxErrorCorrection}`].join(
+              "-",
+            );
+            fixtures.push({
+              id: `${payloadId}-finder-${finderStyle}`,
+              payloadId,
+              format: "v2",
+              density,
+              addressScript,
+              addressBytes,
+              maxErrorCorrection,
+              finderStyle,
+              fields: fieldsFor(density, addressBytes, addressScript),
+            });
+          }
         }
       }
     }
@@ -250,6 +258,7 @@ async function runFixture(fixture) {
     addressScript: fixture.addressScript,
     addressUtf8Bytes: fixture.addressBytes,
     maxErrorCorrection: fixture.maxErrorCorrection,
+    finderStyle: fixture.finderStyle,
   };
 
   let plaintext;
@@ -266,9 +275,9 @@ async function runFixture(fixture) {
     };
   }
 
-  const encrypted = encryptDeterministically(plaintext, fixture.id);
+  const encrypted = encryptDeterministically(plaintext, fixture.payloadId);
   const parts = {
-    verifiablReference: referenceFor(fixture.id),
+    verifiablReference: referenceFor(fixture.payloadId),
     encryptedPii: encrypted.encryptedPii,
   };
 
@@ -278,15 +287,22 @@ async function runFixture(fixture) {
       format: fixture.format,
       maxErrorCorrection: fixture.maxErrorCorrection,
     });
-    const pngResult = await createBarcodePng(
-      parts,
-      {
-        environment: ENVIRONMENT,
-        format: fixture.format,
-        maxErrorCorrection: fixture.maxErrorCorrection,
-      },
-      PNG_PIXEL_WIDTH,
-    );
+    const svg =
+      fixture.finderStyle === "square"
+        ? addSquareFinderOverlay(svgResult.svg, svgResult)
+        : svgResult.svg;
+    const pngResult =
+      fixture.finderStyle === "square"
+        ? renderSvgPngResult(svg, svgResult, PNG_PIXEL_WIDTH)
+        : await createBarcodePng(
+            parts,
+            {
+              environment: ENVIRONMENT,
+              format: fixture.format,
+              maxErrorCorrection: fixture.maxErrorCorrection,
+            },
+            PNG_PIXEL_WIDTH,
+          );
     const payload = buildBarcodePayload(parts, { format: fixture.format });
     const moduleCount = 17 + svgResult.qrVersion * 4;
     const result = {
@@ -315,10 +331,10 @@ async function runFixture(fixture) {
       encryptionMetadata: encrypted.encryptionMetadata,
     };
 
-    await runDecodeMatrix(result, svgResult.svg);
+    await runDecodeMatrix(result, svg);
     if (isRepresentative(result)) {
       const basename = safeFilename(result.fixtureId);
-      await writeFile(path.join(outputDirectory, "representative", `${basename}.svg`), svgResult.svg);
+      await writeFile(path.join(outputDirectory, "representative", `${basename}.svg`), svg);
       await writeFile(path.join(outputDirectory, "representative", `${basename}.png`), pngResult.png);
       representativeAssets.push({ fixtureId: result.fixtureId, svg: `${basename}.svg`, png: `${basename}.png` });
     }
@@ -394,6 +410,7 @@ async function runDecodeMatrix(result, svg) {
         maxErrorCorrection: result.maxErrorCorrection,
         errorCorrectionLevel: result.errorCorrectionLevel,
         degraded: result.degraded,
+        finderStyle: result.finderStyle,
         qrVersion: result.qrVersion,
         moduleCount: result.moduleCount,
         encodedUrlLength: result.encodedUrlLength,
@@ -414,6 +431,42 @@ function decodeSvg(svg, rasterWidth) {
   const result = jsQR(new Uint8ClampedArray(rendered.pixels), rendered.width, rendered.height);
   if (!result) throw new Error(`QR code could not be decoded at ${rasterWidth}px`);
   return result.data;
+}
+
+function renderSvgPngResult(svg, svgResult, pixelWidth) {
+  return {
+    png: new Resvg(svg, { fitTo: { mode: "width", value: pixelWidth } }).render().asPng(),
+    width: pixelWidth,
+    height: Math.round((pixelWidth * svgResult.height) / svgResult.width),
+    qrVersion: svgResult.qrVersion,
+    modulePx: round2((svgResult.modulePx * pixelWidth) / svgResult.width),
+  };
+}
+
+function addSquareFinderOverlay(svg, svgResult) {
+  const scale = svgResult.width / 96;
+  const moduleSize = svgResult.modulePx / scale;
+  const size = svgResult.qrVersion * 4 + 17;
+  const lastFinderOrigin = (size - 7) * moduleSize;
+  const overlay = [
+    squareFinder(0, 0, moduleSize),
+    squareFinder(lastFinderOrigin, 0, moduleSize),
+    squareFinder(0, lastFinderOrigin, moduleSize),
+  ].join("");
+  return svg.replace("</g></svg>", `<g shape-rendering="crispEdges">${overlay}</g></g></svg>`);
+}
+
+function squareFinder(originX, originY, moduleSize) {
+  const outer = 7 * moduleSize;
+  const innerOffset = moduleSize;
+  const inner = 5 * moduleSize;
+  const dotOffset = 2 * moduleSize;
+  const dot = 3 * moduleSize;
+  return (
+    `<rect x="${round2(originX)}" y="${round2(originY)}" width="${round2(outer)}" height="${round2(outer)}" fill="#000000"/>` +
+    `<rect x="${round2(originX + innerOffset)}" y="${round2(originY + innerOffset)}" width="${round2(inner)}" height="${round2(inner)}" fill="#FFFFFF"/>` +
+    `<rect x="${round2(originX + dotOffset)}" y="${round2(originY + dotOffset)}" width="${round2(dot)}" height="${round2(dot)}" fill="#000000"/>`
+  );
 }
 
 function isRepresentative(result) {
@@ -488,7 +541,7 @@ function renderSummary(manifest) {
     .slice(0, 40)
     .map(
       (row) =>
-        `| ${row.addressUtf8Bytes} | ${row.addressScript} | ${row.density} | ${row.errorCorrectionLevel} | ${row.qrVersion} | ${row.moduleCount} | ${row.encodedUrlLength} | ${row.degraded ? "yes" : "no"} |`,
+        `| ${row.addressUtf8Bytes} | ${row.addressScript} | ${row.density} | ${row.finderStyle} | ${row.errorCorrectionLevel} | ${row.qrVersion} | ${row.moduleCount} | ${row.encodedUrlLength} | ${row.degraded ? "yes" : "no"} |`,
     )
     .join("\n");
 
@@ -501,7 +554,7 @@ function renderSummary(manifest) {
     )
     .join("\n");
 
-  return `# VER-523 QR stress summary\n\nSynthetic data only. Generated by the Node SDK stress harness. The manifest includes ciphertext-bearing scan URLs for representative/manual comparison; do not use customer data in this corpus. No ciphertext hashes or other derivatives are written.\n\n## Run metadata\n\n- Generated: ${manifest.generatedAt}\n- SDK: ${manifest.sdk} ${results[0]?.sdkVersion ?? "unknown"}\n- Environment: ${manifest.environment}\n- Fixtures: ${manifest.fixtureCount}\n- Rendered: ${manifest.renderedCount}\n- Expected oversized rejects: ${manifest.expectedRejectCount}\n- Render failures: ${manifest.renderFailureCount}\n- Decode attempts: ${manifest.decodeAttemptCount}\n- Decode failures/mismatches: ${manifest.decodeFailureCount}\n\n## Digital decode threshold by badge size\n\n${thresholdRows}\n\n## QR density sample at ECC ceiling M\n\n| Address bytes | Script | Density | ECC used | QR version | Modules | URL bytes | Degraded |\n| ---: | --- | --- | --- | ---: | ---: | ---: | --- |\n${qrRows || "| _none_ | | | | | | | |"}\n\n## First decode failures or mismatches\n\n| Fixture | Badge mm | DPI | Raster px | Module mm | Message |\n| --- | ---: | ---: | ---: | ---: | --- |\n${failedDecodeRows || "| _none_ | | | | | |"}\n\n## Notes for VER-373\n\nUse this output to decide whether common AU-length payloads, the current 320-byte address cap, ECC policy, and physical badge sizes have enough margin. Address lengths 36/48/58/80 approximate the AU median/P95/P99/P99.9 bands; 120+ byte rows are stress cases, not representative records. The Node SDK public API supports an M or Q ceiling; Low is only reached by the degradation ladder, not selected directly. A direct Low-vs-M manual matrix should be generated from the .NET ScannerPack or a follow-up SDK option if product wants Low as an explicit setting.\n\n## Representative assets\n\n${representativeAssets.map((asset) => `- ${asset.fixtureId}: representative/${asset.svg}, representative/${asset.png}`).join("\n") || "_none_"}\n`;
+  return `# VER-523 QR stress summary\n\nSynthetic data only. Generated by the Node SDK stress harness. The manifest includes ciphertext-bearing scan URLs for representative/manual comparison; do not use customer data in this corpus. No ciphertext hashes or other derivatives are written.\n\n## Run metadata\n\n- Generated: ${manifest.generatedAt}\n- SDK: ${manifest.sdk} ${results[0]?.sdkVersion ?? "unknown"}\n- Environment: ${manifest.environment}\n- Fixtures: ${manifest.fixtureCount}\n- Rendered: ${manifest.renderedCount}\n- Expected oversized rejects: ${manifest.expectedRejectCount}\n- Render failures: ${manifest.renderFailureCount}\n- Decode attempts: ${manifest.decodeAttemptCount}\n- Decode failures/mismatches: ${manifest.decodeFailureCount}\n\n## Digital decode threshold by badge size\n\n${thresholdRows}\n\n## QR density sample at ECC ceiling M\n\n| Address bytes | Script | Density | Finder style | ECC used | QR version | Modules | URL bytes | Degraded |\n| ---: | --- | --- | --- | --- | ---: | ---: | ---: | --- |\n${qrRows || "| _none_ | | | | | | | | |"}\n\n## First decode failures or mismatches\n\n| Fixture | Badge mm | DPI | Raster px | Module mm | Message |\n| --- | ---: | ---: | ---: | ---: | --- |\n${failedDecodeRows || "| _none_ | | | | | |"}\n\n## Notes for VER-373\n\nUse this output to decide whether common AU-length payloads, rounded vs square finder corners, the current 320-byte address cap, ECC policy, and physical badge sizes have enough margin. Address lengths 36/48/58/80 approximate the AU median/P95/P99/P99.9 bands; 120+ byte rows are stress cases, not representative records. The Node SDK public API supports an M or Q ceiling; Low is only reached by the degradation ladder, not selected directly. A direct Low-vs-M manual matrix should be generated from the .NET ScannerPack or a follow-up SDK option if product wants Low as an explicit setting.\n\n## Representative assets\n\n${representativeAssets.map((asset) => `- ${asset.fixtureId}: representative/${asset.svg}, representative/${asset.png}`).join("\n") || "_none_"}\n`;
 }
 
 function summariseDecodeRows() {
@@ -535,6 +588,10 @@ function thresholdTable(summary) {
     return `| ${row.badgeMm} | ${row.dpi} | ${row.passes}/${row.attempts} | ${minModule} | ${row.maxUrlPass} | ${row.maxQrVersionPass} |`;
   });
   return `| Badge mm | DPI | Passes | Smallest passing module mm | Largest passing URL bytes | Largest passing QR version |\n| ---: | ---: | ---: | ---: | ---: | ---: |\n${rows.join("\n")}`;
+}
+
+function round2(value) {
+  return Math.round(value * 100) / 100;
 }
 
 function round4(value) {
