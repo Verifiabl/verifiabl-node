@@ -51,7 +51,8 @@
     "bench": "npm run build && node scripts/bench-png.mjs",
     "prepublishOnly": "npm run typecheck && npm run test && npm run build && npm run check:exports",
     "check:exports": "attw --pack .",
-    "bake:frames": "npm run build && node scripts/bake-frames.mjs"
+    "bake:frames": "npm run build && node scripts/bake-frames.mjs",
+    "scanner:pack": "npm run build && node scripts/generate-scanner-pack.mjs"
   },
   "dependencies": {
     "qrcode": "^1.5.4",
