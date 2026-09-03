@@ -54,7 +54,7 @@ describe("createBarcodePng", () => {
   });
 
   it("rejects with the typed QrCapacityError when the PII is too long", async () => {
-    const parts = { ...PARTS, encryptedPii: "a".repeat(3000) };
+    const parts = { ...PARTS, encryptedPii: "a".repeat(6000) };
     await expect(createBarcodePng(parts, {}, 480)).rejects.toBeInstanceOf(QrCapacityError);
     await expect(createBarcodePng(parts, {}, 480)).rejects.toMatchObject({
       reason: "qr-capacity",

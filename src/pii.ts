@@ -9,7 +9,7 @@ function tuple<const T extends readonly string[]>(value: T): T {
  * It is encrypted before being embedded in the barcode and is never sent to
  * the Verifiabl API in plaintext.
  *
- * Layout (9 segments, "P2" prefix + 8 fields, in this exact order):
+ * Current layout (9 segments, "P2" prefix + 8 fields, in this exact order):
  *
  *   P2|employeeName|position|department|employerAbn|bsb|accountNumber|accountName|address
  *
@@ -18,10 +18,7 @@ function tuple<const T extends readonly string[]>(value: T): T {
  *   P2|Jane A. Doe|Senior Developer|Engineering|12345678901|062-000|12345678|Jane A Doe|12 Example St, Sydney NSW 2000
  *
  * Omitted fields are encoded as empty segments and skipped by Verifiabl.
- *
- * P2 is what this SDK emits. P1 is the same layout without the trailing
- * `address` field; `parsePii` still reads it, because documents issued before
- * P2 carry it and cannot be reissued.
+ * P1 remains available through `formatPiiV1` for rollback and is parsed permanently.
  */
 
 /** P1's field order is the wire contract for documents already issued. Never reorder. */
@@ -35,40 +32,49 @@ const P1_FIELD_ORDER = tuple([
   "accountName",
 ]);
 
-/** Field order is the wire contract. Never reorder; append only, as a new version. */
+/** Field order is the current P2 wire contract. Never reorder. */
 export const PII_FIELD_ORDER = tuple([...P1_FIELD_ORDER, "address"]);
 
 export type PiiFieldName = (typeof PII_FIELD_ORDER)[number];
 
 /**
  * Round per-field sanity cap in UTF-16 code units, not bytes. It is not derived
- * from QR capacity and does not bound it: 8 fields at this cap (~2050 chars)
- * far exceeds the ~1100-char plaintext ceiling above which createBarcodeSvg
- * cannot render at all (and ~455, above which it degrades). Total plaintext is
- * the real budget, so recheck it before adding fields.
+ * from QR capacity and does not bound it. Total plaintext is the real budget,
+ * so recheck it before adding fields.
  */
 export const PII_FIELD_MAX_LENGTH = 256;
 
-// U+2028 and U+2029 are separators, not Cc, so a Cc-only test misses them even
-// though they break a field just as a newline would.
-const DISALLOWED_CHARACTERS = /[\p{Cc}\p{Zl}\p{Zp}]/u;
+/** Maximum UTF-8 size of the optional P2 address. */
+export const PII_ADDRESS_MAX_BYTES = 320;
 
-/**
- * Allow-list for a single PII field value: any printable character except the
- * pipe delimiter, control characters and line separators. Pipes would corrupt
- * the positional layout; the rest have no place in PII fields.
- */
-function isPrintableWithoutPipe(value: string): boolean {
-  if (value.includes("|")) return false;
-  return !DISALLOWED_CHARACTERS.test(value);
+// U+2028 and U+2029 are separators, not Cc, so a Cc-only test misses them even
+// though they break a field just as a newline would. P2 also rejects Unicode
+// format characters so hidden formatting state does not enter new payloads.
+const DISALLOWED_TEXT_CHARACTERS = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+const DISALLOWED_LEGACY_CHARACTERS = /[\p{Cc}\p{Zl}\p{Zp}]/u;
+
+function isCurrentText(value: string): boolean {
+  return !value.includes("|") && !DISALLOWED_TEXT_CHARACTERS.test(value);
+}
+
+function isLegacyText(value: string): boolean {
+  return !value.includes("|") && !DISALLOWED_LEGACY_CHARACTERS.test(value);
 }
 
 const piiFieldSchema = z
   .string()
   .max(PII_FIELD_MAX_LENGTH, `PII field exceeds ${PII_FIELD_MAX_LENGTH} characters`)
   .refine(
-    isPrintableWithoutPipe,
-    "PII field must not contain '|', control characters or line separators",
+    isCurrentText,
+    "PII field must not contain '|', control characters, format characters or line separators",
+  );
+
+const addressSchema = z
+  .string()
+  .refine(isCurrentText, "Address must not contain '|', control, format or line separators")
+  .refine(
+    (value) => Buffer.byteLength(value, "utf8") <= PII_ADDRESS_MAX_BYTES,
+    `Address exceeds ${PII_ADDRESS_MAX_BYTES} UTF-8 bytes`,
   );
 
 export const piiFieldsSchema = z
@@ -80,14 +86,19 @@ export const piiFieldsSchema = z
     bsb: piiFieldSchema.optional(),
     accountNumber: piiFieldSchema.optional(),
     accountName: piiFieldSchema.optional(),
-    address: piiFieldSchema.optional(),
+    address: addressSchema.optional(),
   })
   .strict();
 
 export type PiiFields = z.infer<typeof piiFieldsSchema>;
 
 /** Why a PII field value cannot be encoded in the PII wire format. */
-export type PiiFieldViolationReason = "pipe" | "control-character" | "too-long";
+export type PiiFieldViolationReason =
+  | "pipe"
+  | "control-character"
+  | "format-character"
+  | "too-long"
+  | "too-many-bytes";
 
 /** A single field `formatPii` refused to encode, and why. */
 export interface PiiFieldViolation {
@@ -98,7 +109,9 @@ export interface PiiFieldViolation {
 const VIOLATION_DESCRIPTIONS: Record<PiiFieldViolationReason, string> = {
   pipe: "must not contain '|'",
   "control-character": "must not contain control characters or line separators",
+  "format-character": "must not contain format characters",
   "too-long": `exceeds ${PII_FIELD_MAX_LENGTH} characters`,
+  "too-many-bytes": `exceeds ${PII_ADDRESS_MAX_BYTES} UTF-8 bytes`,
 };
 
 /**
@@ -122,6 +135,25 @@ export class PiiValidationError extends Error {
   }
 }
 
+function fieldViolation(field: PiiFieldName, value: string): PiiFieldViolation | null {
+  if (field === "address" && Buffer.byteLength(value, "utf8") > PII_ADDRESS_MAX_BYTES) {
+    return { field, reason: "too-many-bytes" };
+  }
+  if (field !== "address" && value.length > PII_FIELD_MAX_LENGTH) {
+    return { field, reason: "too-long" };
+  }
+  if (value.includes("|")) {
+    return { field, reason: "pipe" };
+  }
+  if (/[\p{Cc}\p{Zl}\p{Zp}]/u.test(value)) {
+    return { field, reason: "control-character" };
+  }
+  if (/\p{Cf}/u.test(value)) {
+    return { field, reason: "format-character" };
+  }
+  return null;
+}
+
 /**
  * Inspect each supplied field for content the wire format cannot carry, in
  * field order. Non-object inputs and non-string values are left for
@@ -136,25 +168,20 @@ function findPiiViolations(fields: PiiFields): PiiFieldViolation[] {
   for (const field of PII_FIELD_ORDER) {
     const value = fields[field];
     if (typeof value !== "string") continue;
-    if (value.length > PII_FIELD_MAX_LENGTH) {
-      violations.push({ field, reason: "too-long" });
-    } else if (value.includes("|")) {
-      violations.push({ field, reason: "pipe" });
-    } else if (DISALLOWED_CHARACTERS.test(value)) {
-      violations.push({ field, reason: "control-character" });
-    }
+    const violation = fieldViolation(field, value);
+    if (violation !== null) violations.push(violation);
   }
   return violations;
 }
 
 /**
- * Format employee PII into Verifiabl's compact plaintext wire format.
+ * Format employee PII into Verifiabl's current P2 compact plaintext wire format.
  *
  * The result is what you encrypt with `encryptPii` before embedding it in
- * a barcode. Throws {@link PiiValidationError} if any field contains a pipe
- * or control character or exceeds the length limit. Each such value must be
- * corrected at the source, as the format has no escape mechanism. Throws
- * `ZodError` for structural problems (unknown field, non-string value).
+ * a barcode. Throws {@link PiiValidationError} if any field contains content
+ * that cannot be encoded. Each such value must be corrected at the source, as
+ * the format has no escape mechanism. Throws `ZodError` for structural problems
+ * (unknown field, non-string value).
  */
 export function formatPii(fields: PiiFields): string {
   const violations = findPiiViolations(fields);
@@ -166,10 +193,49 @@ export function formatPii(fields: PiiFields): string {
   return `P2|${segments.join("|")}`;
 }
 
-const PII_LAYOUTS: ReadonlyArray<{ version: string; order: readonly PiiFieldName[] }> = [
-  { version: "P1", order: P1_FIELD_ORDER },
-  { version: "P2", order: PII_FIELD_ORDER },
+/**
+ * Format the permanent legacy P1 plaintext for rollback. New documents use
+ * {@link formatPii}.
+ */
+export function formatPiiV1(fields: Omit<PiiFields, "address">): string {
+  if (typeof fields === "object" && fields !== null) {
+    for (const field of P1_FIELD_ORDER) {
+      const value = fields[field];
+      if (typeof value !== "string") continue;
+      if (value.length > PII_FIELD_MAX_LENGTH || !isLegacyText(value)) {
+        throw new PiiValidationError([
+          fieldViolation(field, value) ?? { field, reason: "too-long" },
+        ]);
+      }
+    }
+  }
+  const validated = piiFieldsSchema.omit({ address: true }).parse(fields);
+  const segments = P1_FIELD_ORDER.map((name) => validated[name] ?? "");
+  return `P1|${segments.join("|")}`;
+}
+
+const PII_LAYOUTS: ReadonlyArray<{
+  version: string;
+  order: readonly PiiFieldName[];
+  currentValidation: boolean;
+}> = [
+  { version: "P1", order: P1_FIELD_ORDER, currentValidation: false },
+  { version: "P2", order: PII_FIELD_ORDER, currentValidation: true },
 ];
+
+function validateParsedValue(field: PiiFieldName, value: string, currentValidation: boolean): void {
+  if (field === "address") {
+    addressSchema.parse(value);
+    return;
+  }
+  if (currentValidation) {
+    piiFieldSchema.parse(value);
+    return;
+  }
+  if (value.length > PII_FIELD_MAX_LENGTH || !isLegacyText(value)) {
+    throw new Error(`PII field '${field}' is not a valid field value`);
+  }
+}
 
 /**
  * Parse Verifiabl's compact PII wire format, P2 or P1, back into named fields.
@@ -180,7 +246,7 @@ const PII_LAYOUTS: ReadonlyArray<{ version: string; order: readonly PiiFieldName
  * normal issuance flow.
  */
 export function parsePii(plaintext: string): PiiFields {
-  for (const { version, order } of PII_LAYOUTS) {
+  for (const { version, order, currentValidation } of PII_LAYOUTS) {
     const prefix = `${version}|`;
     if (!plaintext.startsWith(prefix)) {
       continue;
@@ -196,10 +262,11 @@ export function parsePii(plaintext: string): PiiFields {
       const value = values[i];
       const name = order[i];
       if (name !== undefined && value !== undefined && value !== "") {
+        validateParsedValue(name, value, currentValidation);
         result[name] = value;
       }
     }
-    return piiFieldsSchema.parse(result);
+    return result;
   }
 
   throw new Error("Invalid PII format: expected 'P1|' or 'P2|' prefix");

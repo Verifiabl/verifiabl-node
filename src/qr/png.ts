@@ -1,10 +1,11 @@
-import { type BarcodeParts, buildScanUrl, type ScanUrlOptions } from "../payload.js";
+import type { BarcodeParts, ScanUrlOptions } from "../payload.js";
 import { blitQrOntoFrame } from "./blit.js";
 import { frameRaster, SUPPORTED_PNG_PIXEL_WIDTHS, type SupportedPngPixelWidth } from "./frame.js";
 import { encodePng, type PngEncodeOptions } from "./pngEncode.js";
 import {
   type BarcodeErrorCorrectionLevel,
   type BarcodeSvgOptions,
+  buildQrEncoding,
   DEFAULT_MAX_ERROR_CORRECTION,
   errorCorrectionLadder,
   IDEAL_MODULE_PX,
@@ -21,6 +22,8 @@ export interface BarcodePngResult {
   content: string;
   /** Error-correction level actually used (see {@link BarcodeSvgResult}). */
   errorCorrectionLevel: BarcodeErrorCorrectionLevel;
+  /** QR symbol version (1-40), for scanner-fixture attribution. */
+  qrVersion: number;
   /** Rendered size of one QR module, in output pixels. */
   modulePx: number;
   /** True when the ladder traded scan robustness to fit the payload. */
@@ -73,16 +76,20 @@ export async function createBarcodePng(
   }
 
   const scanOptions: ScanUrlOptions = {};
+  if (options.format !== undefined) {
+    scanOptions.format = options.format;
+  }
   if (options.environment !== undefined) {
     scanOptions.environment = options.environment;
   }
   if (options.scanBaseUrl !== undefined) {
     scanOptions.scanBaseUrl = options.scanBaseUrl;
   }
-  const content = buildScanUrl(parts, scanOptions);
+  const encoding = buildQrEncoding(parts, scanOptions);
+  const content = encoding.content;
 
   const ladder = errorCorrectionLadder(options.maxErrorCorrection ?? DEFAULT_MAX_ERROR_CORRECTION);
-  const selected = selectQrRendering(content, pixelWidth, ladder);
+  const selected = selectQrRendering(encoding.data, pixelWidth, ladder, content.length);
   const degraded =
     selected.errorCorrectionLevel !== ladder[0] || selected.modulePx < IDEAL_MODULE_PX;
 
@@ -109,6 +116,7 @@ export async function createBarcodePng(
     height: raster.height,
     content,
     errorCorrectionLevel: selected.errorCorrectionLevel,
+    qrVersion: (selected.size - 17) / 4,
     modulePx: round2(selected.modulePx),
     degraded,
   };

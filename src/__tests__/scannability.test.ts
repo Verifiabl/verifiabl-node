@@ -279,9 +279,20 @@ describe("styled QR scannability", () => {
     const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
     const scanned = new URL(decode(parts));
     const reference = scanned.pathname.slice(scanned.pathname.lastIndexOf("/") + 1);
-    const ciphertext = scanned.hash.slice("#1.".length);
+    const ciphertext = scanned.hash.slice("#2.".length);
 
-    expect(`1|${reference}|${ciphertext}`).toBe(buildBarcodePayload(parts));
+    expect(`2|${reference}|${ciphertext}`).toBe(buildBarcodePayload(parts));
+  });
+
+  it("decodes the mixed-mode v2 symbol byte-exactly", () => {
+    const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
+    const expected = createBarcodeSvg(parts);
+    const scanned = decode(parts, {}, MIN_TESTED_RASTER_WIDTH);
+
+    expect(scanned).toBe(expected.content);
+    expect(scanned).toMatch(/^https:\/\/v\.verifiabl\.io\/v\/[A-Za-z0-9_-]{22}#2\.[A-Z2-7]+$/);
+    expect(expected.errorCorrectionLevel).toBe("M");
+    expect(expected.qrVersion).toBeGreaterThan(0);
   });
 
   it("decodes the encrypted docs PII example at the minimum raster width", () => {
@@ -346,11 +357,11 @@ describe("styled QR scannability", () => {
       verifiablReference: VERIFIABL_REF,
       encryptedPii: encryptFixture(plaintext),
     };
-    const result = createBarcodeSvg(parts);
+    const result = createBarcodeSvg(parts, { format: "v1" });
     expect(result.errorCorrectionLevel).toBe(ec);
     expect(result.degraded).toBe(true);
     expect(result.width).toBe(480);
-    expect(decode(parts, {}, REALISTIC_SCAN_RASTER)).toBe(result.content);
+    expect(decode(parts, { format: "v1" }, REALISTIC_SCAN_RASTER)).toBe(result.content);
   });
 
   it("hard-errors when PII cannot fit the fixed frame even degraded to L", () => {
@@ -358,7 +369,7 @@ describe("styled QR scannability", () => {
       verifiablReference: VERIFIABL_REF,
       encryptedPii: encryptFixture(`P1|${"A".repeat(1200)}`),
     };
-    expect(() => createBarcodeSvg(parts)).toThrow(
+    expect(() => createBarcodeSvg(parts, { format: "v1" })).toThrow(
       /too long to render a scannable barcode in the branded frame/,
     );
   });

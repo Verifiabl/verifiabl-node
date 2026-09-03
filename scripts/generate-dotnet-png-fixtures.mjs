@@ -21,7 +21,7 @@ if (!outDir) {
 
 const PARTS = {
   verifiablReference: "u0FE9WLIS7GYKQnpJPygBw",
-  encryptedPii: "Ab3".repeat(80) + "Zz19-_",
+  encryptedPii: "Ab3".repeat(80) + "Zz19-w",
 };
 
 const CASES = [
@@ -32,11 +32,12 @@ const CASES = [
     pixelWidth: 480,
   },
   { name: "png-default-1440", options: {}, pixelWidth: 1440 },
+  { name: "png-v1-default-720", options: { format: "v1" }, pixelWidth: 720 },
 ];
 
 const meta = {};
-for (const { name, options, pixelWidth } of CASES) {
-  const result = await createBarcodePng(PARTS, options, pixelWidth);
+for (const { name, options, pixelWidth, parts = PARTS } of CASES) {
+  const result = await createBarcodePng(parts, options, pixelWidth);
   // The palette PNG is lossless, so decoding recovers the exact raster the
   // compositor produced.
   const raster = PNG.sync.read(result.png);
@@ -49,6 +50,7 @@ for (const { name, options, pixelWidth } of CASES) {
     height: result.height,
     content: result.content,
     errorCorrectionLevel: result.errorCorrectionLevel,
+    qrVersion: result.qrVersion,
     modulePx: result.modulePx,
     degraded: result.degraded,
   };
