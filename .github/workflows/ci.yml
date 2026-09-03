@@ -30,6 +30,23 @@ jobs:
       # be unimportable from CJS TypeScript, which is how VER-236 shipped.
       - run: npm run check:exports
 
+  qr-stress:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run qr-stress -- --out artifacts/qr-stress --force
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verifiabl-node-qr-stress
+          path: artifacts/qr-stress
+          if-no-files-found: error
+
   audit:
     runs-on: ubuntu-latest
     steps:
