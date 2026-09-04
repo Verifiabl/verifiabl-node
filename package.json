@@ -49,6 +49,7 @@
     "check:ci": "biome ci .",
     "typecheck": "tsc --noEmit",
     "bench": "npm run build && node scripts/bench-png.mjs",
+    "qr-stress": "npm run build && node scripts/qr-stress.mjs",
     "prepublishOnly": "npm run typecheck && npm run test && npm run build && npm run check:exports",
     "check:exports": "attw --pack .",
     "bake:frames": "npm run build && node scripts/bake-frames.mjs"

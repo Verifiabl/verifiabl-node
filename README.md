@@ -113,6 +113,20 @@ for (const { verifiablReference, encryptedPii } of records) {
 
 PNGs are lossless 8-bit palette images, the smallest encoding for the badge's low colour count.
 
+### QR stress corpus
+
+For scanner and badge-size testing, generate a synthetic v2 corpus:
+
+```bash
+npm run qr-stress -- --out artifacts/ver-523-node
+```
+
+The harness covers AU-representative address lengths around the observed median/P95/P99/P99.9 bands
+(36/48/58/80 UTF-8 bytes for ASCII fixtures), common missing-job-title records, rounded and square
+finder-corner variants, and longer stress/capacity rows up to the 320-byte address limit. It digitally decodes 19/22/25/28 mm badges
+and writes `manifest.json`, CSVs, `summary.md`, failures, and representative PNG/SVG assets under
+`artifacts/`. Use synthetic data only; do not replace these fixtures with customer data.
+
 ## Batch registration
 
 For pay runs, register up to 1000 records in one request with `registerNonPiiBatch`. The provider generates each Verifiabl reference up-front with `generateVerifiablReference` and includes it on each record, so the whole batch can go in one round trip. Results come back in the same order as the input records (`results[i]` is the outcome of `records[i]`); one bad record never fails the whole batch.
