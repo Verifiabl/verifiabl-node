@@ -100,6 +100,10 @@ copy must be the matching `2|reference|BASE32`. Never mix QR and XMP versions. F
 
 Prefer `createBarcodeSvg` when you can: SVG scales to any size without losing quality. Use `createBarcodePng` when your document pipeline needs a raster image; it composites the badge deterministically (no rasteriser involved), so the same record produces the byte-identical raster in every Verifiabl SDK. PNG output comes in fixed pixel widths (480, 720, 960 or 1440; the physical print size is set where you place the image in the PDF). Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
 
+### Placing the badge
+
+The badge is the navy header and the QR code, and the QR code spans the full badge width. Everything else is transparent. Place the badge on a light background and keep a clear margin of at least a tenth of the badge width on the left, the right and the bottom. That margin is the QR quiet zone. Scanners need it, and the badge does not carry it itself.
+
 ### Rendering many codes
 
 Generate codes in a loop. Each call is independent, so a single payslip and a large pay run are both fast:

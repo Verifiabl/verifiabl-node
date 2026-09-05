@@ -7,13 +7,12 @@ const PARTS = {
   encryptedPii: "Zm9vYmFyYmF6cXV4",
 };
 
-// The baked frame's pixel height per supported width (755 = 480 * 151/96; the
-// half-pixel heights round up, matching the bake renderer).
+// The baked frame's pixel height per supported width (750 = 480 * 150/96).
 const EXPECTED_HEIGHTS: Record<number, number> = {
-  480: 755,
-  720: 1133,
-  960: 1510,
-  1440: 2265,
+  480: 750,
+  720: 1125,
+  960: 1500,
+  1440: 2250,
 };
 
 describe("createBarcodePng", () => {
