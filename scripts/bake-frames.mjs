@@ -1,4 +1,4 @@
-// Bakes the payload-independent badge frame (border, header, wordmarks) into
+// Bakes the payload-independent badge frame (header and wordmarks) into
 // src/qr/frameAssets.generated.ts for the frame-blit PNG compositor.
 //
 // Rerun after any frame change in src/qr/styled.ts:
@@ -18,15 +18,22 @@ import { createBarcodeSvg } from "../dist/index.js";
 
 const WIDTHS = [480, 720, 960, 1440];
 
+// Frame geometry in viewBox units, mirroring src/qr/styled.ts.
+const FRAME_VIEWBOX_WIDTH = 96;
+const FRAME_QR_BOX_X = 0;
+const FRAME_QR_BOX_Y = 54;
+const FRAME_QR_BOX_SIZE = 96;
+
 // Any valid parts work: the frame is payload-independent, and this script
-// verifies that by baking with two payloads and comparing the results.
+// verifies that by baking with two payloads and comparing the results. The
+// ciphertexts must be canonical base64url (the v2 writer decodes them).
 const PARTS_A = {
   verifiablReference: "AbCdEfGhIjKlMnOpQrStUv",
-  encryptedPii: "Ab3".repeat(80) + "Zz19-_",
+  encryptedPii: "Ab3".repeat(80) + "Zz19-w",
 };
 const PARTS_B = {
   verifiablReference: "u0FE9WLIS7GYKQnpJPygBw",
-  encryptedPii: "Xy9".repeat(40) + "Qq28-_",
+  encryptedPii: "Xy9".repeat(40) + "Qq28-w",
 };
 
 /** The badge SVG minus its QR content: the two groups after the header. */
@@ -43,16 +50,21 @@ function frameOnlySvg(parts, width) {
   return `${svg.slice(0, qrGroupStart)}</svg>`;
 }
 
-/** resvg pixels are premultiplied; PNG and the compositor use straight alpha. */
+/**
+ * resvg pixels are premultiplied; PNG and the compositor use straight alpha.
+ * Fully transparent pixels become white so an alpha-dropping reader sees the
+ * transparent ground as light (mirrors unpremultiplyInPlace in pngEncode.ts).
+ */
 function unpremultiply(data) {
   for (let offset = 0; offset < data.length; offset += 4) {
     const alpha = data[offset + 3];
-    if (alpha === 255 || alpha === 0) {
-      if (alpha === 0) {
-        data[offset] = 0;
-        data[offset + 1] = 0;
-        data[offset + 2] = 0;
-      }
+    if (alpha === 255) {
+      continue;
+    }
+    if (alpha === 0) {
+      data[offset] = 255;
+      data[offset + 1] = 255;
+      data[offset + 2] = 255;
       continue;
     }
     for (let channel = 0; channel < 3; channel++) {
@@ -74,17 +86,18 @@ function renderFrame(parts, width) {
   };
 }
 
-/** The QR box must be uniform white: the compositor blits onto it directly. */
-function assertQrBoxWhite(frame, badgeWidth) {
-  const x0 = Math.ceil((8 * badgeWidth) / 96);
-  const x1 = Math.floor((88 * badgeWidth) / 96);
-  const y0 = Math.ceil((59 * badgeWidth) / 96);
-  const y1 = Math.floor((139 * badgeWidth) / 96);
+/** The QR box must be uniformly transparent: the compositor blits onto it directly. */
+function assertQrBoxTransparent(frame, badgeWidth) {
+  const scale = badgeWidth / FRAME_VIEWBOX_WIDTH;
+  const x0 = Math.ceil(FRAME_QR_BOX_X * scale);
+  const x1 = Math.floor((FRAME_QR_BOX_X + FRAME_QR_BOX_SIZE) * scale);
+  const y0 = Math.ceil(FRAME_QR_BOX_Y * scale);
+  const y1 = Math.floor((FRAME_QR_BOX_Y + FRAME_QR_BOX_SIZE) * scale);
   for (let y = y0; y < y1; y++) {
     for (let x = x0; x < x1; x++) {
       const i = (y * frame.width + x) * 4;
-      if (frame.data.readUInt32BE(i) !== 0xffffffff) {
-        throw new Error(`frame at width ${badgeWidth} is not white at ${x},${y}`);
+      if (frame.data.readUInt32BE(i) !== 0xffffff00) {
+        throw new Error(`frame at width ${badgeWidth} is not transparent at ${x},${y}`);
       }
     }
   }
@@ -129,7 +142,7 @@ function encodeContainer(frame) {
 const entries = [];
 for (const width of WIDTHS) {
   const frame = renderFrame(PARTS_A, width);
-  assertQrBoxWhite(frame, width);
+  assertQrBoxTransparent(frame, width);
   const container = encodeContainer(frame);
 
   const check = encodeContainer(renderFrame(PARTS_B, width));

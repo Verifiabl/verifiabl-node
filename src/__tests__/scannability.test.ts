@@ -19,6 +19,11 @@ const MIN_TESTED_RASTER_WIDTH = 480;
 // Geometry pixel-sampling renders at a fixed raster size independent of the
 // badge width; the sampled coordinates below assume this 420px raster.
 const GEOMETRY_RASTER_WIDTH = 420;
+const BADGE_VIEWBOX_WIDTH = 96;
+const BADGE_VIEWBOX_HEIGHT = 150;
+// The documented placement rule: a light host with a clear margin of a tenth
+// of the badge width on the left, right and bottom (the QR quiet zone).
+const HOST_MARGIN_UNITS = BADGE_VIEWBOX_WIDTH / 10;
 
 const DOCS_EXAMPLE_FIELDS = {
   employeeName: "Jane A. Doe",
@@ -179,32 +184,40 @@ function decodePixels(svg: string, rasterWidth: number): string {
 }
 
 /**
- * Decode the badge exactly as emitted. The white frame body is part of the
- * SVG, so scannability must not depend on any injected background.
+ * Place the badge on a host page the way the docs require: a light ground with
+ * the quiet-zone margin around it. The badge is transparent outside the header
+ * and the QR modules and the QR spans its full width, so the host, not the
+ * badge, supplies the quiet zone on the left, right and bottom.
  */
-function decode(parts: BarcodeParts, options: BarcodeSvgOptions = {}, rasterWidth = 900): string {
-  return decodePixels(createBarcodeSvg(parts, options).svg, rasterWidth);
+function placeOnHostPage(svg: string, background = "#FFFFFF"): string {
+  const badgeElement = svg.replace(
+    /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" width="[\d.]+" height="[\d.]+" /,
+    `<svg x="${HOST_MARGIN_UNITS}" width="${BADGE_VIEWBOX_WIDTH}" height="${BADGE_VIEWBOX_HEIGHT}" `,
+  );
+  if (badgeElement === svg) {
+    throw new Error("badge SVG opening tag did not match");
+  }
+  const width = BADGE_VIEWBOX_WIDTH + 2 * HOST_MARGIN_UNITS;
+  const height = BADGE_VIEWBOX_HEIGHT + HOST_MARGIN_UNITS;
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">` +
+    `<rect width="${width}" height="${height}" fill="${background}"/>${badgeElement}</svg>`
+  );
 }
 
-/**
- * Composite the badge over a hostile full-bleed document background. The
- * white body should still protect the QR, so this must decode regardless of
- * what the payslip places behind the badge.
- */
-function decodeOnDocumentBackground(
-  parts: BarcodeParts,
-  background: string,
-  rasterWidth = MIN_TESTED_RASTER_WIDTH,
-): string {
-  const { svg } = createBarcodeSvg(parts);
-  const openingTagEnd = svg.indexOf(">");
-  if (openingTagEnd < 0) {
-    throw new Error("SVG opening tag was not found");
-  }
-  const composited = `${svg.slice(0, openingTagEnd + 1)}<rect width="96" height="151" fill="${background}"/>${svg.slice(
-    openingTagEnd + 1,
-  )}`;
-  return decodePixels(composited, rasterWidth);
+/** Raster width of the host page at which the badge itself is `badgeRasterWidth` wide. */
+function hostRasterWidth(badgeRasterWidth: number): number {
+  return Math.round(
+    (badgeRasterWidth * (BADGE_VIEWBOX_WIDTH + 2 * HOST_MARGIN_UNITS)) / BADGE_VIEWBOX_WIDTH,
+  );
+}
+
+/** Decode the badge placed on a white host page with the documented margin. */
+function decode(parts: BarcodeParts, options: BarcodeSvgOptions = {}, rasterWidth = 900): string {
+  return decodePixels(
+    placeOnHostPage(createBarcodeSvg(parts, options).svg),
+    hostRasterWidth(rasterWidth),
+  );
 }
 
 function sampleRenderedPixel(
@@ -237,26 +250,17 @@ describe("styled QR scannability", () => {
     expect(decode(parts)).toBe(createBarcodeSvg(parts).content);
   });
 
-  it("fills the frame body white around the QR (the quiet zone)", () => {
-    const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
-    const { svg } = createBarcodeSvg(parts);
-    const white = { r: 255, g: 255, b: 255, a: 255 };
-    // Above the QR (below the header), both side gutters, and below the QR.
-    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 210, 232)).toEqual(white);
-    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 17, 437)).toEqual(white);
-    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 402, 437)).toEqual(white);
-    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 210, 630)).toEqual(white);
-  });
-
-  it("keeps the rounded corners transparent and the header navy", () => {
+  it("leaves the ground transparent outside the header and the QR", () => {
     const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
     const { svg } = createBarcodeSvg(parts);
     const transparent = { r: 0, g: 0, b: 0, a: 0 };
-    // All four corners fall outside the rounded frame body.
+    // The header's rounded top corners, and the gap between header and QR
+    // (47u to 54u; sampled at 50.5u) across the full width.
     expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 0, 0)).toEqual(transparent);
     expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 419, 0)).toEqual(transparent);
-    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 0, 659)).toEqual(transparent);
-    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 419, 659)).toEqual(transparent);
+    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 0, 221)).toEqual(transparent);
+    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 210, 221)).toEqual(transparent);
+    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 419, 221)).toEqual(transparent);
     // Header stays navy.
     expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 40, 20)).toEqual({
       r: 1,
@@ -266,13 +270,29 @@ describe("styled QR scannability", () => {
     });
   });
 
-  it("decodes even over a hostile full-bleed document background", () => {
+  it("spans the full badge width: the QR reaches both edges of a realistic record", () => {
     const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
-    const { content } = createBarcodeSvg(parts);
-    // Dark navy and mid-grey would defeat a transparent quiet zone; the white
-    // body keeps the QR readable regardless of the host document.
-    expect(decodeOnDocumentBackground(parts, "#010A4F")).toBe(content);
-    expect(decodeOnDocumentBackground(parts, "#888888")).toBe(content);
+    const { svg } = createBarcodeSvg(parts);
+    const black = { r: 0, g: 0, b: 0, a: 255 };
+    // The top-left and top-right finder rings sit flush with the badge edges:
+    // sample one module in from each corner at the ring's vertical centre line.
+    // The QR box starts at 54u; the finder ring is 7 modules and ~1.6u/module.
+    const ringCentreY = Math.round(((54 + 1.6 * 3.5) * GEOMETRY_RASTER_WIDTH) / 96);
+    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 2, ringCentreY)).toEqual(black);
+    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 417, ringCentreY)).toEqual(black);
+  });
+
+  it("depends on the host for the quiet zone: a dark host defeats the scan", () => {
+    // The badge carries no white body any more, so the documented placement
+    // (light ground, clear margin) is load-bearing. Prove the contract both
+    // ways: white host decodes, a navy full-bleed host does not.
+    const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
+    const { svg, content } = createBarcodeSvg(parts);
+    const width = hostRasterWidth(MIN_TESTED_RASTER_WIDTH);
+    expect(decodePixels(placeOnHostPage(svg), width)).toBe(content);
+    expect(() => decodePixels(placeOnHostPage(svg, "#010A4F"), width)).toThrow(
+      /could not be decoded/,
+    );
   });
 
   it("decoded URL round-trips to the original payload", () => {
@@ -349,9 +369,9 @@ describe("styled QR scannability", () => {
   // until even M won't fit, then drops to L.
   const REALISTIC_SCAN_RASTER = MIN_TESTED_RASTER_WIDTH * 2;
   it.each([
-    { label: "stays M, sub-ideal modules", plaintext: `P1|${"A".repeat(500)}`, ec: "M" },
-    { label: "stays M near the floor", plaintext: `P1|${"A".repeat(800)}`, ec: "M" },
-    { label: "drops to L", plaintext: `P1|${"A".repeat(1000)}`, ec: "L" },
+    { label: "stays M, sub-ideal modules", plaintext: `P1|${"A".repeat(800)}`, ec: "M" },
+    { label: "stays M near the floor", plaintext: `P1|${"A".repeat(1200)}`, ec: "M" },
+    { label: "drops to L", plaintext: `P1|${"A".repeat(1400)}`, ec: "L" },
   ])("decodes a $label record at the fixed frame and flags it degraded", ({ plaintext, ec }) => {
     const parts: BarcodeParts = {
       verifiablReference: VERIFIABL_REF,
@@ -367,7 +387,7 @@ describe("styled QR scannability", () => {
   it("hard-errors when PII cannot fit the fixed frame even degraded to L", () => {
     const parts: BarcodeParts = {
       verifiablReference: VERIFIABL_REF,
-      encryptedPii: encryptFixture(`P1|${"A".repeat(1200)}`),
+      encryptedPii: encryptFixture(`P1|${"A".repeat(1900)}`),
     };
     expect(() => createBarcodeSvg(parts, { format: "v1" })).toThrow(
       /too long to render a scannable barcode in the branded frame/,

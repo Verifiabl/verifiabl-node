@@ -10,9 +10,9 @@ export interface RgbaRaster {
 /**
  * Convert a premultiplied RGBA raster (resvg's `.pixels`) to straight
  * (non-premultiplied) alpha in place, which is what PNG stores. Opaque pixels
- * are already straight; fully transparent pixels carry no colour; only the
- * anti-aliased edges are scaled back up. Matches resvg's own `asPng()`
- * conversion byte-for-byte.
+ * are already straight; only the anti-aliased edges are scaled back up. Fully
+ * transparent pixels are given a white colour: a reader that drops the alpha
+ * channel then sees the badge's transparent area as light, not black.
  */
 export function unpremultiplyInPlace(raster: RgbaRaster): RgbaRaster {
   const { data } = raster;
@@ -22,9 +22,9 @@ export function unpremultiplyInPlace(raster: RgbaRaster): RgbaRaster {
       continue; // Already straight.
     }
     if (alpha === 0) {
-      data[offset] = 0;
-      data[offset + 1] = 0;
-      data[offset + 2] = 0;
+      data[offset] = 255;
+      data[offset + 1] = 255;
+      data[offset + 2] = 255;
       continue;
     }
     // Premultiplied colour is the straight colour scaled by alpha; divide it back out.
@@ -39,10 +39,10 @@ export function unpremultiplyInPlace(raster: RgbaRaster): RgbaRaster {
 /**
  * Minimal, dependency-free PNG encoder for the rendered QR code raster.
  *
- * The branded QR code is a low-colour image (navy header, white card, grey
- * border, black QR, plus anti-aliased blends, measured at ~140 distinct
- * colours), so it encodes losslessly as an 8-bit palette PNG (colour type 3)
- * with a `tRNS` chunk for the rounded-corner alpha. That is ~1 byte/pixel
+ * The branded QR code is a low-colour image (navy header, black QR, transparent
+ * ground, plus anti-aliased blends, well under 256 distinct colours), so it
+ * encodes losslessly as an 8-bit palette PNG (colour type 3) with a `tRNS`
+ * chunk for the transparent ground and edge alpha. That is ~1 byte/pixel
  * versus 4 for truecolour, so both the buffer and the DEFLATE pass are smaller.
  * If a raster ever exceeds 256 distinct colours we fall back to truecolour
  * RGBA (colour type 6) so encoding is always correct.
