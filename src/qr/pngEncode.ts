@@ -39,10 +39,10 @@ export function unpremultiplyInPlace(raster: RgbaRaster): RgbaRaster {
 /**
  * Minimal, dependency-free PNG encoder for the rendered QR code raster.
  *
- * The branded QR code is a low-colour image (navy header, black QR, transparent
- * ground, plus anti-aliased blends, well under 256 distinct colours), so it
- * encodes losslessly as an 8-bit palette PNG (colour type 3) with a `tRNS`
- * chunk for the transparent ground and edge alpha. That is ~1 byte/pixel
+ * The branded QR code is a low-colour image (navy header, white ground, black
+ * QR, plus anti-aliased blends, well under 256 distinct colours), so it encodes
+ * losslessly as an 8-bit palette PNG (colour type 3) with a `tRNS` chunk for
+ * the header's transparent corners. That is ~1 byte/pixel
  * versus 4 for truecolour, so both the buffer and the DEFLATE pass are smaller.
  * If a raster ever exceeds 256 distinct colours we fall back to truecolour
  * RGBA (colour type 6) so encoding is always correct.

@@ -148,10 +148,9 @@ describe("PNG scannability", () => {
     expect(scan(png)).toBe(content);
   });
 
-  it("keeps the QR data region strictly black and transparent", async () => {
+  it("keeps the QR data region strictly black and white", async () => {
     // The scannability-critical region must never gain anti-aliased greys;
-    // only the rounded finders and the header carry blended colours. The
-    // ground is transparent white, so an alpha-dropping reader still sees light.
+    // only the rounded finders and the header carry blended colours.
     const { png, modulePx } = await createBarcodePng(PARTS, {}, 720);
     const img = decode(png);
     const scale = 720 / 96;
@@ -173,10 +172,10 @@ describe("PNG scannability", () => {
     census(x0, x1, y0 + skip, y1 - skip);
     census(x1 - skip, x1, y0 + skip, y1);
 
-    expect([...seen].sort()).toEqual([0x000000ff, 0xffffff00].sort());
+    expect([...seen].sort()).toEqual([0x000000ff, 0xffffffff].sort());
   });
 
-  it("leaves the gap between the header and the QR transparent", async () => {
+  it("paints the gap between the header and the QR white across the full width", async () => {
     const { png } = await createBarcodePng(PARTS, {}, 720);
     const img = decode(png);
     const scale = 720 / 96;
@@ -184,7 +183,7 @@ describe("PNG scannability", () => {
     for (const yUnits of [48, 50.5, 53]) {
       const y = Math.round(yUnits * scale);
       for (const x of [0, 360, 719]) {
-        expect(img.data.readUInt32BE((y * img.width + x) * 4)).toBe(0xffffff00);
+        expect(img.data.readUInt32BE((y * img.width + x) * 4)).toBe(0xffffffff);
       }
     }
   });

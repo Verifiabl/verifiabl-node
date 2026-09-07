@@ -82,7 +82,8 @@ describe("createBarcodeSvg", () => {
 
     const rectCount = (svg.match(/<rect /g) ?? []).length;
     const finderDotCount = 3;
-    expect(rectCount).toBe(darkDataModules + finderDotCount);
+    const groundCount = 1;
+    expect(rectCount).toBe(darkDataModules + finderDotCount + groundCount);
     expect(svg).toContain('fill-rule="evenodd"');
   });
 
@@ -93,9 +94,11 @@ describe("createBarcodeSvg", () => {
     }
     expect(svg).toContain('fill="#000000"');
     expect(svg).toContain('shape-rendering="crispEdges"');
-    // No border and no card: the navy header is the first element, and nothing
-    // paints the ground, so the badge is transparent outside header and modules.
-    expect(svg).toMatch(/^<svg [^>]*><path d="M0 8C0 3\.58172/);
+    // No border: a full-width white ground under the header and the QR box,
+    // then the navy header on top of it.
+    expect(svg).toMatch(
+      /^<svg [^>]*><rect x="0" y="39" width="96" height="111" fill="#FFFFFF"\/><path d="M0 8C0 3\.58172/,
+    );
     expect(svg).not.toContain("stroke=");
     expect(svg).not.toContain('<rect x="1" y="1"');
     expect(svg).toContain(expectedQrTransform());

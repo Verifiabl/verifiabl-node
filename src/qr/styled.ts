@@ -69,9 +69,11 @@ export interface BarcodeSvgResult {
 const DEFAULT_NAVY = "#010A4F";
 const DEFAULT_QR = "#000000";
 const DEFAULT_TEXT = "#FFFFFF";
-// The badge is the navy header plus the QR modules; everything else is
-// transparent. The host document supplies the light quiet zone on the left,
-// right and bottom, so the QR box spans the full badge width.
+// White ground under the QR box and the gap above it, so the symbol's light
+// modules and its top quiet zone are light on any host document. The QR box
+// spans the full badge width, so the badge carries no quiet zone on the left,
+// right and bottom: the host document supplies that margin.
+const FRAME_BACKGROUND = "#FFFFFF";
 export const FRAME_VIEWBOX_WIDTH = 96;
 const FRAME_HEADER_HEIGHT = 47;
 // Transparent gap between the header and the QR box: the only light margin
@@ -284,11 +286,11 @@ function renderDefaultHeader(textColor: string): string {
  * ciphertext from `encryptPii`, then returns a standalone SVG suitable for
  * embedding in a payslip PDF.
  *
- * The badge is transparent outside the header and the QR modules, and the QR
- * spans its full width. Place it on a light background with a clear margin on
- * the left, right and bottom of at least four QR modules (`modulePx` in the
- * result; a tenth of the badge width covers any realistic record): that margin
- * is the QR quiet zone, which the badge does not carry itself.
+ * The QR spans the full badge width on a white ground. Place the badge with a
+ * clear light margin on the left, right and bottom of at least four QR modules
+ * (`modulePx` in the result; a tenth of the badge width covers any realistic
+ * record): that margin is the QR quiet zone, which the badge does not carry
+ * itself.
  *
  * Throws {@link QrCapacityError} when the encrypted PII is too long to encode.
  */
@@ -332,6 +334,9 @@ export function createBarcodeSvg(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${round2(badgeWidth)}" height="${round2(height)}" ` +
     `viewBox="0 0 ${FRAME_VIEWBOX_WIDTH} ${FRAME_VIEWBOX_HEIGHT}" role="img" ` +
     `aria-label="Secured by Verifiabl verification barcode">` +
+    // Starts under the opaque header so no anti-aliased seam shows at its edge.
+    `<rect x="0" y="${FRAME_HEADER_HEIGHT - 8}" width="${FRAME_VIEWBOX_WIDTH}" ` +
+    `height="${FRAME_VIEWBOX_HEIGHT - FRAME_HEADER_HEIGHT + 8}" fill="${FRAME_BACKGROUND}"/>` +
     header +
     `<g transform="translate(${round2(FRAME_QR_BOX_X + qrPadding)} ${round2(FRAME_QR_BOX_Y + qrPadding)})">` +
     `<g shape-rendering="crispEdges">` +

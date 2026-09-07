@@ -185,9 +185,8 @@ function decodePixels(svg: string, rasterWidth: number): string {
 
 /**
  * Place the badge on a host page the way the docs require: a light ground with
- * the quiet-zone margin around it. The badge is transparent outside the header
- * and the QR modules and the QR spans its full width, so the host, not the
- * badge, supplies the quiet zone on the left, right and bottom.
+ * the quiet-zone margin around it. The QR spans the badge's full width, so the
+ * host, not the badge, supplies the quiet zone on the left, right and bottom.
  */
 function placeOnHostPage(svg: string, background = "#FFFFFF"): string {
   const badgeElement = svg.replace(
@@ -250,17 +249,19 @@ describe("styled QR scannability", () => {
     expect(decode(parts)).toBe(createBarcodeSvg(parts).content);
   });
 
-  it("leaves the ground transparent outside the header and the QR", () => {
+  it("paints the ground white under the QR and keeps the header corners transparent", () => {
     const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
     const { svg } = createBarcodeSvg(parts);
     const transparent = { r: 0, g: 0, b: 0, a: 0 };
-    // The header's rounded top corners, and the gap between header and QR
-    // (47u to 54u; sampled at 50.5u) across the full width.
+    const white = { r: 255, g: 255, b: 255, a: 255 };
+    // The header's rounded top corners stay transparent.
     expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 0, 0)).toEqual(transparent);
     expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 419, 0)).toEqual(transparent);
-    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 0, 221)).toEqual(transparent);
-    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 210, 221)).toEqual(transparent);
-    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 419, 221)).toEqual(transparent);
+    // The gap between header and QR (47u to 54u; sampled at 50.5u) is white
+    // across the full width.
+    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 0, 221)).toEqual(white);
+    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 210, 221)).toEqual(white);
+    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 419, 221)).toEqual(white);
     // Header stays navy.
     expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 40, 20)).toEqual({
       r: 1,
@@ -282,17 +283,29 @@ describe("styled QR scannability", () => {
     expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 417, ringCentreY)).toEqual(black);
   });
 
-  it("depends on the host for the quiet zone: a dark host defeats the scan", () => {
-    // The badge carries no white body any more, so the documented placement
-    // (light ground, clear margin) is load-bearing. Prove the contract both
-    // ways: white host decodes, a navy full-bleed host does not.
+  it("keeps the symbol's ground white over a dark host", () => {
+    // The white ground is part of the badge, so the QR's light modules and its
+    // top quiet zone never depend on the host. Only the side and bottom margin
+    // does, which is the documented placement rule.
     const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
-    const { svg, content } = createBarcodeSvg(parts);
-    const width = hostRasterWidth(MIN_TESTED_RASTER_WIDTH);
-    expect(decodePixels(placeOnHostPage(svg), width)).toBe(content);
-    expect(() => decodePixels(placeOnHostPage(svg, "#010A4F"), width)).toThrow(
-      /could not be decoded/,
+    const { svg } = createBarcodeSvg(parts);
+    const hosted = placeOnHostPage(svg, "#010A4F");
+    const rasterWidth = hostRasterWidth(GEOMETRY_RASTER_WIDTH);
+    const scale = rasterWidth / (BADGE_VIEWBOX_WIDTH + 2 * HOST_MARGIN_UNITS);
+    const gapY = Math.round(50.5 * scale);
+    const badgeLeft = Math.round(HOST_MARGIN_UNITS * scale);
+    const white = { r: 255, g: 255, b: 255, a: 255 };
+    expect(sampleRenderedPixel(hosted, rasterWidth, badgeLeft + 1, gapY)).toEqual(white);
+    expect(sampleRenderedPixel(hosted, rasterWidth, Math.round(rasterWidth / 2), gapY)).toEqual(
+      white,
     );
+    // The margin itself is the host's colour.
+    expect(sampleRenderedPixel(hosted, rasterWidth, 2, gapY)).toEqual({
+      r: 1,
+      g: 10,
+      b: 79,
+      a: 255,
+    });
   });
 
   it("decoded URL round-trips to the original payload", () => {

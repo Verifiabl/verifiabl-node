@@ -151,14 +151,15 @@ export function blitQrOntoFrame(frame: RgbaRaster, qr: QrBlitGeometry, pixelWidt
           }
         }
         if (count === 0) continue;
-        // Black at the coverage as straight alpha, rounded half up; the QR box
-        // is transparent, so the host document shows through the edge pixels.
-        const alpha = Math.floor((510 * count + SUBSAMPLE_COUNT) / (2 * SUBSAMPLE_COUNT));
+        // Black coverage over the white ground, rounded half up.
+        const grey = Math.floor(
+          (510 * (SUBSAMPLE_COUNT - count) + SUBSAMPLE_COUNT) / (2 * SUBSAMPLE_COUNT),
+        );
         const offset = (py * raster.width + px) * 4;
-        raster.data[offset] = 0;
-        raster.data[offset + 1] = 0;
-        raster.data[offset + 2] = 0;
-        raster.data[offset + 3] = alpha;
+        raster.data[offset] = grey;
+        raster.data[offset + 1] = grey;
+        raster.data[offset + 2] = grey;
+        raster.data[offset + 3] = 255;
       }
     }
   }

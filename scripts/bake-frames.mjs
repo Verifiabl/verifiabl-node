@@ -1,4 +1,4 @@
-// Bakes the payload-independent badge frame (header and wordmarks) into
+// Bakes the payload-independent badge frame (header, wordmarks, white ground) into
 // src/qr/frameAssets.generated.ts for the frame-blit PNG compositor.
 //
 // Rerun after any frame change in src/qr/styled.ts:
@@ -86,8 +86,8 @@ function renderFrame(parts, width) {
   };
 }
 
-/** The QR box must be uniformly transparent: the compositor blits onto it directly. */
-function assertQrBoxTransparent(frame, badgeWidth) {
+/** The QR box must be uniform white: the compositor blits onto it directly. */
+function assertQrBoxWhite(frame, badgeWidth) {
   const scale = badgeWidth / FRAME_VIEWBOX_WIDTH;
   const x0 = Math.ceil(FRAME_QR_BOX_X * scale);
   const x1 = Math.floor((FRAME_QR_BOX_X + FRAME_QR_BOX_SIZE) * scale);
@@ -96,8 +96,8 @@ function assertQrBoxTransparent(frame, badgeWidth) {
   for (let y = y0; y < y1; y++) {
     for (let x = x0; x < x1; x++) {
       const i = (y * frame.width + x) * 4;
-      if (frame.data.readUInt32BE(i) !== 0xffffff00) {
-        throw new Error(`frame at width ${badgeWidth} is not transparent at ${x},${y}`);
+      if (frame.data.readUInt32BE(i) !== 0xffffffff) {
+        throw new Error(`frame at width ${badgeWidth} is not white at ${x},${y}`);
       }
     }
   }
@@ -142,7 +142,7 @@ function encodeContainer(frame) {
 const entries = [];
 for (const width of WIDTHS) {
   const frame = renderFrame(PARTS_A, width);
-  assertQrBoxTransparent(frame, width);
+  assertQrBoxWhite(frame, width);
   const container = encodeContainer(frame);
 
   const check = encodeContainer(renderFrame(PARTS_B, width));
