@@ -6,13 +6,15 @@ const VERIFIABL_REF = "AbCdEfGhIjKlMnOpQrStUv";
 const CIPHERTEXT = "Zm9vYmFyYmF6cXV4XzEyMzQ1Njc4OTBhYmNkZWZnaGlqa2xtbm9w";
 const PARTS = { verifiablReference: VERIFIABL_REF, encryptedPii: CIPHERTEXT };
 const FRAME_GEOMETRY = [
-  'viewBox="0 0 96 150"',
+  'viewBox="0 0 96 148"',
   "M0 8C0 3.58172 3.58172 0 8 0H88",
   'transform="translate(8 23) scale(1)"',
 ];
-// Header height plus the transparent gap above the full-width QR box.
+// Header height plus the gap above the QR box; the box sits inside a 2-unit
+// white margin on the other three sides.
 const QR_BOX_TOP = 54;
-const QR_BOX_SIZE = 96;
+const QR_BOX_LEFT = 2;
+const QR_BOX_SIZE = 92;
 const QR_GAP = 7;
 
 /** Mirror the renderer's inset rule: the gap plus the inset must span 4 modules. */
@@ -31,7 +33,7 @@ function expectedQrTransform(parts = PARTS): string {
   const inset = expectedInsetModules(qr.modules.size);
   const moduleSize = QR_BOX_SIZE / (qr.modules.size + inset * 2);
   const padding = inset * moduleSize;
-  return `transform="translate(${round2(padding)} ${round2(QR_BOX_TOP + padding)})"`;
+  return `transform="translate(${round2(QR_BOX_LEFT + padding)} ${round2(QR_BOX_TOP + padding)})"`;
 }
 
 function round2(n: number): number {
@@ -97,14 +99,14 @@ describe("createBarcodeSvg", () => {
     // No border: a full-width white ground under the header and the QR box,
     // then the navy header on top of it.
     expect(svg).toMatch(
-      /^<svg [^>]*><rect x="0" y="39" width="96" height="111" fill="#FFFFFF"\/><path d="M0 8C0 3\.58172/,
+      /^<svg [^>]*><rect x="0" y="39" width="96" height="109" fill="#FFFFFF"\/><path d="M0 8C0 3\.58172/,
     );
     expect(svg).not.toContain("stroke=");
     expect(svg).not.toContain('<rect x="1" y="1"');
     expect(svg).toContain(expectedQrTransform());
     expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"');
     expect(width).toBe(480);
-    expect(height).toBe(750);
+    expect(height).toBe(740);
   });
 
   it("keeps frame and QR placement fixed as payload size changes", () => {
@@ -177,9 +179,11 @@ describe("createBarcodeSvg", () => {
     expect(quietZoneModules).toBeGreaterThanOrEqual(4 - 1e-6);
   });
 
-  it("spans the full badge width for a dense symbol (no side inset)", () => {
+  it("fills the QR box for a dense symbol (no inset beyond the white margin)", () => {
     const { svg } = createBarcodeSvg({ ...PARTS, encryptedPii: "a".repeat(600) });
-    expect(svg).toContain(`translate(0 ${QR_BOX_TOP})"><g shape-rendering="crispEdges"`);
+    expect(svg).toContain(
+      `translate(${QR_BOX_LEFT} ${QR_BOX_TOP})"><g shape-rendering="crispEdges"`,
+    );
   });
 
   // From the default "M" ceiling, the ladder keeps M (flagging degraded once
@@ -188,8 +192,8 @@ describe("createBarcodeSvg", () => {
   // like real encrypted PII. Thresholds are at width 480.
   it.each([
     { label: "stays M, sub-ideal modules", ciphertext: "a".repeat(1000), ec: "M" },
-    { label: "stays M near the floor", ciphertext: "a".repeat(1700), ec: "M" },
-    { label: "longest fittable: drops to L", ciphertext: "a".repeat(1800), ec: "L" },
+    { label: "stays M near the floor", ciphertext: "a".repeat(1600), ec: "M" },
+    { label: "longest fittable: drops to L", ciphertext: "a".repeat(1700), ec: "L" },
   ])("degrades error correction in order for $label", ({ ciphertext, ec }) => {
     const result = createBarcodeSvg({ ...PARTS, encryptedPii: ciphertext }, { format: "v1" });
     expect(result.errorCorrectionLevel).toBe(ec);
@@ -197,7 +201,7 @@ describe("createBarcodeSvg", () => {
     expect(result.modulePx).toBeGreaterThanOrEqual(3);
     // Frame dimensions are unchanged regardless of degradation.
     expect(result.width).toBe(480);
-    expect(result.height).toBe(750);
+    expect(result.height).toBe(740);
   });
 
   it("hard-errors when PII cannot fit the fixed frame even at the lowest level", () => {

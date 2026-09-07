@@ -20,9 +20,9 @@ const WIDTHS = [480, 720, 960, 1440];
 
 // Frame geometry in viewBox units, mirroring src/qr/styled.ts.
 const FRAME_VIEWBOX_WIDTH = 96;
-const FRAME_QR_BOX_X = 0;
+const FRAME_QR_BOX_X = 2;
 const FRAME_QR_BOX_Y = 54;
-const FRAME_QR_BOX_SIZE = 96;
+const FRAME_QR_BOX_SIZE = 92;
 
 // Any valid parts work: the frame is payload-independent, and this script
 // verifies that by baking with two payloads and comparing the results. The

@@ -20,7 +20,7 @@ const MIN_TESTED_RASTER_WIDTH = 480;
 // badge width; the sampled coordinates below assume this 420px raster.
 const GEOMETRY_RASTER_WIDTH = 420;
 const BADGE_VIEWBOX_WIDTH = 96;
-const BADGE_VIEWBOX_HEIGHT = 150;
+const BADGE_VIEWBOX_HEIGHT = 148;
 // The documented placement rule: a light host with a clear margin of a tenth
 // of the badge width on the left, right and bottom (the QR quiet zone).
 const HOST_MARGIN_UNITS = BADGE_VIEWBOX_WIDTH / 10;
@@ -271,16 +271,29 @@ describe("styled QR scannability", () => {
     });
   });
 
-  it("spans the full badge width: the QR reaches both edges of a realistic record", () => {
+  it("sits inside the 2-unit white margin: the QR reaches the box edges of a realistic record", () => {
     const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
     const { svg } = createBarcodeSvg(parts);
     const black = { r: 0, g: 0, b: 0, a: 255 };
-    // The top-left and top-right finder rings sit flush with the badge edges:
-    // sample one module in from each corner at the ring's vertical centre line.
-    // The QR box starts at 54u; the finder ring is 7 modules and ~1.6u/module.
-    const ringCentreY = Math.round(((54 + 1.6 * 3.5) * GEOMETRY_RASTER_WIDTH) / 96);
-    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 2, ringCentreY)).toEqual(black);
-    expect(sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, 417, ringCentreY)).toEqual(black);
+    const white = { r: 255, g: 255, b: 255, a: 255 };
+    const scale = GEOMETRY_RASTER_WIDTH / 96;
+    // The top-left and top-right finder rings sit flush with the QR box edges
+    // (x = 2u and 94u): sample the ring's vertical centre line just inside each
+    // edge, and the white margin just outside. The QR box starts at 54u; the
+    // finder ring is 7 modules and ~1.6u/module.
+    const ringCentreY = Math.round((54 + 1.6 * 3.5) * scale);
+    expect(
+      sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, Math.round(2.8 * scale), ringCentreY),
+    ).toEqual(black);
+    expect(
+      sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, Math.round(93.2 * scale), ringCentreY),
+    ).toEqual(black);
+    expect(
+      sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, Math.round(0.5 * scale), ringCentreY),
+    ).toEqual(white);
+    expect(
+      sampleRenderedPixel(svg, GEOMETRY_RASTER_WIDTH, Math.round(95.5 * scale), ringCentreY),
+    ).toEqual(white);
   });
 
   it("keeps the symbol's ground white over a dark host", () => {
