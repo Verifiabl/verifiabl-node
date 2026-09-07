@@ -154,10 +154,10 @@ describe("PNG scannability", () => {
     const { png, modulePx } = await createBarcodePng(PARTS, {}, 720);
     const img = decode(png);
     const scale = 720 / 96;
-    const x0 = Math.ceil(2 * scale);
-    const x1 = Math.floor(94 * scale);
+    const x0 = 0;
+    const x1 = Math.floor(96 * scale);
     const y0 = Math.ceil(54 * scale);
-    const y1 = Math.floor(146 * scale);
+    const y1 = Math.floor(150 * scale);
     // Carve out the three finder corners (7 modules plus inset headroom).
     const skip = Math.ceil(16 * modulePx);
 
