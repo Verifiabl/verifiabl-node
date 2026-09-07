@@ -69,24 +69,21 @@ export interface BarcodeSvgResult {
 const DEFAULT_NAVY = "#010A4F";
 const DEFAULT_QR = "#000000";
 const DEFAULT_TEXT = "#FFFFFF";
-// White ground under the QR box, the gap above it and the margin around it,
-// so the symbol's light modules and its top quiet zone are light on any host
-// document. The side and bottom margin is visual only: the badge carries no
-// quiet zone there, the host document supplies that.
+// White ground under the QR box and the gap above it, so the symbol's light
+// modules and its top quiet zone are light on any host document. The QR box
+// spans the full badge width, so the badge carries no quiet zone on the left,
+// right and bottom: the host document supplies that margin.
 const FRAME_BACKGROUND = "#FFFFFF";
 export const FRAME_VIEWBOX_WIDTH = 96;
 const FRAME_HEADER_HEIGHT = 47;
-// Gap between the header and the QR box: the only quiet-zone margin the badge
-// itself supplies (the header above it is dark).
+// Transparent gap between the header and the QR box: the only light margin
+// the badge itself supplies (the header above it is dark). Odd so the viewBox
+// height is even and every supported PNG width has an integer pixel height.
 export const FRAME_QR_GAP = 7;
-// White margin on the left, right and bottom so the QR sits inside the ground.
-// Gap and margin sum to an odd number so the viewBox height is even and every
-// supported PNG width has an integer pixel height.
-export const FRAME_QR_MARGIN = 2;
-export const FRAME_QR_BOX_X = FRAME_QR_MARGIN;
+export const FRAME_QR_BOX_X = 0;
 export const FRAME_QR_BOX_Y = FRAME_HEADER_HEIGHT + FRAME_QR_GAP;
-export const FRAME_QR_BOX_SIZE = FRAME_VIEWBOX_WIDTH - 2 * FRAME_QR_MARGIN;
-const FRAME_VIEWBOX_HEIGHT = FRAME_QR_BOX_Y + FRAME_QR_BOX_SIZE + FRAME_QR_MARGIN;
+export const FRAME_QR_BOX_SIZE = FRAME_VIEWBOX_WIDTH;
+const FRAME_VIEWBOX_HEIGHT = FRAME_QR_BOX_Y + FRAME_QR_BOX_SIZE;
 // At this width, a realistic fully-populated PII record renders QR modules at
 // or above IDEAL_MODULE_PX at the default "M" ceiling (the pristine tier).
 const MIN_BADGE_WIDTH = 480;
@@ -289,11 +286,11 @@ function renderDefaultHeader(textColor: string): string {
  * ciphertext from `encryptPii`, then returns a standalone SVG suitable for
  * embedding in a payslip PDF.
  *
- * The QR spans nearly the full badge width on a white ground. Place the badge
- * with a clear light margin on the left, right and bottom of at least four QR
- * modules (`modulePx` in the result; a tenth of the badge width covers any
- * realistic record): that margin is the QR quiet zone, which the badge does
- * not carry itself.
+ * The QR spans the full badge width on a white ground. Place the badge with a
+ * clear light margin on the left, right and bottom of at least four QR modules
+ * (`modulePx` in the result; a tenth of the badge width covers any realistic
+ * record): that margin is the QR quiet zone, which the badge does not carry
+ * itself.
  *
  * Throws {@link QrCapacityError} when the encrypted PII is too long to encode.
  */
