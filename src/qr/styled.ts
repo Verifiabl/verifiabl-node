@@ -76,8 +76,8 @@ const DEFAULT_TEXT = "#FFFFFF";
 const FRAME_BACKGROUND = "#FFFFFF";
 export const FRAME_VIEWBOX_WIDTH = 96;
 const FRAME_HEADER_HEIGHT = 47;
-// Transparent gap between the header and the QR box: the only light margin
-// the badge itself supplies (the header above it is dark). Odd so the viewBox
+// White gap between the header and the QR box: the only quiet-zone margin the
+// badge itself supplies (the header above it is dark). Odd so the viewBox
 // height is even and every supported PNG width has an integer pixel height.
 export const FRAME_QR_GAP = 7;
 export const FRAME_QR_BOX_X = 0;
