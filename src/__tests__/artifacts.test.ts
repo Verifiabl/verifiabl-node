@@ -47,6 +47,18 @@ describe("createBarcodeArtifacts", () => {
     });
   });
 
+  it("snapshots mutable inputs before asynchronous PNG rendering", async () => {
+    const mutableParts = { ...PARTS };
+    const artifactsPromise = createBarcodeArtifacts(mutableParts, { imageFormat: "png" });
+
+    mutableParts.verifiablReference = "ZZZZZZZZZZZZZZZZZZZZZZ";
+    mutableParts.encryptedPii = "Zm9v";
+    const result = await artifactsPromise;
+
+    expect(result.barcode.content).toContain(PARTS.verifiablReference);
+    expect(result.pdfMetadata.payload).toBe(buildBarcodePayload(PARTS));
+  });
+
   it("applies the same rollback format to the QR and XMP copies", async () => {
     const result = await createBarcodeArtifacts(PARTS, { format: "v1", imageFormat: "png" });
 

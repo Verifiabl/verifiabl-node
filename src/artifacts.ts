@@ -57,22 +57,28 @@ export async function createBarcodeArtifacts(
   parts: BarcodeParts,
   options: BarcodeArtifactsOptions = {},
 ): Promise<BarcodeArtifactsResult> {
+  // Snapshot caller-owned objects before PNG rendering yields. Both artifacts
+  // must describe one immutable input even when a batch loop reuses its objects.
+  const artifactParts: BarcodeParts = { ...parts };
+  const artifactOptions: BarcodeArtifactsOptions = { ...options };
   const payloadOptions: BarcodePayloadOptions = {};
-  if (options.format !== undefined) {
-    payloadOptions.format = options.format;
+  if (artifactOptions.format !== undefined) {
+    payloadOptions.format = artifactOptions.format;
   }
 
   const barcode =
-    options.imageFormat === "png"
-      ? barcodeArtifactFromPng(await createBarcodePng(parts, options, options.pixelWidth ?? 720))
-      : barcodeArtifactFromSvg(createBarcodeSvg(parts, options));
+    artifactOptions.imageFormat === "png"
+      ? barcodeArtifactFromPng(
+          await createBarcodePng(artifactParts, artifactOptions, artifactOptions.pixelWidth ?? 720),
+        )
+      : barcodeArtifactFromSvg(createBarcodeSvg(artifactParts, artifactOptions));
 
   return {
     barcode,
     pdfMetadata: {
       xmpNamespace: PDF_PAYLOAD_XMP_NAMESPACE,
       xmpProperty: PDF_PAYLOAD_XMP_PROPERTY,
-      payload: buildBarcodePayload(parts, payloadOptions),
+      payload: buildBarcodePayload(artifactParts, payloadOptions),
     },
   };
 }
