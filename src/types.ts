@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { verifiablReferenceSchema } from "./payload.js";
+import {
+  PDF_PAYLOAD_XMP_NAMESPACE,
+  PDF_PAYLOAD_XMP_PROPERTY,
+  verifiablReferenceSchema,
+} from "./payload.js";
 
 function tuple<const T extends readonly string[]>(value: T): T {
   return value;
@@ -390,6 +394,16 @@ export const registerAndBuildBarcodeRequestSchema = basePayslipRegistrationSchem
 
 export type RegisterAndBuildBarcodeRequest = z.infer<typeof registerAndBuildBarcodeRequestSchema>;
 
+/**
+ * Request for `client.registerAndBuildBarcodeArtifacts`. Same body as
+ * `registerAndBuildBarcode`, but calls POST /v1/registerAndBuildBarcodeArtifacts.
+ */
+export const registerAndBuildBarcodeArtifactsRequestSchema = registerAndBuildBarcodeRequestSchema;
+
+export type RegisterAndBuildBarcodeArtifactsRequest = z.infer<
+  typeof registerAndBuildBarcodeArtifactsRequestSchema
+>;
+
 export const barcodeImageSchema = z.object({
   format: z.literal("png"),
   /** Base64-encoded PNG. */
@@ -405,6 +419,26 @@ export const registerAndBuildBarcodeResponseSchema = z.object({
 });
 
 export type RegisterAndBuildBarcodeResponse = z.infer<typeof registerAndBuildBarcodeResponseSchema>;
+
+export const pdfMetadataSchema = z.object({
+  /** XMP namespace URI for the Verifiabl payload property. */
+  xmpNamespace: z.literal(PDF_PAYLOAD_XMP_NAMESPACE),
+  /** Local XMP property name; with the verifiabl prefix this appears as verifiabl:payload. */
+  xmpProperty: z.literal(PDF_PAYLOAD_XMP_PROPERTY),
+  /** Pipe-delimited payload to write into XMP metadata. */
+  payload: z.string().min(1),
+});
+
+export type PdfMetadata = z.infer<typeof pdfMetadataSchema>;
+
+export const registerAndBuildBarcodeArtifactsResponseSchema =
+  registerAndBuildBarcodeResponseSchema.extend({
+    pdfMetadata: pdfMetadataSchema,
+  });
+
+export type RegisterAndBuildBarcodeArtifactsResponse = z.infer<
+  typeof registerAndBuildBarcodeArtifactsResponseSchema
+>;
 
 /* ------------------------------------------------------------------ *
  * Wire translation                                                    *
@@ -547,6 +581,17 @@ const registerAndBuildBarcodeApiWireResponseSchema = z.object({
   barcode: barcodeImageWireSchema,
 });
 
+const pdfMetadataWireSchema = z.object({
+  xmp_namespace: z.literal(PDF_PAYLOAD_XMP_NAMESPACE),
+  xmp_property: z.literal(PDF_PAYLOAD_XMP_PROPERTY),
+  payload: z.string().min(1),
+});
+
+const registerAndBuildBarcodeArtifactsApiWireResponseSchema =
+  registerAndBuildBarcodeApiWireResponseSchema.extend({
+    pdf_metadata: pdfMetadataWireSchema,
+  });
+
 /** Parse and map a register-and-build-barcode response from the snake_case wire shape. */
 export function registerAndBuildBarcodeFromWire(value: unknown): RegisterAndBuildBarcodeResponse {
   const wire = registerAndBuildBarcodeApiWireResponseSchema.parse(value);
@@ -555,6 +600,24 @@ export function registerAndBuildBarcodeFromWire(value: unknown): RegisterAndBuil
     barcode: {
       format: wire.barcode.format,
       data: wire.barcode.data,
+    },
+  };
+}
+
+export function registerAndBuildBarcodeArtifactsFromWire(
+  value: unknown,
+): RegisterAndBuildBarcodeArtifactsResponse {
+  const wire = registerAndBuildBarcodeArtifactsApiWireResponseSchema.parse(value);
+  return {
+    verifiablReference: wire.verifiabl_reference,
+    barcode: {
+      format: wire.barcode.format,
+      data: wire.barcode.data,
+    },
+    pdfMetadata: {
+      xmpNamespace: wire.pdf_metadata.xmp_namespace,
+      xmpProperty: wire.pdf_metadata.xmp_property,
+      payload: wire.pdf_metadata.payload,
     },
   };
 }

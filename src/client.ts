@@ -5,12 +5,16 @@ import {
   IV_REUSED_CODE,
   localBatchValidationError,
   payslipNonPiiSchema,
+  type RegisterAndBuildBarcodeArtifactsRequest,
+  type RegisterAndBuildBarcodeArtifactsResponse,
   type RegisterAndBuildBarcodeRequest,
   type RegisterAndBuildBarcodeResponse,
   type RegisterNonPiiBatchRequest,
   type RegisterNonPiiBatchResponse,
   type RegisterNonPiiRequest,
   type RegisterNonPiiResponse,
+  registerAndBuildBarcodeArtifactsFromWire,
+  registerAndBuildBarcodeArtifactsRequestSchema,
   registerAndBuildBarcodeFromWire,
   registerAndBuildBarcodeRequestSchema,
   registerAndBuildBarcodeToWire,
@@ -269,8 +273,33 @@ export class VerifiablClient {
   }
 
   /**
+   * Register non-PII payslip data and have the API build the barcode and PDF
+   * XMP metadata payload. Sends the encrypted PII alongside the non-PII data.
+   *
+   * Throws {@link VerifiablIvReuseError} when the iv has already been
+   * registered by this issuer.
+   */
+  async registerAndBuildBarcodeArtifacts(
+    request: RegisterAndBuildBarcodeArtifactsRequest,
+    options: VerifiablRequestOptions = {},
+  ): Promise<RegisterAndBuildBarcodeArtifactsResponse> {
+    const body = registerAndBuildBarcodeToWire(
+      registerAndBuildBarcodeArtifactsRequestSchema.parse(request),
+    );
+    return this.post(
+      "/v1/registerAndBuildBarcodeArtifacts",
+      body,
+      options,
+      registerAndBuildBarcodeArtifactsFromWire,
+    );
+  }
+
+  /**
    * Register non-PII payslip data and have the API build the barcode.
    * Sends the encrypted PII alongside the non-PII data.
+   *
+   * @deprecated Use {@link registerAndBuildBarcodeArtifacts}, which returns the
+   * PDF XMP metadata payload with the QR barcode.
    *
    * Throws {@link VerifiablIvReuseError} when the iv has already been
    * registered by this issuer.

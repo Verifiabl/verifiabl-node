@@ -84,6 +84,21 @@ function registerAndBuildBarcodeResponse(): Response {
   );
 }
 
+function registerAndBuildBarcodeArtifactsResponse(): Response {
+  return new Response(
+    JSON.stringify({
+      verifiabl_reference: VERIFIABL_REF,
+      barcode: { format: "png", data: "iVBORw0KGgo=" },
+      pdf_metadata: {
+        xmp_namespace: "https://verifiabl.io/ns/",
+        xmp_property: "payload",
+        payload: `2|${VERIFIABL_REF}|MZXW6A`,
+      },
+    }),
+    { status: 201 },
+  );
+}
+
 function mockFetch(status: number, body: unknown): jest.MockedFunction<typeof fetch> {
   return jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
     return new Response(JSON.stringify(body), { status });
@@ -405,6 +420,31 @@ describe("VerifiablClient with static auth", () => {
     expect(firstFetchCall(fetch)[0]).toBe("http://localhost:3001/v1/registerNonPII");
   });
 
+  it("maps the API response to barcode and PDF metadata for registerAndBuildBarcodeArtifacts", async () => {
+    const fetchMock = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
+      return registerAndBuildBarcodeArtifactsResponse();
+    });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch: fetchMock });
+
+    const result = await client.registerAndBuildBarcodeArtifacts(
+      REGISTER_AND_BUILD_BARCODE_REQUEST,
+    );
+
+    expect(result).toEqual({
+      verifiablReference: VERIFIABL_REF,
+      barcode: { format: "png", data: "iVBORw0KGgo=" },
+      pdfMetadata: {
+        xmpNamespace: "https://verifiabl.io/ns/",
+        xmpProperty: "payload",
+        payload: `2|${VERIFIABL_REF}|MZXW6A`,
+      },
+    });
+    expect(firstFetchCall(fetchMock)[0]).toBe(
+      "https://register.verifiabl.io/v1/registerAndBuildBarcodeArtifacts",
+    );
+    expect(requestBody(firstFetchCall(fetchMock))).toEqual(WIRE_REGISTER_AND_BUILD_BARCODE_REQUEST);
+  });
+
   it("maps the API response to a barcode image for registerAndBuildBarcode", async () => {
     const fetchMock = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
       return registerAndBuildBarcodeResponse();
@@ -465,6 +505,15 @@ describe("VerifiablClient with static auth", () => {
 
     await expect(
       client.registerAndBuildBarcode(REGISTER_AND_BUILD_BARCODE_REQUEST),
+    ).rejects.toBeInstanceOf(VerifiablIvReuseError);
+  });
+
+  it("throws VerifiablIvReuseError from registerAndBuildBarcodeArtifacts too", async () => {
+    const fetch = mockFetch(409, { error: "Conflict", code: "IV_REUSED" });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await expect(
+      client.registerAndBuildBarcodeArtifacts(REGISTER_AND_BUILD_BARCODE_REQUEST),
     ).rejects.toBeInstanceOf(VerifiablIvReuseError);
   });
 
