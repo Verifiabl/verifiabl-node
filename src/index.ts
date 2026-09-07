@@ -1,5 +1,8 @@
 export {
+  type BarcodeArtifactsOptions,
   type BarcodeArtifactsResult,
+  type BarcodeImageArtifact,
+  type BarcodeImageFormat,
   type BarcodePdfMetadata,
   createBarcodeArtifacts,
 } from "./artifacts.js";

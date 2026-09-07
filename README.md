@@ -67,11 +67,11 @@ const { verifiablReference } = await client.registerNonPii({
 });
 
 // 3. Build both matching PDF artifacts in one call.
-const { barcode, pdfMetadata } = createBarcodeArtifacts(
+const { barcode, pdfMetadata } = await createBarcodeArtifacts(
   { verifiablReference, encryptedPii },
-  { environment: "sandbox" },
+  { environment: "sandbox", imageFormat: "svg" },
 );
-// Embed barcode.svg, then write pdfMetadata.payload under
+// Embed barcode.data (UTF-8 SVG bytes), then write pdfMetadata.payload under
 // pdfMetadata.xmpProperty in pdfMetadata.xmpNamespace.
 ```
 
@@ -89,8 +89,11 @@ const plaintext = formatPii({
 });
 const { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);
 const parts = { verifiablReference, encryptedPii };
-const { barcode, pdfMetadata } = createBarcodeArtifacts(parts, { environment: "sandbox" });
-const svg = barcode.svg;
+const { barcode, pdfMetadata } = await createBarcodeArtifacts(parts, {
+  environment: "sandbox",
+  imageFormat: "svg", // use "png" and optionally pixelWidth for PNG bytes
+});
+const svg = barcode.data.toString("utf8");
 const xmpPayload = pdfMetadata.payload;
 ```
 
