@@ -1,3 +1,8 @@
+export {
+  type BarcodeArtifactsResult,
+  type BarcodePdfMetadata,
+  createBarcodeArtifacts,
+} from "./artifacts.js";
 export { encodeBase32, getBase32EncodedLength } from "./base32.js";
 export {
   VerifiablApiError,
