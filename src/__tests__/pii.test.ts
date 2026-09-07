@@ -1,11 +1,34 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   formatPii,
   formatPiiV1,
+  PII_ADDRESS_MAX_BYTES,
+  PII_FIELD_MAX_LENGTH,
   PII_FIELD_ORDER,
+  PII_TEXT_PROFILE_ID,
+  PII_TEXT_PROFILE_UNICODE_VERSION,
   PiiValidationError,
   parsePii,
   piiFieldsSchema,
 } from "../pii.js";
+
+interface P2TextProfile {
+  id: string;
+  unicodeVersion: string;
+  nonAddressMaxUtf16CodeUnits: number;
+  addressMaxUtf8Bytes: number;
+  controlCharacterRanges: Array<[string, string]>;
+  lineSeparatorCodePoints: string[];
+  formatCharacterRanges: Array<[string, string]>;
+  validText: Array<{ name: string; value: string }>;
+  invalidText: Array<{ name: string; codePoints: string[]; reason: string }>;
+  invalidUtf16: Array<{ name: string; codeUnits: number[] }>;
+}
+
+const textProfile = JSON.parse(
+  readFileSync(join(__dirname, "fixtures", "p2-pii-text-profile-v1.json"), "utf8"),
+) as P2TextProfile;
 
 describe("formatPii", () => {
   it("formats the documented example exactly", () => {
@@ -101,7 +124,7 @@ describe("formatPii", () => {
     }
   });
 
-  it("rejects fields over 256 characters", () => {
+  it("rejects fields over 256 UTF-16 code units", () => {
     expect(() => formatPii({ employeeName: "x".repeat(257) })).toThrow(PiiValidationError);
   });
 
@@ -162,6 +185,71 @@ describe("P2 formatting", () => {
     "bad\u200Baddress",
   ])("rejects delimiter, control, and format characters: %j", (address) =>
     expect(() => formatPii({ ...core, address })).toThrow(PiiValidationError));
+
+  it("matches the canonical P2 text-profile identity", () => {
+    expect(PII_TEXT_PROFILE_ID).toBe(textProfile.id);
+    expect(PII_TEXT_PROFILE_UNICODE_VERSION).toBe(textProfile.unicodeVersion);
+    expect(PII_FIELD_MAX_LENGTH).toBe(textProfile.nonAddressMaxUtf16CodeUnits);
+    expect(PII_ADDRESS_MAX_BYTES).toBe(textProfile.addressMaxUtf8Bytes);
+  });
+
+  it("rejects every canonical control and line-separator code point", () => {
+    for (const [startHex, endHex] of textProfile.controlCharacterRanges) {
+      const start = Number.parseInt(startHex, 16);
+      const end = Number.parseInt(endHex, 16);
+      for (let codePoint = start; codePoint <= end; codePoint++) {
+        expect(() => formatPii({ employeeName: String.fromCodePoint(codePoint) })).toThrow(
+          PiiValidationError,
+        );
+      }
+    }
+    for (const codePointHex of textProfile.lineSeparatorCodePoints) {
+      expect(() =>
+        formatPii({ employeeName: String.fromCodePoint(Number.parseInt(codePointHex, 16)) }),
+      ).toThrow(PiiValidationError);
+    }
+  });
+
+  it("rejects every canonical Unicode 15.1 format-character range", () => {
+    for (const [startHex, endHex] of textProfile.formatCharacterRanges) {
+      const start = Number.parseInt(startHex, 16);
+      const end = Number.parseInt(endHex, 16);
+      for (let codePoint = start; codePoint <= end; codePoint++) {
+        expect(() => formatPii({ employeeName: String.fromCodePoint(codePoint) })).toThrow(
+          PiiValidationError,
+        );
+      }
+    }
+  });
+
+  it.each(textProfile.validText)("accepts canonical text vector: $name", ({ value }) => {
+    expect(formatPii({ employeeName: value })).toContain(value);
+    expect(formatPii({ address: value })).toContain(value);
+  });
+
+  it.each(textProfile.invalidText)("rejects canonical text vector: $name", ({
+    codePoints,
+    reason,
+  }) => {
+    const value = String.fromCodePoint(...codePoints.map((value) => Number.parseInt(value, 16)));
+    try {
+      formatPii({ employeeName: value });
+      throw new Error("expected formatPii to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(PiiValidationError);
+      const expectedReason = reason === "line-separator" ? "control-character" : reason;
+      expect((error as PiiValidationError).violations).toEqual([
+        { field: "employeeName", reason: expectedReason },
+      ]);
+    }
+  });
+
+  it.each(textProfile.invalidUtf16)("rejects canonical malformed UTF-16 vector: $name", ({
+    codeUnits,
+  }) => {
+    const value = String.fromCharCode(...codeUnits);
+    expect(() => formatPii({ employeeName: value })).toThrow(PiiValidationError);
+  });
 
   it("keeps a P1 writer only for rollback", () => {
     expect(formatPiiV1(core)).toBe(

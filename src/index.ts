@@ -36,6 +36,8 @@ export {
   PII_ADDRESS_MAX_BYTES,
   PII_FIELD_MAX_LENGTH,
   PII_FIELD_ORDER,
+  PII_TEXT_PROFILE_ID,
+  PII_TEXT_PROFILE_UNICODE_VERSION,
   type PiiFieldName,
   type PiiFields,
   type PiiFieldViolation,

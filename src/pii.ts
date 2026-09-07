@@ -53,11 +53,66 @@ export const PII_FIELD_MAX_LENGTH = 256;
 /** Maximum UTF-8 size of the optional P2 address. */
 export const PII_ADDRESS_MAX_BYTES = 320;
 
-// U+2028 and U+2029 are separators, not Cc, so a Cc-only test misses them even
-// though they break a field just as a newline would. P2 also rejects Unicode
-// format characters so hidden formatting state does not enter new payloads.
-const DISALLOWED_TEXT_CHARACTERS = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
-const DISALLOWED_LEGACY_CHARACTERS = /[\p{Cc}\p{Zl}\p{Zp}]/u;
+export const PII_TEXT_PROFILE_ID = "io.verifiabl.p2-pii-text.v1";
+export const PII_TEXT_PROFILE_UNICODE_VERSION = "15.1.0";
+
+// P2's Unicode categories are frozen to Unicode 15.1 so acceptance cannot
+// change when a caller upgrades Node/V8. This is the complete 15.1 Cf table
+// from https://docs.verifiabl.io/spec/p2-pii-text-profile-v1.json.
+const UNICODE_15_1_FORMAT_RANGES: ReadonlyArray<readonly [number, number]> = [
+  [0x00ad, 0x00ad],
+  [0x0600, 0x0605],
+  [0x061c, 0x061c],
+  [0x06dd, 0x06dd],
+  [0x070f, 0x070f],
+  [0x0890, 0x0891],
+  [0x08e2, 0x08e2],
+  [0x180e, 0x180e],
+  [0x200b, 0x200f],
+  [0x202a, 0x202e],
+  [0x2060, 0x2064],
+  [0x2066, 0x206f],
+  [0xfeff, 0xfeff],
+  [0xfff9, 0xfffb],
+  [0x110bd, 0x110bd],
+  [0x110cd, 0x110cd],
+  [0x13430, 0x1343f],
+  [0x1bca0, 0x1bca3],
+  [0x1d173, 0x1d17a],
+  [0xe0001, 0xe0001],
+  [0xe0020, 0xe007f],
+];
+
+// Cc is permanently assigned to C0/C1. U+2028 and U+2029 are Zl/Zp rather
+// than Cc, but are forbidden because every P2 field is one line.
+function containsControlOrLineCharacter(value: string): boolean {
+  for (const character of value) {
+    const codePoint = character.codePointAt(0);
+    if (
+      codePoint !== undefined &&
+      (codePoint <= 0x1f ||
+        (codePoint >= 0x7f && codePoint <= 0x9f) ||
+        codePoint === 0x2028 ||
+        codePoint === 0x2029)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function containsUnicode15FormatCharacter(value: string): boolean {
+  for (const character of value) {
+    const codePoint = character.codePointAt(0);
+    if (
+      codePoint !== undefined &&
+      UNICODE_15_1_FORMAT_RANGES.some(([start, end]) => codePoint >= start && codePoint <= end)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
 
 function hasUnpairedSurrogate(value: string): boolean {
   for (let index = 0; index < value.length; index++) {
@@ -81,17 +136,18 @@ function isCurrentText(value: string): boolean {
   return (
     !hasUnpairedSurrogate(value) &&
     !value.includes(PII_FIELD_DELIMITER) &&
-    !DISALLOWED_TEXT_CHARACTERS.test(value)
+    !containsControlOrLineCharacter(value) &&
+    !containsUnicode15FormatCharacter(value)
   );
 }
 
 function isLegacyText(value: string): boolean {
-  return !value.includes(PII_FIELD_DELIMITER) && !DISALLOWED_LEGACY_CHARACTERS.test(value);
+  return !value.includes(PII_FIELD_DELIMITER) && !containsControlOrLineCharacter(value);
 }
 
 const piiFieldSchema = z
   .string()
-  .max(PII_FIELD_MAX_LENGTH, `PII field exceeds ${PII_FIELD_MAX_LENGTH} characters`)
+  .max(PII_FIELD_MAX_LENGTH, `PII field exceeds ${PII_FIELD_MAX_LENGTH} UTF-16 code units`)
   .refine((value) => !hasUnpairedSurrogate(value), "PII field must contain valid Unicode")
   .refine(
     isCurrentText,
@@ -142,7 +198,7 @@ const VIOLATION_DESCRIPTIONS: Record<PiiFieldViolationReason, string> = {
   "control-character": "must not contain control characters or line separators",
   "format-character": "must not contain format characters",
   "invalid-unicode": "must contain valid Unicode",
-  "too-long": `exceeds ${PII_FIELD_MAX_LENGTH} characters`,
+  "too-long": `exceeds ${PII_FIELD_MAX_LENGTH} UTF-16 code units`,
   "too-many-bytes": `exceeds ${PII_ADDRESS_MAX_BYTES} UTF-8 bytes`,
 };
 
@@ -180,10 +236,10 @@ function fieldViolation(field: PiiFieldName, value: string): PiiFieldViolation |
   if (value.includes(PII_FIELD_DELIMITER)) {
     return { field, reason: "pipe" };
   }
-  if (/[\p{Cc}\p{Zl}\p{Zp}]/u.test(value)) {
+  if (containsControlOrLineCharacter(value)) {
     return { field, reason: "control-character" };
   }
-  if (/\p{Cf}/u.test(value)) {
+  if (containsUnicode15FormatCharacter(value)) {
     return { field, reason: "format-character" };
   }
   return null;

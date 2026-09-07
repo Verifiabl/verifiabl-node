@@ -92,8 +92,10 @@ const xmpPayload = buildBarcodePayload(parts);
 ```
 
 P2 is exactly `P2|employeeName|position|department|employerAbn|bsb|accountNumber|accountName|address`.
-The final address is unstructured, optional, preserved verbatim, and limited to 320 UTF-8 bytes.
-Pipes, control characters, and Unicode format characters are rejected before encryption. A v2 QR
+P2 preserves valid Unicode without normalization. Each non-address field is limited to 256 UTF-16
+code units, and the final unstructured optional address is limited to 320 UTF-8 bytes. The pipe
+and Unicode General Categories Cc (control), Cf (format), Zl (line separator), and Zp (paragraph
+separator) are rejected before encryption. Ordinary international Unicode remains valid. A v2 QR
 uses the short `v.verifiabl.io` scan host (`v.sandbox.verifiabl.io` in sandbox) with `#2.<BASE32>` and an explicit byte/alphanumeric segment split. Its XMP
 copy must be the matching `2|reference|BASE32`. Never mix QR and XMP versions. For rollback, pass
 `{ format: "v1" }` to `createBarcodeSvg`, `createBarcodePng`, `buildScanUrl`, and `buildBarcodePayload`.

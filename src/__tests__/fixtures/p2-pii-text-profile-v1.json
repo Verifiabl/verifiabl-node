@@ -1,0 +1,93 @@
+{
+  "id": "io.verifiabl.p2-pii-text.v1",
+  "canonicalUrl": "https://docs.verifiabl.io/spec/p2-pii-text-profile-v1.json",
+  "unicodeVersion": "15.1.0",
+  "encoding": "UTF-8",
+  "normalization": "none",
+  "fieldDelimiter": "U+007C",
+  "forbiddenGeneralCategories": ["Cc", "Cf", "Zl", "Zp"],
+  "nonAddressMaxUtf16CodeUnits": 256,
+  "addressMaxUtf8Bytes": 320,
+  "controlCharacterRanges": [["0000", "001F"], ["007F", "009F"]],
+  "lineSeparatorCodePoints": ["2028", "2029"],
+  "formatCharacterRanges": [
+    ["00AD", "00AD"],
+    ["0600", "0605"],
+    ["061C", "061C"],
+    ["06DD", "06DD"],
+    ["070F", "070F"],
+    ["0890", "0891"],
+    ["08E2", "08E2"],
+    ["180E", "180E"],
+    ["200B", "200F"],
+    ["202A", "202E"],
+    ["2060", "2064"],
+    ["2066", "206F"],
+    ["FEFF", "FEFF"],
+    ["FFF9", "FFFB"],
+    ["110BD", "110BD"],
+    ["110CD", "110CD"],
+    ["13430", "1343F"],
+    ["1BCA0", "1BCA3"],
+    ["1D173", "1D17A"],
+    ["E0001", "E0001"],
+    ["E0020", "E007F"]
+  ],
+  "validText": [
+    { "name": "accented and Vietnamese letters", "value": "Zoë Nguyễn" },
+    { "name": "Japanese address", "value": "東京都千代田区千代田1番1号 日本" },
+    { "name": "regional-indicator flag", "value": "France 🇫🇷" },
+    { "name": "non-breaking space", "value": "A B" },
+    { "name": "decomposed accent", "value": "Café" }
+  ],
+  "invalidText": [
+    { "name": "pipe delimiter", "codePoints": ["0041", "007C", "0042"], "reason": "pipe" },
+    { "name": "line feed", "codePoints": ["0041", "000A", "0042"], "reason": "control-character" },
+    { "name": "tab", "codePoints": ["0041", "0009", "0042"], "reason": "control-character" },
+    { "name": "next line", "codePoints": ["0041", "0085", "0042"], "reason": "control-character" },
+    { "name": "soft hyphen", "codePoints": ["0041", "00AD", "0042"], "reason": "format-character" },
+    {
+      "name": "zero-width space",
+      "codePoints": ["0041", "200B", "0042"],
+      "reason": "format-character"
+    },
+    {
+      "name": "zero-width joiner",
+      "codePoints": ["0041", "200D", "0042"],
+      "reason": "format-character"
+    },
+    {
+      "name": "right-to-left override",
+      "codePoints": ["0041", "202E", "0042"],
+      "reason": "format-character"
+    },
+    {
+      "name": "byte order mark",
+      "codePoints": ["0041", "FEFF", "0042"],
+      "reason": "format-character"
+    },
+    {
+      "name": "supplementary-plane language tag",
+      "codePoints": ["0041", "E0001", "0042"],
+      "reason": "format-character"
+    },
+    {
+      "name": "line separator",
+      "codePoints": ["0041", "2028", "0042"],
+      "reason": "line-separator"
+    },
+    {
+      "name": "paragraph separator",
+      "codePoints": ["0041", "2029", "0042"],
+      "reason": "line-separator"
+    }
+  ],
+  "invalidUtf16": [
+    { "name": "unpaired high surrogate", "codeUnits": [55296] },
+    { "name": "unpaired low surrogate", "codeUnits": [56320] }
+  ],
+  "invalidUtf8": [
+    { "name": "invalid leading byte", "bytesHex": "ff" },
+    { "name": "truncated four-byte sequence", "bytesHex": "f09f87" }
+  ]
+}
