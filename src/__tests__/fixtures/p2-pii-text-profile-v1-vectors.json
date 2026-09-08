@@ -1,0 +1,117 @@
+{
+  "$schema": "https://docs.verifiabl.io/spec/p2-pii-text-profile-v1.schema.json#/$defs/conformanceVectors",
+  "profileId": "io.verifiabl.p2-pii-text.v1",
+  "validText": [
+    {
+      "name": "accented letters",
+      "value": "Zoë Nguyễn",
+      "codePoints": ["005A", "006F", "00EB", "0020", "004E", "0067", "0075", "0079", "1EC5", "006E"]
+    },
+    {
+      "name": "non-Latin script",
+      "value": "給与明細",
+      "codePoints": ["7D66", "4E0E", "660E", "7D30"]
+    },
+    {
+      "name": "punctuation",
+      "value": "Engineering – R&D",
+      "codePoints": [
+        "0045",
+        "006E",
+        "0067",
+        "0069",
+        "006E",
+        "0065",
+        "0065",
+        "0072",
+        "0069",
+        "006E",
+        "0067",
+        "0020",
+        "2013",
+        "0020",
+        "0052",
+        "0026",
+        "0044"
+      ]
+    },
+    {
+      "name": "regional-indicator flag",
+      "value": "Australia 🇦🇺",
+      "codePoints": [
+        "0041",
+        "0075",
+        "0073",
+        "0074",
+        "0072",
+        "0061",
+        "006C",
+        "0069",
+        "0061",
+        "0020",
+        "1F1E6",
+        "1F1FA"
+      ]
+    },
+    {
+      "name": "non-breaking space",
+      "value": "A B",
+      "codePoints": ["0041", "00A0", "0042"]
+    },
+    {
+      "name": "decomposed accent",
+      "value": "Café",
+      "codePoints": ["0043", "0061", "0066", "0065", "0301"]
+    }
+  ],
+  "invalidText": [
+    { "name": "pipe delimiter", "codePoints": ["0041", "007C", "0042"], "reason": "pipe" },
+    { "name": "line feed", "codePoints": ["0041", "000A", "0042"], "reason": "control-character" },
+    { "name": "tab", "codePoints": ["0041", "0009", "0042"], "reason": "control-character" },
+    { "name": "next line", "codePoints": ["0041", "0085", "0042"], "reason": "control-character" },
+    { "name": "soft hyphen", "codePoints": ["0041", "00AD", "0042"], "reason": "format-character" },
+    {
+      "name": "zero-width space",
+      "codePoints": ["0041", "200B", "0042"],
+      "reason": "format-character"
+    },
+    {
+      "name": "zero-width joiner",
+      "codePoints": ["0041", "200D", "0042"],
+      "reason": "format-character"
+    },
+    {
+      "name": "right-to-left override",
+      "codePoints": ["0041", "202E", "0042"],
+      "reason": "format-character"
+    },
+    {
+      "name": "byte order mark",
+      "codePoints": ["0041", "FEFF", "0042"],
+      "reason": "format-character"
+    },
+    {
+      "name": "supplementary-plane language tag",
+      "codePoints": ["0041", "E0001", "0042"],
+      "reason": "format-character"
+    },
+    {
+      "name": "line separator",
+      "codePoints": ["0041", "2028", "0042"],
+      "reason": "line-separator"
+    },
+    {
+      "name": "paragraph separator",
+      "codePoints": ["0041", "2029", "0042"],
+      "reason": "line-separator"
+    }
+  ],
+  "invalidUtf16": [
+    { "name": "unpaired high surrogate", "codeUnits": [55296] },
+    { "name": "unpaired low surrogate", "codeUnits": [56320] }
+  ],
+  "invalidUtf8": [
+    { "name": "invalid leading byte", "bytesHex": "ff" },
+    { "name": "truncated four-byte sequence", "bytesHex": "f09f87" }
+  ]
+}

@@ -3,8 +3,6 @@ import { join } from "node:path";
 import {
   formatPii,
   formatPiiV1,
-  PII_ADDRESS_MAX_BYTES,
-  PII_FIELD_MAX_LENGTH,
   PII_FIELD_ORDER,
   PII_TEXT_PROFILE_ID,
   PII_TEXT_PROFILE_UNICODE_VERSION,
@@ -14,21 +12,27 @@ import {
 } from "../pii.js";
 
 interface P2TextProfile {
-  id: string;
+  profileId: string;
   unicodeVersion: string;
-  nonAddressMaxUtf16CodeUnits: number;
-  addressMaxUtf8Bytes: number;
   controlCharacterRanges: Array<[string, string]>;
   lineSeparatorCodePoints: string[];
   formatCharacterRanges: Array<[string, string]>;
+}
+
+interface P2TextProfileVectors {
+  profileId: string;
   validText: Array<{ name: string; value: string }>;
   invalidText: Array<{ name: string; codePoints: string[]; reason: string }>;
   invalidUtf16: Array<{ name: string; codeUnits: number[] }>;
 }
 
+const fixturesDirectory = join(__dirname, "fixtures");
 const textProfile = JSON.parse(
-  readFileSync(join(__dirname, "fixtures", "p2-pii-text-profile-v1.json"), "utf8"),
+  readFileSync(join(fixturesDirectory, "p2-pii-text-profile-v1.json"), "utf8"),
 ) as P2TextProfile;
+const textProfileVectors = JSON.parse(
+  readFileSync(join(fixturesDirectory, "p2-pii-text-profile-v1-vectors.json"), "utf8"),
+) as P2TextProfileVectors;
 
 describe("formatPii", () => {
   it("formats the documented example exactly", () => {
@@ -187,10 +191,9 @@ describe("P2 formatting", () => {
     expect(() => formatPii({ ...core, address })).toThrow(PiiValidationError));
 
   it("matches the canonical P2 text-profile identity", () => {
-    expect(PII_TEXT_PROFILE_ID).toBe(textProfile.id);
+    expect(PII_TEXT_PROFILE_ID).toBe(textProfile.profileId);
+    expect(textProfileVectors.profileId).toBe(textProfile.profileId);
     expect(PII_TEXT_PROFILE_UNICODE_VERSION).toBe(textProfile.unicodeVersion);
-    expect(PII_FIELD_MAX_LENGTH).toBe(textProfile.nonAddressMaxUtf16CodeUnits);
-    expect(PII_ADDRESS_MAX_BYTES).toBe(textProfile.addressMaxUtf8Bytes);
   });
 
   it("rejects every canonical control and line-separator code point", () => {
@@ -210,7 +213,7 @@ describe("P2 formatting", () => {
     }
   });
 
-  it("rejects every canonical Unicode 15.1 format-character range", () => {
+  it("rejects every canonical Unicode 17.0 format-character range", () => {
     for (const [startHex, endHex] of textProfile.formatCharacterRanges) {
       const start = Number.parseInt(startHex, 16);
       const end = Number.parseInt(endHex, 16);
@@ -222,12 +225,12 @@ describe("P2 formatting", () => {
     }
   });
 
-  it.each(textProfile.validText)("accepts canonical text vector: $name", ({ value }) => {
+  it.each(textProfileVectors.validText)("accepts canonical text vector: $name", ({ value }) => {
     expect(formatPii({ employeeName: value })).toContain(value);
     expect(formatPii({ address: value })).toContain(value);
   });
 
-  it.each(textProfile.invalidText)("rejects canonical text vector: $name", ({
+  it.each(textProfileVectors.invalidText)("rejects canonical text vector: $name", ({
     codePoints,
     reason,
   }) => {
@@ -244,7 +247,7 @@ describe("P2 formatting", () => {
     }
   });
 
-  it.each(textProfile.invalidUtf16)("rejects canonical malformed UTF-16 vector: $name", ({
+  it.each(textProfileVectors.invalidUtf16)("rejects canonical malformed UTF-16 vector: $name", ({
     codeUnits,
   }) => {
     const value = String.fromCharCode(...codeUnits);
