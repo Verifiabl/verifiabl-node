@@ -99,7 +99,6 @@ export async function createBarcodePng(
     {
       matrixData: selected.qr.modules.data,
       size: selected.size,
-      insetModules: selected.insetModules,
     },
     pixelWidth,
   );
