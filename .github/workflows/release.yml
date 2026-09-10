@@ -31,17 +31,19 @@ jobs:
       # Passing an explicit `ref:` forces a detached checkout at the bare SHA,
       # which drops that ref again and makes npm reject the bundle with
       # "Missing SourceRepositoryRef" (npm/cli#8699). Pinned >=6.0.2 here.
-      - uses: actions/checkout@v6 # >=6.0.2 required for the release-ref fix
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      # Trusted publishing requires npm >=11.5.1. Pin an exact known-good
-      # version rather than @latest or a floating major: npm 12.0.0
-      # (published 2026-07-08) ships broken and fails
-      # `npm publish --provenance` with "Cannot find module 'sigstore'".
-      # Bump this deliberately after verifying a newer release works.
-      - run: npm install -g npm@11.18.0
-      # prepublishOnly runs typecheck + tests + build before publish
-      - run: npm publish --provenance --access public
+          node-version: 26
+          cache: pnpm
+      # This validator and its target config are generated from the private
+      # monorepo's central release-targets.json manifest.
+      - name: Validate the release target, tag, package id, and version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: node .github/scripts/release-tool.mjs validate "$TAG"
+      - run: pnpm install --frozen-lockfile
+      # pnpm exchanges the job's OIDC token with npm trusted publishing and
+      # attaches provenance. prepublishOnly runs typecheck, tests, and build.
+      - run: pnpm publish --provenance --access public
