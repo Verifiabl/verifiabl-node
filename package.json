@@ -1,6 +1,6 @@
 {
   "name": "@verifiabl/issuer",
-  "version": "0.22.0",
+  "version": "0.23.0",
   "description": "Official Verifiabl Node.js SDK for issuing payslip QR codes, formatting PII, AES-256-GCM encryption helpers, and typed issuer API calls.",
   "license": "MIT",
   "repository": {
@@ -16,6 +16,7 @@
     "sdk"
   ],
   "type": "module",
+  "packageManager": "pnpm@12.3.4",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.cts",
@@ -48,10 +49,8 @@
     "check": "biome check --write .",
     "check:ci": "biome ci .",
     "typecheck": "tsc --noEmit",
-    "bench": "npm run build && node scripts/bench-png.mjs",
-    "prepublishOnly": "npm run typecheck && npm run test && npm run build && npm run check:exports",
-    "check:exports": "attw --pack .",
-    "bake:frames": "npm run build && node scripts/bake-frames.mjs"
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build && pnpm check:exports",
+    "check:exports": "attw --pack ."
   },
   "dependencies": {
     "qrcode": "^1.5.4",
@@ -65,14 +64,10 @@
     "@types/pngjs": "^6.0.5",
     "@types/qrcode": "^1.5.5",
     "jest": "^29.7.0",
-    "jsqr": "^1.4.0",
     "pngjs": "^5.0.0",
     "ts-jest": "^29.2.5",
     "tsup": "^8.3.5",
-    "typescript": "^5.7.0"
-  },
-  "overrides": {
-    "esbuild": "0.28.1",
-    "js-yaml": "4.3.1"
+    "typescript": "^5.7.0",
+    "zxing-wasm": "3.1.3"
   }
 }

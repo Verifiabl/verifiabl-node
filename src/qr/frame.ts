@@ -1,16 +1,19 @@
 import { inflateRawSync } from "node:zlib";
 
-import { FRAME_ASSETS_V1 } from "./frameAssets.generated.js";
+import {
+  FRAME_ASSETS_V1,
+  SUPPORTED_PNG_PIXEL_WIDTHS,
+  type SupportedPngPixelWidth,
+} from "./frameAssets.generated.js";
 import type { RgbaRaster } from "./pngEncode.js";
 
+export type { SupportedPngPixelWidth };
 /**
  * Pixel widths the PNG compositor supports. The frame is pre-rasterised at
- * bake time (scripts/bake-frames.mjs), so PNG output exists only at these
- * widths; SVG output remains continuously scalable.
+ * generation time, so PNG output exists only at these widths; SVG output
+ * remains continuously scalable.
  */
-export const SUPPORTED_PNG_PIXEL_WIDTHS = [480, 720, 960, 1440] as const;
-
-export type SupportedPngPixelWidth = (typeof SUPPORTED_PNG_PIXEL_WIDTHS)[number];
+export { SUPPORTED_PNG_PIXEL_WIDTHS };
 
 export interface ParsedFrameAsset {
   width: number;

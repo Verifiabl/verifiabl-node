@@ -3,14 +3,13 @@ import { join } from "node:path";
 
 import { Resvg } from "@resvg/resvg-js";
 
-import jsQR = require("jsqr");
-
 import { PNG } from "pngjs";
 import type { BarcodeParts } from "../payload.js";
 import { frameRaster, SUPPORTED_PNG_PIXEL_WIDTHS } from "../qr/frame.js";
 import { createBarcodePng } from "../qr/png.js";
 import { unpremultiplyInPlace } from "../qr/pngEncode.js";
 import { createBarcodeSvg } from "../qr/styled.js";
+import { decodeQrImage } from "../test/decodeQr.js";
 
 const PARTS: BarcodeParts = {
   verifiablReference: "AbCdEfGhIjKlMnOpQrStUv",
@@ -77,7 +76,7 @@ describe("PNG pipeline visual identity", () => {
 });
 
 describe("frame asset freshness", () => {
-  /** The badge SVG minus its QR content, exactly as scripts/bake-frames.mjs strips it. */
+  /** The badge SVG minus its QR content, exactly as the artifact generator strips it. */
   function frameOnlySvg(width: number): string {
     const { svg } = createBarcodeSvg(PARTS, { width });
     const crispIndex = svg.indexOf('<g shape-rendering="crispEdges">');
@@ -86,7 +85,7 @@ describe("frame asset freshness", () => {
     return `${svg.slice(0, qrGroupStart)}</svg>`;
   }
 
-  // A frame change in styled.ts without re-running scripts/bake-frames.mjs
+  // A frame change in styled.ts without regenerating the committed artifacts
   // would silently drift the PNG output from the SVG. Re-render the frame from
   // the live SVG renderer and demand the committed asset matches it exactly.
   it.each([
@@ -126,26 +125,25 @@ describe("PNG scannability", () => {
     encryptedPii: "A".repeat(220),
   };
 
-  function scan(png: Buffer): string | null {
-    const img = decode(png);
-    return jsQR.default(new Uint8ClampedArray(img.data), img.width, img.height)?.data ?? null;
+  function scan(png: Buffer): Promise<string | null> {
+    return decodeQrImage(png);
   }
 
   it.each(payloads)("decodes back to the scan URL (%s)", async (ref) => {
     const parts: BarcodeParts = { verifiablReference: ref, encryptedPii: PARTS.encryptedPii };
     const { png, content } = await createBarcodePng(parts, {}, 720);
-    expect(scan(png)).toBe(content);
+    expect(await scan(png)).toBe(content);
     expect(content).toBe(createBarcodeSvg(parts).content);
   });
 
   it.each([...SUPPORTED_PNG_PIXEL_WIDTHS])("decodes at width %d", async (width) => {
     const { png, content } = await createBarcodePng(PARTS, {}, width);
-    expect(scan(png)).toBe(content);
+    expect(await scan(png)).toBe(content);
   });
 
   it("decodes a dense (long-PII) code", async () => {
     const { png, content } = await createBarcodePng(DENSE, {}, 720);
-    expect(scan(png)).toBe(content);
+    expect(await scan(png)).toBe(content);
   });
 
   it("keeps the QR data region strictly black and white", async () => {

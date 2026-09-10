@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "versionPolicy": {
+    "name": "SemVer 2.0 without build metadata",
+    "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-(?:(?:0|[1-9][0-9]*)|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:(?:0|[1-9][0-9]*)|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?$"
+  },
+  "targets": [
+    {
+      "id": "node/issuer",
+      "ecosystem": "node",
+      "role": "issuer",
+      "publicRepository": "Verifiabl/verifiabl-node",
+      "changelog": "CHANGELOG.md",
+      "tags": {
+        "privatePrefix": "node/issuer/v",
+        "publicPrefix": "issuer/v"
+      },
+      "packages": [
+        {
+          "id": "@verifiabl/issuer",
+          "versionSource": {
+            "kind": "json",
+            "path": "package.json",
+            "versionProperty": "version",
+            "packageIdProperty": "name"
+          }
+        }
+      ],
+      "coupledVersionGroups": [],
+      "packCommands": [
+        [
+          "pnpm",
+          "pack",
+          "--pack-destination",
+          "artifacts"
+        ]
+      ]
+    }
+  ]
+}
