@@ -1,11 +1,10 @@
 import { createCipheriv, createHash } from "node:crypto";
 import { Resvg } from "@resvg/resvg-js";
 
-import jsQR = require("jsqr");
-
 import { type BarcodeParts, buildBarcodePayload } from "../payload.js";
 import { formatPii, type PiiFields } from "../pii.js";
 import { type BarcodeSvgOptions, createBarcodeSvg } from "../qr/styled.js";
+import { decodeQrImage } from "../test/decodeQr.js";
 
 /**
  * End-to-end scannability: rasterise the styled SVG and decode it with an
@@ -172,15 +171,11 @@ function partsFromPii(fields: PiiFields): { parts: BarcodeParts; plaintext: stri
   };
 }
 
-function decodePixels(svg: string, rasterWidth: number): string {
+async function decodePixels(svg: string, rasterWidth: number): Promise<string> {
   const rendered = new Resvg(svg, { fitTo: { mode: "width", value: rasterWidth } }).render();
-  const result = jsQR.default(
-    new Uint8ClampedArray(rendered.pixels),
-    rendered.width,
-    rendered.height,
-  );
+  const result = await decodeQrImage(rendered.asPng());
   if (!result) throw new Error(`QR code could not be decoded at ${rasterWidth}px`);
-  return result.data;
+  return result;
 }
 
 /**
@@ -212,7 +207,11 @@ function hostRasterWidth(badgeRasterWidth: number): number {
 }
 
 /** Decode the badge placed on a white host page with the documented margin. */
-function decode(parts: BarcodeParts, options: BarcodeSvgOptions = {}, rasterWidth = 900): string {
+function decode(
+  parts: BarcodeParts,
+  options: BarcodeSvgOptions = {},
+  rasterWidth = 900,
+): Promise<string> {
   return decodePixels(
     placeOnHostPage(createBarcodeSvg(parts, options).svg),
     hostRasterWidth(rasterWidth),
@@ -244,9 +243,9 @@ function pixelChannel(pixels: Uint8Array, index: number): number {
 }
 
 describe("styled QR scannability", () => {
-  it("decodes the framed badge back to the scan URL", () => {
+  it("decodes the framed badge back to the scan URL", async () => {
     const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
-    expect(decode(parts)).toBe(createBarcodeSvg(parts).content);
+    expect(await decode(parts)).toBe(createBarcodeSvg(parts).content);
   });
 
   it("paints the ground white under the QR and keeps the header corners transparent", () => {
@@ -308,19 +307,19 @@ describe("styled QR scannability", () => {
     });
   });
 
-  it("decoded URL round-trips to the original payload", () => {
+  it("decoded URL round-trips to the original payload", async () => {
     const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
-    const scanned = new URL(decode(parts));
+    const scanned = new URL(await decode(parts));
     const reference = scanned.pathname.slice(scanned.pathname.lastIndexOf("/") + 1);
     const ciphertext = scanned.hash.slice("#2.".length);
 
     expect(`2|${reference}|${ciphertext}`).toBe(buildBarcodePayload(parts));
   });
 
-  it("decodes the mixed-mode v2 symbol byte-exactly", () => {
+  it("decodes the mixed-mode v2 symbol byte-exactly", async () => {
     const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
     const expected = createBarcodeSvg(parts);
-    const scanned = decode(parts, {}, MIN_TESTED_RASTER_WIDTH);
+    const scanned = await decode(parts, {}, MIN_TESTED_RASTER_WIDTH);
 
     expect(scanned).toBe(expected.content);
     expect(scanned).toMatch(/^https:\/\/v\.verifiabl\.io\/v\/[A-Za-z0-9_-]{22}#2\.[A-Z2-7]+$/);
@@ -328,27 +327,29 @@ describe("styled QR scannability", () => {
     expect(expected.qrVersion).toBeGreaterThan(0);
   });
 
-  it("decodes the encrypted docs PII example at the minimum raster width", () => {
+  it("decodes the encrypted docs PII example at the minimum raster width", async () => {
     const { parts, plaintext } = partsFromPii(DOCS_EXAMPLE_FIELDS);
     expect(plaintext).toBe(
       "P2|Jane A. Doe|Senior Developer|Engineering|12-345-678-901|062-000|12345678|Jane A Doe|12 Example St, Sydney NSW 2000",
     );
     expect(parts.encryptedPii.length).toBeGreaterThan(plaintext.length);
-    expect(decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(createBarcodeSvg(parts).content);
+    expect(await decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(createBarcodeSvg(parts).content);
   });
 
-  it("decodes longer real-world employee fields at the minimum raster width", () => {
+  it("decodes longer real-world employee fields at the minimum raster width", async () => {
     const { parts, plaintext } = partsFromPii(LONG_NAME_FIELDS);
     expect(plaintext.length).toBeGreaterThan(formatPii(DOCS_EXAMPLE_FIELDS).length);
     expect(parts.encryptedPii.length).toBeGreaterThan(plaintext.length);
-    expect(decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(createBarcodeSvg(parts).content);
+    expect(await decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(createBarcodeSvg(parts).content);
   });
 
   it.each(
     DIVERSE_RECORDS,
-  )("decodes a diverse real-world record at the minimum raster width ($label)", ({ fields }) => {
+  )("decodes a diverse real-world record at the minimum raster width ($label)", async ({
+    fields,
+  }) => {
     const { parts } = partsFromPii(fields);
-    expect(decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(createBarcodeSvg(parts).content);
+    expect(await decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(createBarcodeSvg(parts).content);
   });
 
   it("defaults to error-correction M and renders a clean (non-degraded) code", () => {
@@ -360,7 +361,7 @@ describe("styled QR scannability", () => {
     expect(result.degraded).toBe(false);
   });
 
-  it("maxErrorCorrection 'Q' stays available and yields a denser code", () => {
+  it("maxErrorCorrection 'Q' stays available and yields a denser code", async () => {
     // Opting back into Q packs the same payload into more (smaller) modules for
     // extra damage recovery; both encodings remain scannable and non-degraded.
     const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
@@ -370,7 +371,7 @@ describe("styled QR scannability", () => {
     expect(qResult.degraded).toBe(false);
     // Denser: Q's modules are smaller than the default M's at the same width.
     expect(qResult.modulePx).toBeLessThan(defaultResult.modulePx);
-    expect(decode(parts, { maxErrorCorrection: "Q" })).toBe(qResult.content);
+    expect(await decode(parts, { maxErrorCorrection: "Q" })).toBe(qResult.content);
   });
 
   // The ladder degrades error correction (not the frame) for unusually long
@@ -385,7 +386,10 @@ describe("styled QR scannability", () => {
     { label: "stays M, sub-ideal modules", plaintext: `P1|${"A".repeat(800)}`, ec: "M" },
     { label: "stays M near the floor", plaintext: `P1|${"A".repeat(1200)}`, ec: "M" },
     { label: "drops to L", plaintext: `P1|${"A".repeat(1400)}`, ec: "L" },
-  ])("decodes a $label record at the fixed frame and flags it degraded", ({ plaintext, ec }) => {
+  ])("decodes a $label record at the fixed frame and flags it degraded", async ({
+    plaintext,
+    ec,
+  }) => {
     const parts: BarcodeParts = {
       verifiablReference: VERIFIABL_REF,
       encryptedPii: encryptFixture(plaintext),
@@ -394,7 +398,7 @@ describe("styled QR scannability", () => {
     expect(result.errorCorrectionLevel).toBe(ec);
     expect(result.degraded).toBe(true);
     expect(result.width).toBe(480);
-    expect(decode(parts, { format: "v1" }, REALISTIC_SCAN_RASTER)).toBe(result.content);
+    expect(await decode(parts, { format: "v1" }, REALISTIC_SCAN_RASTER)).toBe(result.content);
   });
 
   it("hard-errors when PII cannot fit the fixed frame even degraded to L", () => {
@@ -407,11 +411,11 @@ describe("styled QR scannability", () => {
     );
   });
 
-  it("decodes the framed badge across larger raster scales", () => {
+  it("decodes the framed badge across larger raster scales", async () => {
     const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
     const { content } = createBarcodeSvg(parts);
     for (const rasterWidth of [500, 900, 1600]) {
-      expect(decode(parts, {}, rasterWidth)).toBe(content);
+      expect(await decode(parts, {}, rasterWidth)).toBe(content);
     }
   });
 });

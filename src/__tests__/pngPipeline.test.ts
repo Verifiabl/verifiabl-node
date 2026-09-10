@@ -3,14 +3,13 @@ import { join } from "node:path";
 
 import { Resvg } from "@resvg/resvg-js";
 
-import jsQR = require("jsqr");
-
 import { PNG } from "pngjs";
 import type { BarcodeParts } from "../payload.js";
 import { frameRaster, SUPPORTED_PNG_PIXEL_WIDTHS } from "../qr/frame.js";
 import { createBarcodePng } from "../qr/png.js";
 import { unpremultiplyInPlace } from "../qr/pngEncode.js";
 import { createBarcodeSvg } from "../qr/styled.js";
+import { decodeQrImage } from "../test/decodeQr.js";
 
 const PARTS: BarcodeParts = {
   verifiablReference: "AbCdEfGhIjKlMnOpQrStUv",
@@ -126,26 +125,25 @@ describe("PNG scannability", () => {
     encryptedPii: "A".repeat(220),
   };
 
-  function scan(png: Buffer): string | null {
-    const img = decode(png);
-    return jsQR.default(new Uint8ClampedArray(img.data), img.width, img.height)?.data ?? null;
+  function scan(png: Buffer): Promise<string | null> {
+    return decodeQrImage(png);
   }
 
   it.each(payloads)("decodes back to the scan URL (%s)", async (ref) => {
     const parts: BarcodeParts = { verifiablReference: ref, encryptedPii: PARTS.encryptedPii };
     const { png, content } = await createBarcodePng(parts, {}, 720);
-    expect(scan(png)).toBe(content);
+    expect(await scan(png)).toBe(content);
     expect(content).toBe(createBarcodeSvg(parts).content);
   });
 
   it.each([...SUPPORTED_PNG_PIXEL_WIDTHS])("decodes at width %d", async (width) => {
     const { png, content } = await createBarcodePng(PARTS, {}, width);
-    expect(scan(png)).toBe(content);
+    expect(await scan(png)).toBe(content);
   });
 
   it("decodes a dense (long-PII) code", async () => {
     const { png, content } = await createBarcodePng(DENSE, {}, 720);
-    expect(scan(png)).toBe(content);
+    expect(await scan(png)).toBe(content);
   });
 
   it("keeps the QR data region strictly black and white", async () => {
