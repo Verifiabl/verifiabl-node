@@ -39,11 +39,20 @@ jobs:
           cache: pnpm
       # This validator and its target config are generated from the private
       # monorepo's central release-targets.json manifest.
-      - name: Validate the release target, tag, package id, and version
+      - name: Validate the release target and tag checkout
         env:
           TAG: ${{ github.event.release.tag_name }}
-        run: node .github/scripts/release-tool.mjs validate "$TAG"
+        run: |
+          node .github/scripts/release-tool.mjs validate "$TAG"
+          TAG_COMMIT="$(git rev-parse "${TAG}^{commit}")"
+          test "$(git rev-parse HEAD)" = "$TAG_COMMIT"
       - run: pnpm install --frozen-lockfile
-      # pnpm exchanges the job's OIDC token with npm trusted publishing and
-      # attaches provenance. prepublishOnly runs typecheck, tests, and build.
-      - run: pnpm publish --provenance --access public
+      - name: Verify tracked release sources are clean
+        run: |
+          git diff --exit-code
+          git diff --cached --exit-code
+      # A release tag is necessarily a detached checkout, so pnpm's
+      # branch-oriented Git check cannot apply. The steps above explicitly
+      # validate the tag commit and clean tree before trusted publishing.
+      # prepublishOnly runs typecheck, tests, build, and package export checks.
+      - run: pnpm publish --provenance --access public --no-git-checks
