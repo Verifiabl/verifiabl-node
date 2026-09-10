@@ -9,7 +9,7 @@ Verifiabl is for accredited payroll providers. You receive sandbox credentials a
 ## Installation
 
 ```bash
-npm install @verifiabl/issuer
+pnpm add @verifiabl/issuer
 ```
 
 Requires Node.js 20+. No native dependencies: both the SVG and PNG renderers are pure JavaScript.
@@ -92,13 +92,16 @@ const xmpPayload = buildBarcodePayload(parts);
 ```
 
 P2 is exactly `P2|employeeName|position|department|employerAbn|bsb|accountNumber|accountName|address`.
-The final address is unstructured, optional, preserved verbatim, and limited to 320 UTF-8 bytes.
-Pipes, control characters, and Unicode format characters are rejected before encryption. A v2 QR
+P2 preserves valid Unicode without normalization. Writers limit the complete plaintext, including
+framing and delimiters, to 1024 UTF-8 bytes. Readers continue to accept oversized P2 plaintext from
+legacy documents. The pipe and Unicode General Categories Cc (control), Cf (format), Zl (line
+separator), and Zp (paragraph separator) are rejected before encryption. Ordinary international
+Unicode remains valid. A v2 QR
 uses the short `v.verifiabl.io` scan host (`v.sandbox.verifiabl.io` in sandbox) with `#2.<BASE32>` and an explicit byte/alphanumeric segment split. Its XMP
 copy must be the matching `2|reference|BASE32`. Never mix QR and XMP versions. For rollback, pass
 `{ format: "v1" }` to `createBarcodeSvg`, `createBarcodePng`, `buildScanUrl`, and `buildBarcodePayload`.
 
-Prefer `createBarcodeSvg` when you can: SVG scales to any size without losing quality. Use `createBarcodePng` when your document pipeline needs a raster image; it composites the badge deterministically (no rasteriser involved), so the same record produces the byte-identical raster in every Verifiabl SDK. PNG output comes in fixed pixel widths (480, 720, 960 or 1440; the physical print size is set where you place the image in the PDF). Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
+Prefer `createBarcodeSvg` when you can: SVG scales to any size without losing quality. Use `createBarcodePng` when your document pipeline needs a raster image; it composites the badge deterministically (no rasteriser involved), so the same record produces the byte-identical raster in every Verifiabl SDK. PNG output comes in fixed pixel widths (480, 720, 960 or 1440; the physical print size is set where you place the image in the PDF). The committed frame data is a centrally generated cross-SDK artifact; the test suite independently checks it against a fresh render of the live SVG. Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
 
 ### Placing the badge
 
