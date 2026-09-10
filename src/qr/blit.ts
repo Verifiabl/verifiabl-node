@@ -13,8 +13,8 @@ import {
  * modules and rounded finder patterns) onto a pre-rasterised frame.
  *
  * Everything here is integer arithmetic on exact rational coordinates. Module
- * geometry is rational by construction (`modulePx = BW / (96(n + 2i))` for the
- * QR box size B), so the same inputs produce the identical raster in every
+ * geometry is rational by construction (`modulePx = BW / (96n)` for the QR
+ * box size B), so the same inputs produce the identical raster in every
  * implementation of this spec; the .NET SDK mirrors this file and byte-compares
  * rasters in CI. Do not introduce floating point here: cross-runtime float
  * differences (e.g. x87 on .NET Framework x86) would silently break that parity.
@@ -45,20 +45,15 @@ export interface QrBlitGeometry {
   /** Row-major dark-module flags, `size * size` entries. */
   matrixData: Uint8Array;
   size: number;
-  insetModules: number;
 }
 
 /** Draw the QR modules and finders onto `frame` in place. */
 export function blitQrOntoFrame(frame: RgbaRaster, qr: QrBlitGeometry, pixelWidth: number): void {
-  const { matrixData, size, insetModules } = qr;
+  const { matrixData, size } = qr;
   // Common denominator for all module-grid coordinates, in pixels.
-  const denom = FRAME_VIEWBOX_WIDTH * (size + 2 * insetModules);
-  const numX = (k: number): number =>
-    pixelWidth *
-    (FRAME_QR_BOX_X * (size + 2 * insetModules) + FRAME_QR_BOX_SIZE * (insetModules + k));
-  const numY = (k: number): number =>
-    pixelWidth *
-    (FRAME_QR_BOX_Y * (size + 2 * insetModules) + FRAME_QR_BOX_SIZE * (insetModules + k));
+  const denom = FRAME_VIEWBOX_WIDTH * size;
+  const numX = (k: number): number => pixelWidth * (FRAME_QR_BOX_X * size + FRAME_QR_BOX_SIZE * k);
+  const numY = (k: number): number => pixelWidth * (FRAME_QR_BOX_Y * size + FRAME_QR_BOX_SIZE * k);
   // Round half up; edges are >= 2px apart (modulePx >= 3), so never degenerate.
   const snap = (num: number): number => Math.floor((2 * num + denom) / (2 * denom));
 

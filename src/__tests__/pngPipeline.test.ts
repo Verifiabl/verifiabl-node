@@ -77,7 +77,7 @@ describe("PNG pipeline visual identity", () => {
 });
 
 describe("frame asset freshness", () => {
-  /** The badge SVG minus its QR content, exactly as scripts/bake-frames.mjs strips it. */
+  /** The badge SVG minus its QR content, exactly as the artifact generator strips it. */
   function frameOnlySvg(width: number): string {
     const { svg } = createBarcodeSvg(PARTS, { width });
     const crispIndex = svg.indexOf('<g shape-rendering="crispEdges">');
@@ -86,7 +86,7 @@ describe("frame asset freshness", () => {
     return `${svg.slice(0, qrGroupStart)}</svg>`;
   }
 
-  // A frame change in styled.ts without re-running scripts/bake-frames.mjs
+  // A frame change in styled.ts without regenerating the committed artifacts
   // would silently drift the PNG output from the SVG. Re-render the frame from
   // the live SVG renderer and demand the committed asset matches it exactly.
   it.each([

@@ -49,10 +49,8 @@
     "check": "biome check --write .",
     "check:ci": "biome ci .",
     "typecheck": "tsc --noEmit",
-    "bench": "pnpm build && node scripts/bench-png.mjs",
     "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build && pnpm check:exports",
-    "check:exports": "attw --pack .",
-    "bake:frames": "pnpm build && node scripts/bake-frames.mjs"
+    "check:exports": "attw --pack ."
   },
   "dependencies": {
     "qrcode": "^1.5.4",

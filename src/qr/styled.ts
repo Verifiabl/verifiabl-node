@@ -77,8 +77,11 @@ const FRAME_BACKGROUND = "#FFFFFF";
 export const FRAME_VIEWBOX_WIDTH = 96;
 const FRAME_HEADER_HEIGHT = 47;
 // White gap between the header and the QR box: the only quiet-zone margin the
-// badge itself supplies (the header above it is dark). Odd so the viewBox
-// height is even and every supported PNG width has an integer pixel height.
+// badge itself supplies (the header above it is dark). It is four modules for
+// a version 10 symbol, the smallest a full record encodes as, and fewer for
+// shorter payloads, whose larger modules have the scan headroom to spare. Odd
+// so the viewBox height is even and every supported PNG width has an integer
+// pixel height.
 export const FRAME_QR_GAP = 7;
 export const FRAME_QR_BOX_X = 0;
 export const FRAME_QR_BOX_Y = FRAME_HEADER_HEIGHT + FRAME_QR_GAP;
@@ -125,31 +128,6 @@ export const IDEAL_MODULE_PX = 4;
 // Absolute floor: a module smaller than this (px) is unreliable for real-world
 // scans, so we hard-error rather than emit it. Evaluated at the badge's width.
 const MIN_MODULE_PX = 3;
-// QR spec quiet zone: at least this many light modules around the symbol.
-const QUIET_ZONE_MODULES = 4;
-// Smallest internal inset (in modules) padded inside the fixed QR box.
-const MIN_QR_INSET_MODULES = 0;
-// Light gutter (viewBox units) on the binding side: the top, where the header
-// sits above the QR box. The other three sides open onto the host document.
-const FRAME_QR_GUTTER = FRAME_QR_GAP;
-
-/**
- * Internal inset (in modules) needed so the light margin between the header
- * and the QR - the fixed gap plus the inset - is at least QUIET_ZONE_MODULES.
- * Dense symbols (small modules) already clear it from the gap alone and take
- * no inset; only small/sparse symbols, which have large modules and huge
- * scannability headroom, need one. So this never affects the degradation
- * thresholds, which bite for dense payloads.
- */
-function quietZoneInsetModules(size: number): number {
-  for (let inset = MIN_QR_INSET_MODULES; inset < QUIET_ZONE_MODULES; inset++) {
-    const moduleSize = FRAME_QR_BOX_SIZE / (size + inset * 2);
-    if (FRAME_QR_GUTTER / moduleSize + inset >= QUIET_ZONE_MODULES) {
-      return inset;
-    }
-  }
-  return QUIET_ZONE_MODULES;
-}
 
 function renderModules(
   matrixData: Uint8Array,
@@ -315,7 +293,7 @@ export function createBarcodeSvg(
   const content = encoding.content;
 
   const ladder = errorCorrectionLadder(options.maxErrorCorrection ?? DEFAULT_MAX_ERROR_CORRECTION);
-  const { qr, errorCorrectionLevel, size, moduleSize, modulePx, insetModules } = selectQrRendering(
+  const { qr, errorCorrectionLevel, size, moduleSize, modulePx } = selectQrRendering(
     encoding.data,
     badgeWidth,
     ladder,
@@ -325,7 +303,6 @@ export function createBarcodeSvg(
   const degraded = errorCorrectionLevel !== ladder[0] || modulePx < IDEAL_MODULE_PX;
 
   const height = round2((badgeWidth * FRAME_VIEWBOX_HEIGHT) / FRAME_VIEWBOX_WIDTH);
-  const qrPadding = insetModules * moduleSize;
 
   const headerBackground = `<path d="M0 8C0 3.58172 3.58172 0 8 0H88C92.4183 0 96 3.58172 96 8V${FRAME_HEADER_HEIGHT}H0V8Z" fill="${DEFAULT_NAVY}"/>`;
   const header = headerBackground + renderDefaultHeader(DEFAULT_TEXT);
@@ -338,7 +315,7 @@ export function createBarcodeSvg(
     `<rect x="0" y="${FRAME_HEADER_HEIGHT - 8}" width="${FRAME_VIEWBOX_WIDTH}" ` +
     `height="${FRAME_VIEWBOX_HEIGHT - FRAME_HEADER_HEIGHT + 8}" fill="${FRAME_BACKGROUND}"/>` +
     header +
-    `<g transform="translate(${round2(FRAME_QR_BOX_X + qrPadding)} ${round2(FRAME_QR_BOX_Y + qrPadding)})">` +
+    `<g transform="translate(${FRAME_QR_BOX_X} ${FRAME_QR_BOX_Y})">` +
     `<g shape-rendering="crispEdges">` +
     renderModules(matrixData, size, moduleSize, DEFAULT_QR) +
     `</g>` +
@@ -363,7 +340,6 @@ export interface SelectedQrRendering {
   size: number;
   moduleSize: number;
   modulePx: number;
-  insetModules: number;
 }
 
 /**
@@ -471,11 +447,10 @@ export function selectQrRendering(
       throw error;
     }
     const size = qr.modules.size;
-    const insetModules = quietZoneInsetModules(size);
-    const moduleSize = FRAME_QR_BOX_SIZE / (size + insetModules * 2);
+    const moduleSize = FRAME_QR_BOX_SIZE / size;
     const modulePx = moduleSize * scale;
     if (modulePx >= MIN_MODULE_PX) {
-      return { qr, errorCorrectionLevel, size, moduleSize, modulePx, insetModules };
+      return { qr, errorCorrectionLevel, size, moduleSize, modulePx };
     }
     densestSize = size;
   }
