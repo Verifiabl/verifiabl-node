@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  PII_FORMAT_CHARACTER_RANGES,
+  PII_TEXT_PROFILE_UNICODE_VERSION,
+} from "./generated/piiTextProfile.js";
+
+export { PII_TEXT_PROFILE_UNICODE_VERSION };
 
 function tuple<const T extends readonly string[]>(value: T): T {
   return value;
@@ -44,20 +50,51 @@ export const PII_FIELD_ORDER = tuple([...P1_FIELD_ORDER, "address"]);
 export type PiiFieldName = (typeof PII_FIELD_ORDER)[number];
 
 /**
- * Round per-field sanity cap in UTF-16 code units, not bytes. It is not derived
- * from QR capacity and does not bound it. Total plaintext is the real budget,
- * so recheck it before adding fields.
+ * @deprecated P2 has no per-field limit. Retained for API compatibility and
+ * still used by the legacy P1 writer and reader.
  */
 export const PII_FIELD_MAX_LENGTH = 256;
 
-/** Maximum UTF-8 size of the optional P2 address. */
+/**
+ * @deprecated P2 has no address-specific limit. Retained for API compatibility.
+ */
 export const PII_ADDRESS_MAX_BYTES = 320;
 
-// U+2028 and U+2029 are separators, not Cc, so a Cc-only test misses them even
-// though they break a field just as a newline would. P2 also rejects Unicode
-// format characters so hidden formatting state does not enter new payloads.
-const DISALLOWED_TEXT_CHARACTERS = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
-const DISALLOWED_LEGACY_CHARACTERS = /[\p{Cc}\p{Zl}\p{Zp}]/u;
+/** Maximum UTF-8 size of complete newly written P2 plaintext, including framing. */
+export const PII_PAYLOAD_MAX_BYTES = 1024;
+
+export const PII_TEXT_PROFILE_ID = "io.verifiabl.p2-pii-text.v1";
+
+// Cc is permanently assigned to C0/C1. U+2028 and U+2029 are Zl/Zp rather
+// than Cc, but are forbidden because every P2 field is one line.
+function containsControlOrLineCharacter(value: string): boolean {
+  for (const character of value) {
+    const codePoint = character.codePointAt(0);
+    if (
+      codePoint !== undefined &&
+      (codePoint <= 0x1f ||
+        (codePoint >= 0x7f && codePoint <= 0x9f) ||
+        codePoint === 0x2028 ||
+        codePoint === 0x2029)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function containsFormatCharacter(value: string): boolean {
+  for (const character of value) {
+    const codePoint = character.codePointAt(0);
+    if (
+      codePoint !== undefined &&
+      PII_FORMAT_CHARACTER_RANGES.some(([start, end]) => codePoint >= start && codePoint <= end)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
 
 function hasUnpairedSurrogate(value: string): boolean {
   for (let index = 0; index < value.length; index++) {
@@ -81,17 +118,17 @@ function isCurrentText(value: string): boolean {
   return (
     !hasUnpairedSurrogate(value) &&
     !value.includes(PII_FIELD_DELIMITER) &&
-    !DISALLOWED_TEXT_CHARACTERS.test(value)
+    !containsControlOrLineCharacter(value) &&
+    !containsFormatCharacter(value)
   );
 }
 
 function isLegacyText(value: string): boolean {
-  return !value.includes(PII_FIELD_DELIMITER) && !DISALLOWED_LEGACY_CHARACTERS.test(value);
+  return !value.includes(PII_FIELD_DELIMITER) && !containsControlOrLineCharacter(value);
 }
 
 const piiFieldSchema = z
   .string()
-  .max(PII_FIELD_MAX_LENGTH, `PII field exceeds ${PII_FIELD_MAX_LENGTH} characters`)
   .refine((value) => !hasUnpairedSurrogate(value), "PII field must contain valid Unicode")
   .refine(
     isCurrentText,
@@ -101,11 +138,7 @@ const piiFieldSchema = z
 const addressSchema = z
   .string()
   .refine((value) => !hasUnpairedSurrogate(value), "Address must contain valid Unicode")
-  .refine(isCurrentText, "Address must not contain '|', control, format or line separators")
-  .refine(
-    (value) => Buffer.byteLength(value, "utf8") <= PII_ADDRESS_MAX_BYTES,
-    `Address exceeds ${PII_ADDRESS_MAX_BYTES} UTF-8 bytes`,
-  );
+  .refine(isCurrentText, "Address must not contain '|', control, format or line separators");
 
 export const piiFieldsSchema = z
   .object({
@@ -142,8 +175,8 @@ const VIOLATION_DESCRIPTIONS: Record<PiiFieldViolationReason, string> = {
   "control-character": "must not contain control characters or line separators",
   "format-character": "must not contain format characters",
   "invalid-unicode": "must contain valid Unicode",
-  "too-long": `exceeds ${PII_FIELD_MAX_LENGTH} characters`,
-  "too-many-bytes": `exceeds ${PII_ADDRESS_MAX_BYTES} UTF-8 bytes`,
+  "too-long": `exceeds the legacy ${PII_FIELD_MAX_LENGTH} UTF-16 code-unit limit`,
+  "too-many-bytes": `exceeds the legacy ${PII_ADDRESS_MAX_BYTES} UTF-8 bytes`,
 };
 
 /**
@@ -171,19 +204,13 @@ function fieldViolation(field: PiiFieldName, value: string): PiiFieldViolation |
   if (hasUnpairedSurrogate(value)) {
     return { field, reason: "invalid-unicode" };
   }
-  if (field === "address" && Buffer.byteLength(value, "utf8") > PII_ADDRESS_MAX_BYTES) {
-    return { field, reason: "too-many-bytes" };
-  }
-  if (field !== "address" && value.length > PII_FIELD_MAX_LENGTH) {
-    return { field, reason: "too-long" };
-  }
   if (value.includes(PII_FIELD_DELIMITER)) {
     return { field, reason: "pipe" };
   }
-  if (/[\p{Cc}\p{Zl}\p{Zp}]/u.test(value)) {
+  if (containsControlOrLineCharacter(value)) {
     return { field, reason: "control-character" };
   }
-  if (/\p{Cf}/u.test(value)) {
+  if (containsFormatCharacter(value)) {
     return { field, reason: "format-character" };
   }
   return null;
@@ -225,7 +252,11 @@ export function formatPii(fields: PiiFields): string {
   }
   const validated = piiFieldsSchema.parse(fields);
   const segments = PII_FIELD_ORDER.map((name) => validated[name] ?? "");
-  return PII_V2_PREFIX + segments.join(PII_FIELD_DELIMITER);
+  const plaintext = PII_V2_PREFIX + segments.join(PII_FIELD_DELIMITER);
+  if (Buffer.byteLength(plaintext, "utf8") > PII_PAYLOAD_MAX_BYTES) {
+    throw new RangeError(`P2 plaintext exceeds ${PII_PAYLOAD_MAX_BYTES} UTF-8 bytes`);
+  }
+  return plaintext;
 }
 
 /**
