@@ -16,6 +16,7 @@
     "sdk"
   ],
   "type": "module",
+  "packageManager": "pnpm@12.3.4",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.cts",
@@ -48,10 +49,10 @@
     "check": "biome check --write .",
     "check:ci": "biome ci .",
     "typecheck": "tsc --noEmit",
-    "bench": "npm run build && node scripts/bench-png.mjs",
-    "prepublishOnly": "npm run typecheck && npm run test && npm run build && npm run check:exports",
+    "bench": "pnpm build && node scripts/bench-png.mjs",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build && pnpm check:exports",
     "check:exports": "attw --pack .",
-    "bake:frames": "npm run build && node scripts/bake-frames.mjs"
+    "bake:frames": "pnpm build && node scripts/bake-frames.mjs"
   },
   "dependencies": {
     "qrcode": "^1.5.4",
@@ -70,9 +71,5 @@
     "ts-jest": "^29.2.5",
     "tsup": "^8.3.5",
     "typescript": "^5.7.0"
-  },
-  "overrides": {
-    "esbuild": "0.28.1",
-    "js-yaml": "4.3.1"
   }
 }
