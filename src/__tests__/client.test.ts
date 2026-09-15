@@ -300,6 +300,117 @@ describe("VerifiablClient with static auth", () => {
     });
   });
 
+  it("maps the sub-cent rate, award and per-line year-to-date fields", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await client.registerNonPii({
+      ...REQUEST,
+      payslipNonPii: {
+        ...REQUEST.payslipNonPii,
+        industrialInstrument: "modern_award",
+        award: { code: "MA000065", classificationFixedId: 12_345, classificationLevel: 4 },
+        // $65.2673/hour, which is 6526.73 cents and not an integer.
+        hourly: { ordinaryRateMicros: 65_267_300, hours: 159.6, amountCents: 900_000 },
+        earnings: [
+          {
+            type: "ordinary",
+            amountCents: 900_000,
+            units: 159.6,
+            rateMicros: 65_267_300,
+            ytdAmountCents: 900_000,
+          },
+        ],
+        superannuation: [
+          {
+            contributionType: "superannuation_guarantee",
+            amountCents: 108_000,
+            rateBasisPoints: 1200,
+            ytdAmountCents: 108_000,
+          },
+        ],
+      },
+    });
+
+    const body = requestBody(firstFetchCall(fetch)) as { payslip_non_pii: Record<string, unknown> };
+    expect(body.payslip_non_pii).toMatchObject({
+      industrial_instrument: "modern_award",
+      award: { code: "MA000065", classification_fixed_id: 12_345, classification_level: 4 },
+      hourly: { ordinary_rate_micros: 65_267_300, hours: 159.6, amount_cents: 900_000 },
+      earnings: [
+        {
+          type: "ordinary",
+          amount_cents: 900_000,
+          units: 159.6,
+          rate_micros: 65_267_300,
+          ytd_amount_cents: 900_000,
+        },
+      ],
+      superannuation: [
+        {
+          contribution_type: "superannuation_guarantee",
+          amount_cents: 108_000,
+          rate_basis_points: 1200,
+          ytd_amount_cents: 108_000,
+        },
+      ],
+    });
+  });
+
+  it("rejects a rate stated at two scales, and an hourly block stating none", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await expect(
+      client.registerNonPii({
+        ...REQUEST,
+        payslipNonPii: {
+          ...REQUEST.payslipNonPii,
+          earnings: [
+            { type: "ordinary", amountCents: 900_000, rateCents: 6527, rateMicros: 65_267_300 },
+          ],
+        },
+      }),
+    ).rejects.toThrow();
+
+    await expect(
+      client.registerNonPii({
+        ...REQUEST,
+        payslipNonPii: { ...REQUEST.payslipNonPii, hourly: { hours: 38, amountCents: 900_000 } },
+      }),
+    ).rejects.toThrow();
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects an award code that is not one, and an award on an award-free payslip", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+
+    await expect(
+      client.registerNonPii({
+        ...REQUEST,
+        payslipNonPii: {
+          ...REQUEST.payslipNonPii,
+          award: { code: "Professional Employees Award 2020" },
+        },
+      }),
+    ).rejects.toThrow();
+
+    await expect(
+      client.registerNonPii({
+        ...REQUEST,
+        payslipNonPii: {
+          ...REQUEST.payslipNonPii,
+          industrialInstrument: "award_free",
+          award: { code: "MA000065" },
+        },
+      }),
+    ).rejects.toThrow();
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   // A YYYY-MM-DD regex would pass these; the API validates real calendar dates,
   // so accepting them locally would just move the failure to registration.
   it("rejects a date that cannot exist", async () => {

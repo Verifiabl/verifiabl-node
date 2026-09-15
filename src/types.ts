@@ -47,6 +47,14 @@ const cents = z.int();
 const quantity = z.number().nonnegative().finite();
 
 /**
+ * A rate in millionths of one currency unit, so a rate finer than a cent stays
+ * exact and stays an integer: $65.2673 is 65_267_300. Payroll engines hold
+ * hourly rates to four decimal places, while the amount paid is always whole
+ * cents, so only rate fields take this scale.
+ */
+const rateMicros = z.int();
+
+/**
  * ABR checksum (abr.business.gov.au/Help/AbnFormat): subtract 1 from the first
  * digit, weight each digit, and the sum must divide by 89. Catches a typo'd or
  * fabricated identifier here rather than at the API.
@@ -156,6 +164,16 @@ export const employmentBases = tuple([
 
 export const engagementTypes = tuple(["permanent", "fixed_term"]);
 
+/** The instrument the employee's terms come from. */
+export const industrialInstruments = tuple(["modern_award", "enterprise_agreement", "award_free"]);
+
+/**
+ * FWC award code: MA plus six digits, covering modern, enterprise and public
+ * sector awards alike. A format rather than a list of the awards in force,
+ * because awards are made, varied and terminated by FWC decision.
+ */
+const awardCodeSchema = z.string().regex(/^MA\d{6}$/, "award code must be MA followed by 6 digits");
+
 /**
  * ISO 4217 currencies with a minor-unit exponent of 2, which is what keeps every
  * `*Cents` field literally cents. JPY (exponent 0) and BHD (exponent 3) are
@@ -185,6 +203,21 @@ const plainEarningsTypes = tuple([
   "return_to_work",
 ]);
 
+/** Fields every earnings line carries, whatever its type. */
+const earningsLineFields = {
+  amountCents: cents,
+  units: quantity.optional(),
+  rateCents: cents.optional(),
+  /**
+   * The same rate at a finer scale, not a second rate: send one or the other.
+   * Use it where the printed rate is finer than a cent, as a rate derived from
+   * an annual salary usually is.
+   */
+  rateMicros: rateMicros.optional(),
+  /** This line's printed year-to-date figure, where the payslip shows one. */
+  ytdAmountCents: cents.optional(),
+};
+
 /**
  * One earnings line. A leave line must carry a leave code and an allowance line
  * an allowance code; neither can carry the other's. Earnings itemise
@@ -195,9 +228,7 @@ const earningsLineSchema = z.discriminatedUnion("type", [
     .object({
       type: z.literal("paid_leave"),
       leaveType: z.enum(paidLeaveTypes),
-      amountCents: cents,
-      units: quantity.optional(),
-      rateCents: cents.optional(),
+      ...earningsLineFields,
     })
     .strict(),
   z
@@ -206,18 +237,14 @@ const earningsLineSchema = z.discriminatedUnion("type", [
       allowanceType: z.enum(allowanceTypes),
       /** Required on an `other` allowance, forbidden on any other. */
       otherCategory: z.enum(otherAllowanceCategories).optional(),
-      amountCents: cents,
-      units: quantity.optional(),
-      rateCents: cents.optional(),
+      ...earningsLineFields,
     })
     .strict(),
   ...plainEarningsTypes.map((type) =>
     z
       .object({
         type: z.literal(type),
-        amountCents: cents,
-        units: quantity.optional(),
-        rateCents: cents.optional(),
+        ...earningsLineFields,
       })
       .strict(),
   ),
@@ -249,8 +276,29 @@ const payslipNonPiiFields = z
     payFrequency: z.enum(payFrequencies).optional(),
     employmentBasis: z.enum(employmentBases).optional(),
     engagementType: z.enum(engagementTypes).optional(),
+    industrialInstrument: z.enum(industrialInstruments).optional(),
+    /**
+     * The printed award and classification. `classificationFixedId` is the FWC
+     * pay-database identifier, stable year on year. An enterprise-agreement or
+     * award-free classification has no such identifier and stays free text, so
+     * it goes in the barcode PII instead and is never sent here.
+     */
+    award: z
+      .object({
+        code: awardCodeSchema,
+        classificationFixedId: z.int().positive().optional(),
+        classificationLevel: z.int().nonnegative().optional(),
+      })
+      .strict()
+      .optional(),
+    /** Send exactly one of `ordinaryRateCents` and `ordinaryRateMicros`. */
     hourly: z
-      .object({ ordinaryRateCents: cents, hours: quantity, amountCents: cents })
+      .object({
+        ordinaryRateCents: cents.optional(),
+        ordinaryRateMicros: rateMicros.optional(),
+        hours: quantity,
+        amountCents: cents,
+      })
       .strict()
       .optional(),
     annualRateCents: cents.optional(),
@@ -261,11 +309,27 @@ const payslipNonPiiFields = z
     /** Itemisation of gross. */
     earnings: z.array(earningsLineSchema).optional(),
     salarySacrifice: z
-      .array(z.object({ type: z.enum(salarySacrificeTypes), amountCents: cents }).strict())
+      .array(
+        z
+          .object({
+            type: z.enum(salarySacrificeTypes),
+            amountCents: cents,
+            ytdAmountCents: cents.optional(),
+          })
+          .strict(),
+      )
       .optional(),
     /** Post-tax only. */
     deductions: z
-      .array(z.object({ type: z.enum(deductionTypes), amountCents: cents }).strict())
+      .array(
+        z
+          .object({
+            type: z.enum(deductionTypes),
+            amountCents: cents,
+            ytdAmountCents: cents.optional(),
+          })
+          .strict(),
+      )
       .optional(),
     /** Funds are identified structurally (USI/ABN) or not at all, never by name. */
     superannuation: z
@@ -274,6 +338,9 @@ const payslipNonPiiFields = z
           .object({
             contributionType: z.enum(superContributionTypes),
             amountCents: cents,
+            /** The printed contribution rate in basis points, so 12% is 1200. */
+            rateBasisPoints: z.int().min(0).max(10_000).optional(),
+            ytdAmountCents: cents.optional(),
             usi: usiSchema.optional(),
             fundAbn: abnSchema.optional(),
           })
@@ -317,6 +384,14 @@ export const payslipNonPiiSchema = payslipNonPiiFields.superRefine((value, ctx) 
   }
 
   for (const [index, line] of (value.earnings ?? []).entries()) {
+    if (line.rateCents !== undefined && line.rateMicros !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["earnings", index, "rateMicros"],
+        message: "a line carries rateCents or rateMicros, never both",
+      });
+    }
+
     if (line.type !== "allowance") continue;
     if (line.allowanceType === "other" && line.otherCategory === undefined) {
       ctx.addIssue({
@@ -331,6 +406,27 @@ export const payslipNonPiiSchema = payslipNonPiiFields.superRefine((value, ctx) 
         message: "otherCategory applies only to allowanceType 'other'",
       });
     }
+  }
+
+  if (value.hourly !== undefined) {
+    const rates = [value.hourly.ordinaryRateCents, value.hourly.ordinaryRateMicros].filter(
+      (rate) => rate !== undefined,
+    );
+    if (rates.length !== 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["hourly", "ordinaryRateCents"],
+        message: "hourly carries exactly one of ordinaryRateCents and ordinaryRateMicros",
+      });
+    }
+  }
+
+  if (value.award !== undefined && value.industrialInstrument === "award_free") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["award"],
+      message: "an award-free payslip cannot carry an award",
+    });
   }
 });
 
@@ -434,6 +530,8 @@ function earningsLineToWire(line: EarningsLine): Record<string, unknown> {
     amount_cents: line.amountCents,
     ...when(line.units, "units"),
     ...when(line.rateCents, "rate_cents"),
+    ...when(line.rateMicros, "rate_micros"),
+    ...when(line.ytdAmountCents, "ytd_amount_cents"),
   };
 }
 
@@ -456,11 +554,22 @@ function payslipNonPiiToWire(data: PayslipNonPii): Record<string, unknown> {
     ...when(data.payFrequency, "pay_frequency"),
     ...when(data.employmentBasis, "employment_basis"),
     ...when(data.engagementType, "engagement_type"),
+    ...when(data.industrialInstrument, "industrial_instrument"),
+    ...(data.award === undefined
+      ? {}
+      : {
+          award: {
+            code: data.award.code,
+            ...when(data.award.classificationFixedId, "classification_fixed_id"),
+            ...when(data.award.classificationLevel, "classification_level"),
+          },
+        }),
     ...(data.hourly === undefined
       ? {}
       : {
           hourly: {
-            ordinary_rate_cents: data.hourly.ordinaryRateCents,
+            ...when(data.hourly.ordinaryRateCents, "ordinary_rate_cents"),
+            ...when(data.hourly.ordinaryRateMicros, "ordinary_rate_micros"),
             hours: data.hourly.hours,
             amount_cents: data.hourly.amountCents,
           },
@@ -475,6 +584,7 @@ function payslipNonPiiToWire(data: PayslipNonPii): Record<string, unknown> {
           salary_sacrifice: data.salarySacrifice.map((line) => ({
             type: line.type,
             amount_cents: line.amountCents,
+            ...when(line.ytdAmountCents, "ytd_amount_cents"),
           })),
         }),
     ...(data.deductions === undefined
@@ -483,6 +593,7 @@ function payslipNonPiiToWire(data: PayslipNonPii): Record<string, unknown> {
           deductions: data.deductions.map((line) => ({
             type: line.type,
             amount_cents: line.amountCents,
+            ...when(line.ytdAmountCents, "ytd_amount_cents"),
           })),
         }),
     ...(data.superannuation === undefined
@@ -491,6 +602,8 @@ function payslipNonPiiToWire(data: PayslipNonPii): Record<string, unknown> {
           superannuation: data.superannuation.map((line) => ({
             contribution_type: line.contributionType,
             amount_cents: line.amountCents,
+            ...when(line.rateBasisPoints, "rate_basis_points"),
+            ...when(line.ytdAmountCents, "ytd_amount_cents"),
             ...when(line.usi, "usi"),
             ...when(line.fundAbn, "fund_abn"),
           })),
