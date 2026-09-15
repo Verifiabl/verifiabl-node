@@ -17,6 +17,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `rateBasisPoints` on a superannuation line. A line carries `rateCents` or
   `rateMicros` and never both, and `hourly` carries exactly one of the two.
 
+### Changed
+
+- `ytdGrossCents` and `ytdPaygwCents` are now optional, because a payslip need
+  not print a year-to-date total. A payload that sends them is unaffected.
+
 ## [0.23.0]
 
 ### Changed

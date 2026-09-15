@@ -357,6 +357,18 @@ describe("VerifiablClient with static auth", () => {
     });
   });
 
+  it("sends a payslip that prints no year-to-date figures, and omits the keys", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const { ytdGrossCents: _gross, ytdPaygwCents: _paygw, ...printed } = REQUEST.payslipNonPii;
+
+    await client.registerNonPii({ ...REQUEST, payslipNonPii: printed });
+
+    const body = requestBody(firstFetchCall(fetch)) as { payslip_non_pii: Record<string, unknown> };
+    expect(body.payslip_non_pii).not.toHaveProperty("ytd_gross_cents");
+    expect(body.payslip_non_pii).not.toHaveProperty("ytd_paygw_cents");
+  });
+
   it("rejects a rate stated at two scales, and an hourly block stating none", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
     const client = new VerifiablClient({ ...STATIC_AUTH, fetch });

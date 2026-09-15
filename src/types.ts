@@ -268,11 +268,14 @@ const payslipNonPiiFields = z
     /** PAYG withholding: its own component, never also a `deductions` line. */
     paygwCents: cents,
     netCents: cents,
-    /** Year to date over the AU financial year, as at and including this payslip. */
-    ytdGrossCents: cents,
-    ytdPaygwCents: cents,
 
     // ---- Optional. ----
+    /**
+     * Year to date over the AU financial year, as at and including this
+     * payslip. Optional: a payslip need not print a year-to-date total.
+     */
+    ytdGrossCents: cents.optional(),
+    ytdPaygwCents: cents.optional(),
     payFrequency: z.enum(payFrequencies).optional(),
     employmentBasis: z.enum(employmentBases).optional(),
     engagementType: z.enum(engagementTypes).optional(),
@@ -549,8 +552,8 @@ function payslipNonPiiToWire(data: PayslipNonPii): Record<string, unknown> {
     gross_cents: data.grossCents,
     paygw_cents: data.paygwCents,
     net_cents: data.netCents,
-    ytd_gross_cents: data.ytdGrossCents,
-    ytd_paygw_cents: data.ytdPaygwCents,
+    ...when(data.ytdGrossCents, "ytd_gross_cents"),
+    ...when(data.ytdPaygwCents, "ytd_paygw_cents"),
     ...when(data.payFrequency, "pay_frequency"),
     ...when(data.employmentBasis, "employment_basis"),
     ...when(data.engagementType, "engagement_type"),
