@@ -168,11 +168,14 @@ export const engagementTypes = tuple(["permanent", "fixed_term"]);
 export const industrialInstruments = tuple(["modern_award", "enterprise_agreement", "award_free"]);
 
 /**
- * FWC award code: MA plus six digits, covering modern, enterprise and public
- * sector awards alike. A format rather than a list of the awards in force,
- * because awards are made, varied and terminated by FWC decision.
+ * FWC award code: MA000 plus three digits, covering modern, enterprise and
+ * public sector awards alike. A format rather than a list of the awards in
+ * force, because awards are made, varied and terminated by FWC decision. Three
+ * free digits hold no identifier; six would hold a BSB.
  */
-const awardCodeSchema = z.string().regex(/^MA\d{6}$/, "award code must be MA followed by 6 digits");
+const awardCodeSchema = z
+  .string()
+  .regex(/^MA000\d{3}$/, "award code must be MA000 followed by 3 digits");
 
 /**
  * ISO 4217 currencies with a minor-unit exponent of 2, which is what keeps every
@@ -281,16 +284,14 @@ const payslipNonPiiFields = z
     engagementType: z.enum(engagementTypes).optional(),
     industrialInstrument: z.enum(industrialInstruments).optional(),
     /**
-     * The printed award and classification. `classificationFixedId` is the FWC
-     * pay-database identifier, stable year on year. An enterprise-agreement or
-     * award-free classification has no such identifier and stays free text, so
-     * it goes in the barcode PII instead and is never sent here.
+     * The printed award and classification level. The level is bounded to three
+     * digits so it can hold no identifier. A classification name is free text,
+     * so it goes in the barcode PII instead and is never sent here.
      */
     award: z
       .object({
         code: awardCodeSchema,
-        classificationFixedId: z.int().positive().optional(),
-        classificationLevel: z.int().nonnegative().optional(),
+        classificationLevel: z.int().min(0).max(999).optional(),
       })
       .strict()
       .optional(),
@@ -563,7 +564,6 @@ function payslipNonPiiToWire(data: PayslipNonPii): Record<string, unknown> {
       : {
           award: {
             code: data.award.code,
-            ...when(data.award.classificationFixedId, "classification_fixed_id"),
             ...when(data.award.classificationLevel, "classification_level"),
           },
         }),

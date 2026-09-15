@@ -309,7 +309,7 @@ describe("VerifiablClient with static auth", () => {
       payslipNonPii: {
         ...REQUEST.payslipNonPii,
         industrialInstrument: "modern_award",
-        award: { code: "MA000065", classificationFixedId: 12_345, classificationLevel: 4 },
+        award: { code: "MA000065", classificationLevel: 4 },
         // $65.2673/hour, which is 6526.73 cents and not an integer.
         hourly: { ordinaryRateMicros: 65_267_300, hours: 159.6, amountCents: 900_000 },
         earnings: [
@@ -335,7 +335,7 @@ describe("VerifiablClient with static auth", () => {
     const body = requestBody(firstFetchCall(fetch)) as { payslip_non_pii: Record<string, unknown> };
     expect(body.payslip_non_pii).toMatchObject({
       industrial_instrument: "modern_award",
-      award: { code: "MA000065", classification_fixed_id: 12_345, classification_level: 4 },
+      award: { code: "MA000065", classification_level: 4 },
       hourly: { ordinary_rate_micros: 65_267_300, hours: 159.6, amount_cents: 900_000 },
       earnings: [
         {
@@ -355,6 +355,29 @@ describe("VerifiablClient with static auth", () => {
         },
       ],
     });
+  });
+
+  it("rejects an award field that could carry an identifier", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const withAward = (award: unknown) =>
+      client.registerNonPii({
+        ...REQUEST,
+        payslipNonPii: {
+          ...REQUEST.payslipNonPii,
+          award,
+        } as unknown as RegisterNonPiiRequest["payslipNonPii"],
+      });
+
+    // A six-digit code body would hold a BSB; an unbounded level a TFN.
+    await expect(withAward({ code: "MA062000" })).rejects.toThrow();
+    await expect(
+      withAward({ code: "MA000065", classificationLevel: 123_456_789 }),
+    ).rejects.toThrow();
+    await expect(
+      withAward({ code: "MA000065", classificationFixedId: 123_456_789 }),
+    ).rejects.toThrow();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("sends a payslip that prints no year-to-date figures, and omits the keys", async () => {
