@@ -1,11 +1,9 @@
 import { z } from "zod";
-import { verifiablReferenceSchema } from "./payload.js";
+import { ciphertextSchema, verifiablReferenceSchema } from "./payload.js";
 
 function tuple<const T extends readonly string[]>(value: T): T {
   return value;
 }
-
-const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
 
 export const SCHEMA_RE = /^[a-z]{2}\.[a-z]+\.v\d+$/;
 
@@ -31,10 +29,12 @@ export const payslipSchemaIdSchema = z.string().regex(SCHEMA_RE, {
 /** Decryption metadata stored server-side at registration time. */
 export const encryptionMetadataSchema = z
   .object({
-    /** 96-bit IV, exactly 16 base64url characters. */
-    iv: z.string().length(16).regex(BASE64URL_RE),
-    /** 128-bit GCM auth tag, exactly 22 base64url characters. */
-    tag: z.string().length(22).regex(BASE64URL_RE),
+    /** 96-bit (12-byte) IV. */
+    iv: z.instanceof(Uint8Array).refine((value) => value.length === 12, "IV must be 12 bytes"),
+    /** 128-bit (16-byte) GCM authentication tag. */
+    tag: z
+      .instanceof(Uint8Array)
+      .refine((value) => value.length === 16, "Authentication tag must be 16 bytes"),
   })
   .strict();
 
@@ -365,7 +365,19 @@ const basePayslipRegistrationSchema = z
  * The encrypted PII stays with you and goes into a locally generated
  * barcode; only non-PII data and decryption metadata are sent.
  */
-export const registerNonPiiRequestSchema = basePayslipRegistrationSchema;
+export const registerNonPiiRequestSchema = basePayslipRegistrationSchema
+  .extend({
+    /**
+     * Optional provider-generated reference (from `generateVerifiablReference`).
+     * When omitted, the SDK generates one for this call. The reference makes
+     * automatic retries idempotent: an identical replay succeeds without
+     * creating another record, while reuse with different data returns a
+     * conflict. Supply and persist one when retries must survive a process
+     * restart or occur in a separate call.
+     */
+    verifiablReference: verifiablReferenceSchema.optional(),
+  })
+  .strict();
 
 export type RegisterNonPiiRequest = z.infer<typeof registerNonPiiRequestSchema>;
 
@@ -383,8 +395,8 @@ export type RegisterNonPiiResponse = z.infer<typeof registerNonPiiResponseSchema
  */
 export const registerAndBuildBarcodeRequestSchema = basePayslipRegistrationSchema
   .extend({
-    /** Base64url AES-256-GCM ciphertext of the formatted PII plaintext. */
-    encryptedPii: z.string().min(1).max(10_000).regex(BASE64URL_RE),
+    /** AES-256-GCM ciphertext bytes for the formatted PII plaintext. */
+    encryptedPii: ciphertextSchema,
   })
   .strict();
 
@@ -416,7 +428,10 @@ export type RegisterAndBuildBarcodeResponse = z.infer<typeof registerAndBuildBar
  * ------------------------------------------------------------------ */
 
 function encryptionMetadataToWire(metadata: EncryptionMetadata): Record<string, unknown> {
-  return { iv: metadata.iv, tag: metadata.tag };
+  return {
+    iv: Buffer.from(metadata.iv).toString("base64url"),
+    tag: Buffer.from(metadata.tag).toString("base64url"),
+  };
 }
 
 /** Include a key only when the value was supplied, so optionals stay absent rather than null. */
@@ -513,6 +528,7 @@ function payslipNonPiiToWire(data: PayslipNonPii): Record<string, unknown> {
 /** Map a validated registration request to the snake_case wire body. */
 export function registrationToWire(request: RegisterNonPiiRequest): Record<string, unknown> {
   return {
+    ...when(request.verifiablReference, "verifiabl_reference"),
     schema: request.schema,
     issued_at: request.issuedAt,
     payslip_non_pii: payslipNonPiiToWire(request.payslipNonPii),
@@ -524,7 +540,10 @@ export function registrationToWire(request: RegisterNonPiiRequest): Record<strin
 export function registerAndBuildBarcodeToWire(
   request: RegisterAndBuildBarcodeRequest,
 ): Record<string, unknown> {
-  return { ...registrationToWire(request), encrypted_pii: request.encryptedPii };
+  return {
+    ...registrationToWire(request),
+    encrypted_pii: Buffer.from(request.encryptedPii).toString("base64url"),
+  };
 }
 
 const registerNonPiiWireResponseSchema = z.object({

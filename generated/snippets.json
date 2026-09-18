@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "snippets": {
+    "node.self-managed.create-client": {
+      "ecosystem": "node",
+      "language": "typescript",
+      "source": "examples/self-managed-issuer/src/app.ts",
+      "code": "const clientId = process.env.VERIFIABL_CLIENT_ID?.trim();\nconst clientSecret = process.env.VERIFIABL_CLIENT_SECRET?.trim();\n\nif (!clientId || !clientSecret) {\n  throw new Error(\"Set VERIFIABL_CLIENT_ID and VERIFIABL_CLIENT_SECRET\");\n}\n\nconst client = new VerifiablClient({\n  environment: \"sandbox\",\n  auth: { clientId, clientSecret },\n});"
+    },
+    "node.self-managed.format-and-encrypt": {
+      "ecosystem": "node",
+      "language": "typescript",
+      "source": "examples/self-managed-issuer/src/app.ts",
+      "code": "const plaintext = formatPii(payslip.pii);\nconst { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);"
+    },
+    "node.self-managed.prepare-registration": {
+      "ecosystem": "node",
+      "language": "typescript",
+      "source": "examples/self-managed-issuer/src/app.ts",
+      "code": "const verifiablReference = generateVerifiablReference();\nconst issuedAt = new Date().toISOString();\n\n// Persist these values with the payslip before registration."
+    },
+    "node.self-managed.register-single": {
+      "ecosystem": "node",
+      "language": "typescript",
+      "source": "examples/self-managed-issuer/src/app.ts",
+      "code": "await client.registerNonPii({\n  verifiablReference,\n  schema: \"au.payslip.v1\",\n  issuedAt,\n  payslipNonPii: payslip.nonPii,\n  encryptionMetadata,\n});"
+    },
+    "node.self-managed.build-qr": {
+      "ecosystem": "node",
+      "language": "typescript",
+      "source": "examples/self-managed-issuer/src/app.ts",
+      "code": "const parts = { verifiablReference, encryptedPii };\nconst badge = createBarcodeSvg(parts, { environment: \"sandbox\" });\nconst svg = badge.svg;"
+    },
+    "node.self-managed.build-xmp": {
+      "ecosystem": "node",
+      "language": "typescript",
+      "source": "examples/self-managed-issuer/src/app.ts",
+      "code": "const xmpPayload = buildBarcodePayload({ verifiablReference, encryptedPii });"
+    },
+    "node.self-managed.prepare-batch": {
+      "ecosystem": "node",
+      "language": "typescript",
+      "source": "examples/self-managed-issuer/src/app.ts",
+      "code": "const batch = payslips.map((payslip) => {\n  const plaintext = formatPii(payslip.pii);\n  const { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);\n\n  const verifiablReference = generateVerifiablReference();\n  const issuedAt = new Date().toISOString();\n\n  // Persist these values with the payslip before registration.\n  return { payslip, verifiablReference, issuedAt, encryptedPii, encryptionMetadata };\n});"
+    },
+    "node.self-managed.register-batch": {
+      "ecosystem": "node",
+      "language": "typescript",
+      "source": "examples/self-managed-issuer/src/app.ts",
+      "code": "const response = await client.registerNonPiiBatch({\n  records: batch.map((record) => ({\n    verifiablReference: record.verifiablReference,\n    externalId: record.payslip.externalId,\n    schema: \"au.payslip.v1\",\n    issuedAt: record.issuedAt,\n    payslipNonPii: record.payslip.nonPii,\n    encryptionMetadata: record.encryptionMetadata,\n  })),\n});\n\nconst registeredOutcomes = response.results.map((result) => ({\n  externalId: result.externalId ?? \"unknown\",\n  verifiablReference: result.verifiablReference,\n  status: result.status,\n  ...(result.code === undefined ? {} : { code: result.code }),\n  ...(result.detail === undefined ? {} : { detail: result.detail }),\n}));"
+    }
+  }
+}

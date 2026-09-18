@@ -28,12 +28,14 @@
       ],
       "coupledVersionGroups": [],
       "packCommands": [
-        [
-          "pnpm",
-          "pack",
-          "--pack-destination",
-          "artifacts"
-        ]
+        {
+          "run": [
+            "pnpm",
+            "pack",
+            "--pack-destination",
+            "artifacts"
+          ]
+        }
       ]
     }
   ]

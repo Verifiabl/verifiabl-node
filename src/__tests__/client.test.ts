@@ -1,7 +1,9 @@
+import type { MockedFunction } from "vitest";
 import {
   VerifiablApiError,
   VerifiablAuthError,
   VerifiablClient,
+  type VerifiablClientOptions,
   VerifiablIvReuseError,
 } from "../client.js";
 import type {
@@ -12,7 +14,8 @@ import type {
 import { isIvReuseResult } from "../types.js";
 
 const VERIFIABL_REF = "AbCdEfGhIjKlMnOpQrStUv";
-const CIPHERTEXT = "Zm9v";
+const CIPHERTEXT_BASE64URL = "Zm9v";
+const CIPHERTEXT = Uint8Array.from(Buffer.from(CIPHERTEXT_BASE64URL, "base64url"));
 
 const REQUEST: RegisterNonPiiRequest = {
   schema: "au.payslip.v1",
@@ -30,8 +33,8 @@ const REQUEST: RegisterNonPiiRequest = {
     ytdPaygwCents: 225_000,
   },
   encryptionMetadata: {
-    iv: "AAAAAAAAAAAAAAAA",
-    tag: "AAAAAAAAAAAAAAAAAAAAAA",
+    iv: new Uint8Array(12),
+    tag: new Uint8Array(16),
   },
 };
 
@@ -65,10 +68,33 @@ const WIRE_REQUEST = {
 
 const WIRE_REGISTER_AND_BUILD_BARCODE_REQUEST = {
   ...WIRE_REQUEST,
-  encrypted_pii: CIPHERTEXT,
+  encrypted_pii: CIPHERTEXT_BASE64URL,
 };
 
-const STATIC_AUTH = { auth: { apiKey: "k" } };
+// Most tests exercise one API request in isolation. Satisfy the OAuth exchange
+// without exposing it to the API fetch mock whose calls each test asserts on.
+const TEST_AUTH = { clientId: "test-client", clientSecret: "test-secret" };
+
+function testClient(
+  options: Omit<VerifiablClientOptions, "auth" | "fetch"> & {
+    fetch?: typeof globalThis.fetch;
+  } = {},
+): VerifiablClient {
+  const apiFetch = options.fetch ?? globalThis.fetch;
+  return new VerifiablClient({
+    ...options,
+    auth: TEST_AUTH,
+    maxRetries: options.maxRetries ?? 0,
+    fetch: async (input, init) => {
+      if (String(input).includes("/oauth/token")) {
+        return new Response(
+          JSON.stringify({ access_token: "test-token", token_type: "Bearer", expires_in: 3600 }),
+        );
+      }
+      return apiFetch(input, init);
+    },
+  });
+}
 
 function registerResponse(): Response {
   return new Response(JSON.stringify({ verifiabl_reference: VERIFIABL_REF }), { status: 201 });
@@ -84,13 +110,13 @@ function registerAndBuildBarcodeResponse(): Response {
   );
 }
 
-function mockFetch(status: number, body: unknown): jest.MockedFunction<typeof fetch> {
-  return jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
+function mockFetch(status: number, body: unknown): MockedFunction<typeof fetch> {
+  return vi.fn<typeof fetch>(async () => {
     return new Response(JSON.stringify(body), { status });
   });
 }
 
-function firstFetchCall(fetchMock: jest.MockedFunction<typeof fetch>): Parameters<typeof fetch> {
+function firstFetchCall(fetchMock: MockedFunction<typeof fetch>): Parameters<typeof fetch> {
   const call = fetchMock.mock.calls[0];
   if (call === undefined) {
     throw new Error("Expected fetch to be called");
@@ -107,29 +133,6 @@ function requestBody(call: Parameters<typeof fetch>): unknown {
 }
 
 describe("VerifiablClient construction", () => {
-  it("requires a non-empty apiKey for static auth", () => {
-    expect(() => new VerifiablClient({ auth: { apiKey: "" } })).toThrow("apiKey");
-  });
-
-  it("trims static bearer credentials from environment variables", async () => {
-    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ auth: { apiKey: " secret-key\n" }, fetch });
-
-    await client.registerNonPii(REQUEST);
-
-    const [, init] = firstFetchCall(fetch);
-    if (init === undefined) {
-      throw new Error("Expected fetch init options");
-    }
-    expect(new Headers(init.headers).get("authorization")).toBe("Bearer secret-key");
-  });
-
-  it("reports malformed static auth with a configuration error", () => {
-    expect(() => Reflect.construct(VerifiablClient, [{ auth: { apiKey: 42 } }])).toThrow(
-      "auth.apiKey must be a string",
-    );
-  });
-
   it("requires auth", () => {
     expect(() => Reflect.construct(VerifiablClient, [{}])).toThrow("auth is required");
   });
@@ -146,20 +149,12 @@ describe("VerifiablClient construction", () => {
     );
   });
 
-  it("rejects mixed auth modes and malformed OAuth options", () => {
-    expect(() =>
-      Reflect.construct(VerifiablClient, [
-        { auth: { apiKey: "k", clientId: "c", clientSecret: "s" } },
-      ]),
-    ).toThrow("not both");
+  it("rejects malformed OAuth options", () => {
     expect(() =>
       Reflect.construct(VerifiablClient, [
         { auth: { clientId: "c", clientSecret: "s", tokenUrl: 42 } },
       ]),
     ).toThrow("auth.tokenUrl must be a string");
-    expect(() =>
-      Reflect.construct(VerifiablClient, [{ auth: { apiKey: "k", tokenUrl: "https://auth" } }]),
-    ).toThrow("auth.tokenUrl requires OAuth client credentials");
     expect(() =>
       Reflect.construct(VerifiablClient, [
         { auth: { clientId: "c", clientSecret: "s", tokenUrl: "\n" } },
@@ -174,48 +169,64 @@ describe("VerifiablClient construction", () => {
   });
 
   it("rejects non-https issuer base URLs except local http development", () => {
-    expect(
-      () => new VerifiablClient({ ...STATIC_AUTH, issuerBaseUrl: "http://api.example" }),
-    ).toThrow("https");
+    expect(() => testClient({ issuerBaseUrl: "http://api.example" })).toThrow("https");
   });
 
   it("allows http for loopback issuer development", () => {
-    expect(
-      () => new VerifiablClient({ ...STATIC_AUTH, issuerBaseUrl: "http://localhost:3001" }),
-    ).not.toThrow();
-    expect(
-      () => new VerifiablClient({ ...STATIC_AUTH, issuerBaseUrl: "http://127.0.0.1:3001" }),
-    ).not.toThrow();
-    expect(
-      () => new VerifiablClient({ ...STATIC_AUTH, issuerBaseUrl: "http://[::1]:3001" }),
-    ).not.toThrow();
+    expect(() => testClient({ issuerBaseUrl: "http://localhost:3001" })).not.toThrow();
+    expect(() => testClient({ issuerBaseUrl: "http://127.0.0.1:3001" })).not.toThrow();
+    expect(() => testClient({ issuerBaseUrl: "http://[::1]:3001" })).not.toThrow();
   });
 
-  it("rejects invalid timeouts", () => {
-    expect(() => new VerifiablClient({ ...STATIC_AUTH, timeoutMs: 0 })).toThrow("timeoutMs");
+  it("rejects invalid timeouts and retry limits", () => {
+    expect(() => testClient({ timeoutMs: 0 })).toThrow("timeoutMs");
+    expect(() => testClient({ maxRetries: -1 })).toThrow("maxRetries");
+    expect(() => testClient({ maxRetries: 1.5 })).toThrow("maxRetries");
   });
 });
 
-describe("VerifiablClient with static auth", () => {
-  it("sends registration to the production issuer origin with bearer auth", async () => {
+describe("VerifiablClient requests", () => {
+  it("sends a provider-generated reference for retry-safe registration", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ auth: { apiKey: "secret-key" }, fetch });
+    const client = testClient({ fetch });
 
-    const result = await client.registerNonPii(REQUEST);
+    const result = await client.registerNonPii({
+      ...REQUEST,
+      verifiablReference: VERIFIABL_REF,
+    });
 
     expect(result.verifiablReference).toBe(VERIFIABL_REF);
-    const [url, init] = firstFetchCall(fetch);
-    if (init === undefined) {
-      throw new Error("Expected fetch init options");
-    }
-    expect(url).toBe("https://register.verifiabl.io/v1/registerNonPII");
-    expect(new Headers(init.headers).get("authorization")).toBe("Bearer secret-key");
-    expect(requestBody(firstFetchCall(fetch))).toEqual(WIRE_REQUEST);
+    expect(requestBody(firstFetchCall(fetch))).toEqual({
+      verifiabl_reference: VERIFIABL_REF,
+      ...WIRE_REQUEST,
+    });
+  });
+
+  it("generates and sends a reference when the caller omits one", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = testClient({ fetch });
+
+    await client.registerNonPii(REQUEST);
+
+    expect(requestBody(firstFetchCall(fetch))).toEqual({
+      verifiabl_reference: expect.stringMatching(/^[A-Za-z0-9_-]{22}$/),
+      ...WIRE_REQUEST,
+    });
+  });
+
+  it("rejects a malformed provider-generated reference without calling the API", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = testClient({ fetch });
+
+    await expect(
+      client.registerNonPii({ ...REQUEST, verifiablReference: "too-short" }),
+    ).rejects.toThrow("Verifiabl reference");
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("routes registration to the sandbox issuer origin", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ ...STATIC_AUTH, environment: "sandbox", fetch });
+    const client = testClient({ environment: "sandbox", fetch });
 
     await client.registerNonPii(REQUEST);
 
@@ -229,7 +240,7 @@ describe("VerifiablClient with static auth", () => {
   // a 400 (and it is what stops PII reaching the record).
   it("rejects an unknown payslipNonPii key without calling the API", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     await expect(
       client.registerNonPii({
@@ -245,7 +256,7 @@ describe("VerifiablClient with static auth", () => {
 
   it("maps every canonical field to its snake_case wire name", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     await client.registerNonPii({
       ...REQUEST,
@@ -304,7 +315,7 @@ describe("VerifiablClient with static auth", () => {
   // so accepting them locally would just move the failure to registration.
   it("rejects a date that cannot exist", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     for (const paymentDate of ["2026-02-31", "2026-13-01", "2027-02-29"]) {
       await expect(
@@ -329,7 +340,7 @@ describe("VerifiablClient with static auth", () => {
   // same integer at a hundredfold different scale.
   it("accepts a non-AUD exponent-2 currency and rejects one with another exponent", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     await client.registerNonPii({
       ...REQUEST,
@@ -356,7 +367,7 @@ describe("VerifiablClient with static auth", () => {
   // given rather than adjudicating them locally.
   it("sends figures that do not reconcile, as issued", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     await client.registerNonPii({
       ...REQUEST,
@@ -377,7 +388,7 @@ describe("VerifiablClient with static auth", () => {
 
   it("rejects a period that ends before it starts, before the request is sent", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     await expect(
       client.registerNonPii({
@@ -394,8 +405,7 @@ describe("VerifiablClient with static auth", () => {
 
   it("lets explicit issuer base URL overrides win over the environment", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({
-      ...STATIC_AUTH,
+    const client = testClient({
       environment: "sandbox",
       issuerBaseUrl: "http://localhost:3001",
       fetch,
@@ -406,10 +416,10 @@ describe("VerifiablClient with static auth", () => {
   });
 
   it("maps the API response to a barcode image for registerAndBuildBarcode", async () => {
-    const fetchMock = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () => {
       return registerAndBuildBarcodeResponse();
     });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch: fetchMock });
+    const client = testClient({ fetch: fetchMock });
 
     const result = await client.registerAndBuildBarcode(REGISTER_AND_BUILD_BARCODE_REQUEST);
 
@@ -425,7 +435,7 @@ describe("VerifiablClient with static auth", () => {
 
   it("throws VerifiablApiError with the stable code on API errors", async () => {
     const fetch = mockFetch(401, { error: "Unauthorized", code: "UNAUTHORIZED" });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     await expect(client.registerNonPii(REQUEST)).rejects.toMatchObject({
       name: "VerifiablApiError",
@@ -441,7 +451,7 @@ describe("VerifiablClient with static auth", () => {
       detail:
         "encryption_metadata.iv has already been used by this issuer; re-encrypt the record with a fresh iv",
     });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const err: unknown = await client.registerNonPii(REQUEST).catch((e: unknown) => e);
 
@@ -461,7 +471,7 @@ describe("VerifiablClient with static auth", () => {
 
   it("throws VerifiablIvReuseError from registerAndBuildBarcode too", async () => {
     const fetch = mockFetch(409, { error: "Conflict", code: "IV_REUSED" });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     await expect(
       client.registerAndBuildBarcode(REGISTER_AND_BUILD_BARCODE_REQUEST),
@@ -474,7 +484,7 @@ describe("VerifiablClient with static auth", () => {
       code: "CONFLICT",
       detail: "verifiabl_reference already registered with different data",
     });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const err: unknown = await client.registerNonPii(REQUEST).catch((e: unknown) => e);
 
@@ -489,7 +499,7 @@ describe("VerifiablClient with static auth", () => {
       code: "VALIDATION_FAILED",
       field_errors: [{ path: "records.0", message: "Unrecognized key" }],
     });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     await expect(client.registerNonPii(REQUEST)).rejects.toMatchObject({
       code: "VALIDATION_FAILED",
@@ -499,7 +509,7 @@ describe("VerifiablClient with static auth", () => {
 
   it("omits fieldErrors from the error body when the API sends none", async () => {
     const fetch = mockFetch(401, { error: "Unauthorized", code: "UNAUTHORIZED" });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const err: unknown = await client.registerNonPii(REQUEST).catch((e: unknown) => e);
     if (!(err instanceof VerifiablApiError) || err.body === undefined) {
@@ -509,16 +519,15 @@ describe("VerifiablClient with static auth", () => {
   });
 
   it("includes request ids on API errors when the response has one", async () => {
-    const fetchMock: jest.MockedFunction<typeof globalThis.fetch> = jest.fn<
-      ReturnType<typeof globalThis.fetch>,
-      Parameters<typeof globalThis.fetch>
-    >(async () => {
-      return new Response(JSON.stringify({ error: "Forbidden", code: "FORBIDDEN" }), {
-        status: 403,
-        headers: { "x-request-id": "req_123" },
-      });
-    });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch: fetchMock });
+    const fetchMock: MockedFunction<typeof globalThis.fetch> = vi.fn<typeof globalThis.fetch>(
+      async () => {
+        return new Response(JSON.stringify({ error: "Forbidden", code: "FORBIDDEN" }), {
+          status: 403,
+          headers: { "x-request-id": "req_123" },
+        });
+      },
+    );
+    const client = testClient({ fetch: fetchMock });
 
     await expect(client.registerNonPii(REQUEST)).rejects.toMatchObject({
       status: 403,
@@ -529,7 +538,7 @@ describe("VerifiablClient with static auth", () => {
 
   it("passes through error codes this SDK version does not know", async () => {
     const fetch = mockFetch(429, { error: "Slow down", code: "RATE_LIMITED" });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     await expect(client.registerNonPii(REQUEST)).rejects.toMatchObject({
       status: 429,
@@ -539,7 +548,7 @@ describe("VerifiablClient with static auth", () => {
 
   it("tolerates additive fields in success responses", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF, audit_ref: "future-field" });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const result = await client.registerNonPii(REQUEST);
 
@@ -547,10 +556,10 @@ describe("VerifiablClient with static auth", () => {
   });
 
   it("survives non-JSON error bodies", async () => {
-    const fetchMock = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () => {
       return new Response("not json", { status: 502 });
     });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch: fetchMock });
+    const client = testClient({ fetch: fetchMock });
 
     let error: unknown;
     try {
@@ -566,7 +575,7 @@ describe("VerifiablClient with static auth", () => {
 
   it("rejects invalid per-request timeouts before sending", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     await expect(client.registerNonPii(REQUEST, { timeoutMs: 0 })).rejects.toThrow("timeoutMs");
     expect(fetch).not.toHaveBeenCalled();
@@ -574,7 +583,7 @@ describe("VerifiablClient with static auth", () => {
 
   it("reports malformed per-request options with configuration errors", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     // @ts-expect-error Exercise JavaScript runtime input validation.
     await expect(client.registerNonPii(REQUEST, null)).rejects.toThrow("options must be an object");
@@ -622,7 +631,7 @@ describe("VerifiablClient with static auth", () => {
 
     const successSignal = new PrototypeSignal();
     let successFetchSignal: AbortSignal | undefined;
-    const successFetchMock: jest.MockedFunction<typeof globalThis.fetch> = jest.fn(
+    const successFetchMock: MockedFunction<typeof globalThis.fetch> = vi.fn(
       async (_input, init) => {
         if (init?.signal instanceof AbortSignal) {
           successFetchSignal = init.signal;
@@ -630,7 +639,7 @@ describe("VerifiablClient with static auth", () => {
         return registerResponse();
       },
     );
-    const successClient = new VerifiablClient({ ...STATIC_AUTH, fetch: successFetchMock });
+    const successClient = testClient({ fetch: successFetchMock });
 
     // @ts-expect-error Exercise JavaScript runtime input validation.
     await successClient.registerNonPii(REQUEST, { signal: successSignal });
@@ -643,16 +652,14 @@ describe("VerifiablClient with static auth", () => {
 
     const signal = new PrototypeSignal();
     let fetchSignal: AbortSignal | undefined;
-    const fetchMock: jest.MockedFunction<typeof globalThis.fetch> = jest.fn(
-      async (_input, init) => {
-        if (init?.signal instanceof AbortSignal) {
-          fetchSignal = init.signal;
-        }
-        signal.abort("caller aborted");
-        return registerResponse();
-      },
-    );
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch: fetchMock });
+    const fetchMock: MockedFunction<typeof globalThis.fetch> = vi.fn(async (_input, init) => {
+      if (init?.signal instanceof AbortSignal) {
+        fetchSignal = init.signal;
+      }
+      signal.abort("caller aborted");
+      return registerResponse();
+    });
+    const client = testClient({ fetch: fetchMock });
 
     // @ts-expect-error Exercise JavaScript runtime input validation.
     await client.registerNonPii(REQUEST, { signal });
@@ -666,17 +673,15 @@ describe("VerifiablClient with static auth", () => {
   it("emits request and response hooks without bodies", async () => {
     const requests: unknown[] = [];
     const responses: unknown[] = [];
-    const fetchMock: jest.MockedFunction<typeof globalThis.fetch> = jest.fn<
-      ReturnType<typeof globalThis.fetch>,
-      Parameters<typeof globalThis.fetch>
-    >(async () => {
-      return new Response(JSON.stringify({ verifiabl_reference: VERIFIABL_REF }), {
-        status: 201,
-        headers: { "x-request-id": "req_hook" },
-      });
-    });
-    const client = new VerifiablClient({
-      ...STATIC_AUTH,
+    const fetchMock: MockedFunction<typeof globalThis.fetch> = vi.fn<typeof globalThis.fetch>(
+      async () => {
+        return new Response(JSON.stringify({ verifiabl_reference: VERIFIABL_REF }), {
+          status: 201,
+          headers: { "x-request-id": "req_hook" },
+        });
+      },
+    );
+    const client = testClient({
       fetch: fetchMock,
       onRequest: (event) => requests.push(event),
       onResponse: (event) => responses.push(event),
@@ -705,8 +710,7 @@ describe("VerifiablClient with static auth", () => {
 
   it("does not let observability hook failures change request behaviour", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({
-      ...STATIC_AUTH,
+    const client = testClient({
       fetch,
       onRequest: () => {
         throw new Error("hook failed");
@@ -723,8 +727,7 @@ describe("VerifiablClient with static auth", () => {
 
   it("does not let async observability hook failures change request behaviour", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({
-      ...STATIC_AUTH,
+    const client = testClient({
       fetch,
       onRequest: async () => {
         throw new Error("hook failed");
@@ -744,14 +747,12 @@ describe("VerifiablClient with static auth", () => {
     const responses: unknown[] = [];
     const errors: unknown[] = [];
     const fetchError = new Error("network failed");
-    const fetchMock: jest.MockedFunction<typeof globalThis.fetch> = jest.fn<
-      ReturnType<typeof globalThis.fetch>,
-      Parameters<typeof globalThis.fetch>
-    >(async () => {
-      throw fetchError;
-    });
-    const client = new VerifiablClient({
-      ...STATIC_AUTH,
+    const fetchMock: MockedFunction<typeof globalThis.fetch> = vi.fn<typeof globalThis.fetch>(
+      async () => {
+        throw fetchError;
+      },
+    );
+    const client = testClient({
       fetch: fetchMock,
       onRequest: (event) => requests.push(event),
       onResponse: (event) => responses.push(event),
@@ -774,11 +775,11 @@ describe("VerifiablClient with static auth", () => {
 
   it("validates request bodies before sending", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
     await expect(
       client.registerNonPii({
         ...REQUEST,
-        encryptionMetadata: { ...REQUEST.encryptionMetadata, iv: "short" },
+        encryptionMetadata: { ...REQUEST.encryptionMetadata, iv: new Uint8Array(11) },
       }),
     ).rejects.toThrow();
     expect(fetch).not.toHaveBeenCalled();
@@ -786,7 +787,7 @@ describe("VerifiablClient with static auth", () => {
 
   it("rejects the retired keyVersion field before sending", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
     await expect(
       client.registerNonPii({
         ...REQUEST,
@@ -801,11 +802,198 @@ describe("VerifiablClient with static auth", () => {
 
   it("rejects issuedAt with a UTC offset, matching the API", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
     await expect(
       client.registerNonPii({ ...REQUEST, issuedAt: "2026-06-11T10:00:00+10:00" }),
     ).rejects.toThrow("UTC");
     expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("VerifiablClient retries", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("retries idempotent registration and reuses its generated reference", async () => {
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(new Response("{}", { status: 503 }))
+      .mockResolvedValueOnce(registerResponse());
+    const client = testClient({ maxRetries: 1, fetch });
+
+    const registration = client.registerNonPii(REQUEST);
+    await vi.runAllTimersAsync();
+    await expect(registration).resolves.toMatchObject({ verifiablReference: VERIFIABL_REF });
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(requestBody(fetch.mock.calls[0] as Parameters<typeof globalThis.fetch>)).toEqual(
+      requestBody(fetch.mock.calls[1] as Parameters<typeof globalThis.fetch>),
+    );
+  });
+
+  it("retries network faults only for reference-bearing calls", async () => {
+    const networkError = new TypeError("connection reset");
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockRejectedValueOnce(networkError)
+      .mockResolvedValueOnce(registerResponse());
+    const client = testClient({ maxRetries: 1, fetch });
+
+    const registration = client.registerNonPii(REQUEST);
+    await vi.runAllTimersAsync();
+    await expect(registration).resolves.toMatchObject({ verifiablReference: VERIFIABL_REF });
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    const barcodeFetch = vi.fn<typeof globalThis.fetch>().mockRejectedValue(networkError);
+    const barcodeClient = testClient({
+      maxRetries: 1,
+      fetch: barcodeFetch,
+    });
+    await expect(
+      barcodeClient.registerAndBuildBarcode(REGISTER_AND_BUILD_BARCODE_REQUEST),
+    ).rejects.toBe(networkError);
+    expect(barcodeFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries an idempotent request when its successful response body fails", async () => {
+    const responseError = new TypeError("response terminated");
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(responseError);
+            },
+          }),
+          { status: 201 },
+        ),
+      )
+      .mockResolvedValueOnce(registerResponse());
+    const client = testClient({ maxRetries: 1, fetch });
+
+    const registration = client.registerNonPii(REQUEST);
+    await vi.runAllTimersAsync();
+
+    await expect(registration).resolves.toMatchObject({ verifiablReference: VERIFIABL_REF });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(requestBody(fetch.mock.calls[0] as Parameters<typeof globalThis.fetch>)).toEqual(
+      requestBody(fetch.mock.calls[1] as Parameters<typeof globalThis.fetch>),
+    );
+  });
+
+  it("does not replay a non-idempotent request when its response body fails", async () => {
+    const responseError = new TypeError("response terminated");
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      async () =>
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(responseError);
+            },
+          }),
+          { status: 201 },
+        ),
+    );
+    const client = testClient({ maxRetries: 1, fetch });
+
+    await expect(client.registerAndBuildBarcode(REGISTER_AND_BUILD_BARCODE_REQUEST)).rejects.toBe(
+      responseError,
+    );
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries when discarding an errored response body fails", async () => {
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(new TypeError("response terminated"));
+            },
+          }),
+          { status: 503 },
+        ),
+      )
+      .mockResolvedValueOnce(registerResponse());
+    const client = testClient({ maxRetries: 1, fetch });
+
+    const registration = client.registerNonPii(REQUEST);
+    await vi.runAllTimersAsync();
+
+    await expect(registration).resolves.toMatchObject({ verifiablReference: VERIFIABL_REF });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("honours a zero-second Retry-After without applying backoff", async () => {
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(new Response("{}", { status: 429, headers: { "retry-after": "0" } }))
+      .mockResolvedValueOnce(registerResponse());
+    const client = testClient({ maxRetries: 1, fetch });
+
+    const registration = client.registerNonPii(REQUEST);
+    await vi.advanceTimersByTimeAsync(0);
+
+    await expect(registration).resolves.toMatchObject({ verifiablReference: VERIFIABL_REF });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("bounds timers for Retry-After delays longer than Node supports", async () => {
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(
+        new Response("{}", { status: 429, headers: { "retry-after": "2592000" } }),
+      )
+      .mockResolvedValueOnce(registerResponse());
+    const client = testClient({ maxRetries: 1, fetch });
+    const controller = new AbortController();
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+
+    try {
+      const registration = client.registerNonPii(REQUEST, { signal: controller.signal });
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(fetch).toHaveBeenCalledTimes(1);
+      const timerDelays = setTimeoutSpy.mock.calls
+        .map((call) => call[1])
+        .filter((delay): delay is number => typeof delay === "number");
+      expect(timerDelays.length).toBeGreaterThan(0);
+      expect(timerDelays.every((delay) => delay <= 2_147_483_647)).toBe(true);
+
+      controller.abort();
+      await expect(registration).rejects.toMatchObject({ name: "AbortError" });
+      expect(fetch).toHaveBeenCalledTimes(1);
+    } finally {
+      setTimeoutSpy.mockRestore();
+    }
+  });
+
+  it("retries registerAndBuildBarcode on 429 but not ambiguous 5xx", async () => {
+    const throttledFetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(new Response("{}", { status: 429 }))
+      .mockResolvedValueOnce(registerAndBuildBarcodeResponse());
+    const throttledClient = testClient({
+      maxRetries: 1,
+      fetch: throttledFetch,
+    });
+
+    const barcode = throttledClient.registerAndBuildBarcode(REGISTER_AND_BUILD_BARCODE_REQUEST);
+    await vi.runAllTimersAsync();
+    await expect(barcode).resolves.toMatchObject({ verifiablReference: VERIFIABL_REF });
+    expect(throttledFetch).toHaveBeenCalledTimes(2);
+
+    const failedFetch = mockFetch(503, {});
+    const failedClient = testClient({
+      maxRetries: 1,
+      fetch: failedFetch,
+    });
+    await expect(
+      failedClient.registerAndBuildBarcode(REGISTER_AND_BUILD_BARCODE_REQUEST),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(failedFetch).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -834,13 +1022,31 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     };
   }
 
+  it("retries transient batch failures", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetch = vi
+        .fn<typeof globalThis.fetch>()
+        .mockResolvedValueOnce(new Response("{}", { status: 503 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify(batchResponseBody()), { status: 200 }));
+      const client = testClient({ maxRetries: 1, fetch });
+
+      const batch = client.registerNonPiiBatch(BATCH_REQUEST);
+      await vi.runAllTimersAsync();
+      await expect(batch).resolves.toHaveProperty("results");
+      expect(fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // Batch promises that one bad record never fails the whole batch, so a record
   // the SDK rejects locally must not cost the caller the rest of the pay run.
   it("registers the good records and reports the bad one, in input order", async () => {
     const fetch = mockFetch(200, {
       results: [{ status: "created", verifiabl_reference: VERIFIABL_REF_B }],
     });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const result = await client.registerNonPiiBatch({
       records: [
@@ -883,7 +1089,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     const fetch = mockFetch(200, {
       results: [{ status: "created", verifiabl_reference: VERIFIABL_REF_B }],
     });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const result = await client.registerNonPiiBatch({
       records: [
@@ -910,7 +1116,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
 
   it("does not call the API when every record fails locally", async () => {
     const fetch = mockFetch(200, { results: [] });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const result = await client.registerNonPiiBatch({
       records: [
@@ -933,7 +1139,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     const fetch = mockFetch(200, {
       results: [{ status: "created", verifiabl_reference: VERIFIABL_REF_A }],
     });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const result = await client.registerNonPiiBatch({
       records: [
@@ -958,7 +1164,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
 
   it("posts the batch to the batch endpoint with the wire body and maps the response", async () => {
     const fetch = mockFetch(200, batchResponseBody());
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const result = await client.registerNonPiiBatch(BATCH_REQUEST);
 
@@ -992,7 +1198,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
         { status: "created", verifiabl_reference: VERIFIABL_REF_B },
       ],
     });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const result = await client.registerNonPiiBatch({
       records: [
@@ -1019,7 +1225,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
 
   it("routes the batch to the sandbox issuer origin", async () => {
     const fetch = mockFetch(200, { results: [] });
-    const client = new VerifiablClient({ ...STATIC_AUTH, environment: "sandbox", fetch });
+    const client = testClient({ environment: "sandbox", fetch });
 
     await client.registerNonPiiBatch({
       records: [{ ...REQUEST, verifiablReference: VERIFIABL_REF_A }],
@@ -1047,7 +1253,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
         { status: "created", verifiabl_reference: VERIFIABL_REF_C },
       ],
     });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const result = await client.registerNonPiiBatch({
       records: [
@@ -1094,7 +1300,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
         },
       ],
     });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const result = await client.registerNonPiiBatch({
       records: [
@@ -1118,7 +1324,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
 
   it("does not treat a reference conflict as iv reuse", async () => {
     const fetch = mockFetch(200, batchResponseBody());
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const result = await client.registerNonPiiBatch(BATCH_REQUEST);
 
@@ -1130,7 +1336,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     const fetch = mockFetch(200, {
       results: [{ status: "skipped", verifiabl_reference: VERIFIABL_REF_A }],
     });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const result = await client.registerNonPiiBatch({
       records: [{ ...REQUEST, verifiablReference: VERIFIABL_REF_A }],
@@ -1153,7 +1359,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
         },
       ],
     });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const result = await client.registerNonPiiBatch({
       records: [{ ...REQUEST, verifiablReference: VERIFIABL_REF_A }],
@@ -1164,7 +1370,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
 
   it("rejects records with a malformed Verifiabl reference before sending", async () => {
     const fetch = mockFetch(200, { results: [] });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     await expect(
       client.registerNonPiiBatch({
@@ -1176,7 +1382,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
 
   it("rejects an empty batch before sending", async () => {
     const fetch = mockFetch(200, { results: [] });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     await expect(client.registerNonPiiBatch({ records: [] })).rejects.toThrow();
     expect(fetch).not.toHaveBeenCalled();
@@ -1184,7 +1390,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
 
   it("rejects batches above the API maximum before sending", async () => {
     const fetch = mockFetch(200, { results: [] });
-    const client = new VerifiablClient({ ...STATIC_AUTH, fetch });
+    const client = testClient({ fetch });
 
     const records = Array.from({ length: 1001 }, () => ({
       ...REQUEST,
@@ -1208,8 +1414,8 @@ describe("VerifiablClient with OAuth client credentials", () => {
   function oauthFetch(handlers: {
     token?: (body: unknown) => Response;
     api?: (url: string, authorization: string | null) => Response;
-  }): jest.MockedFunction<typeof fetch> {
-    return jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async (input, init) => {
+  }): MockedFunction<typeof fetch> {
+    return vi.fn<typeof fetch>(async (input, init) => {
       const url = String(input);
       if (url.includes("/oauth/token")) {
         const body: unknown = JSON.parse(String(init?.body));
@@ -1373,9 +1579,9 @@ describe("VerifiablClient with OAuth client credentials", () => {
 
   it("applies timeoutMs across token fetch, API call, and 401 retry", async () => {
     let nowMs = 0;
-    const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => nowMs);
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => nowMs);
     const timeoutWindows: number[] = [];
-    const timeoutSpy = jest.spyOn(AbortSignal, "timeout").mockImplementation((timeoutMs) => {
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockImplementation((timeoutMs) => {
       timeoutWindows.push(timeoutMs);
       return new AbortController().signal;
     });
@@ -1445,7 +1651,7 @@ describe("VerifiablClient with OAuth client credentials", () => {
 
   it("preserves abort errors from OAuth token requests", async () => {
     const abortError = new DOMException("The operation was aborted", "AbortError");
-    const fetchMock = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () => {
       throw abortError;
     });
     const client = new VerifiablClient({ auth: OAUTH, fetch: fetchMock });
@@ -1457,7 +1663,7 @@ describe("VerifiablClient with OAuth client credentials", () => {
     const controller = new AbortController();
     controller.abort();
     const abortError = new Error("caller aborted");
-    const fetchMock = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
+    const fetchMock = vi.fn<typeof fetch>(async () => {
       throw abortError;
     });
     const client = new VerifiablClient({ auth: OAUTH, fetch: fetchMock });
@@ -1465,6 +1671,34 @@ describe("VerifiablClient with OAuth client credentials", () => {
     await expect(client.registerNonPii(REQUEST, { signal: controller.signal })).rejects.toBe(
       abortError,
     );
+  });
+
+  it.each(["Bearer", "bearer", "BEARER"])("accepts the %s OAuth token type", async (tokenType) => {
+    const fetch = oauthFetch({
+      token: () =>
+        new Response(
+          JSON.stringify({ access_token: "issuer-token", token_type: tokenType, expires_in: 3600 }),
+        ),
+      api: (_url, authorization) => {
+        expect(authorization).toBe("Bearer issuer-token");
+        return registerResponse();
+      },
+    });
+    const client = new VerifiablClient({ auth: OAUTH, fetch });
+
+    await client.registerNonPii(REQUEST);
+  });
+
+  it.each(["Basic", "DPoP"])("rejects the %s OAuth token type", async (tokenType) => {
+    const fetch = oauthFetch({
+      token: () =>
+        new Response(
+          JSON.stringify({ access_token: "issuer-token", token_type: tokenType, expires_in: 3600 }),
+        ),
+    });
+    const client = new VerifiablClient({ auth: OAUTH, fetch });
+
+    await expect(client.registerNonPii(REQUEST)).rejects.toBeInstanceOf(VerifiablAuthError);
   });
 
   it("throws VerifiablAuthError on a malformed token response", async () => {
@@ -1477,7 +1711,7 @@ describe("VerifiablClient with OAuth client credentials", () => {
   });
 
   it("requests a fresh token once the cached one nears expiry", async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       let tokenRequests = 0;
       const fetch = oauthFetch({
@@ -1489,12 +1723,12 @@ describe("VerifiablClient with OAuth client credentials", () => {
       const client = new VerifiablClient({ auth: OAUTH, fetch });
 
       await client.registerNonPii(REQUEST);
-      jest.advanceTimersByTime(90_000);
+      vi.advanceTimersByTime(90_000);
       await client.registerNonPii(REQUEST);
 
       expect(tokenRequests).toBe(2);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 });
