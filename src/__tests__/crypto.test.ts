@@ -2,23 +2,16 @@ import { createDecipheriv, randomBytes } from "node:crypto";
 import { encryptPii } from "../crypto.js";
 import { formatPii, parsePii } from "../pii.js";
 
-/**
- * Mirrors Verifiabl scan-time decryption: AES-256-GCM with base64url
- * iv/tag/ciphertext. If this round-trip breaks, provider integrations would
- * produce barcodes the platform cannot verify.
- */
+/** Mirrors Verifiabl scan-time AES-256-GCM decryption. */
 function decryptLikeVerifiabl(
-  ciphertextB64u: string,
-  ivB64u: string,
-  tagB64u: string,
+  ciphertext: Uint8Array,
+  iv: Uint8Array,
+  tag: Uint8Array,
   key: Buffer,
 ): string {
-  const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(ivB64u, "base64url"));
-  decipher.setAuthTag(Buffer.from(tagB64u, "base64url"));
-  return Buffer.concat([
-    decipher.update(Buffer.from(ciphertextB64u, "base64url")),
-    decipher.final(),
-  ]).toString("utf8");
+  const decipher = createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
 }
 
 describe("encryptPii", () => {
@@ -49,15 +42,10 @@ describe("encryptPii", () => {
 
   it("detects tampering: a flipped ciphertext byte fails the auth tag", () => {
     const { encryptedPii, encryptionMetadata } = encryptPii("P1|a||||||", key);
-    const corrupted = Buffer.from(encryptedPii, "base64url");
+    const corrupted = Buffer.from(encryptedPii);
     corrupted.writeUInt8(corrupted.readUInt8(0) ^ 0x01, 0);
     expect(() =>
-      decryptLikeVerifiabl(
-        corrupted.toString("base64url"),
-        encryptionMetadata.iv,
-        encryptionMetadata.tag,
-        key,
-      ),
+      decryptLikeVerifiabl(corrupted, encryptionMetadata.iv, encryptionMetadata.tag, key),
     ).toThrow();
   });
 
@@ -74,20 +62,23 @@ describe("encryptPii", () => {
     ).toThrow();
   });
 
-  it("emits metadata in the exact wire sizes the API validates", () => {
+  it("emits binary values in the exact sizes the API validates", () => {
     const { encryptedPii, encryptionMetadata } = encryptPii("P1|a||||||", key);
-    expect(encryptionMetadata.iv).toHaveLength(16); // 96-bit IV
-    expect(encryptionMetadata.tag).toHaveLength(22); // 128-bit tag
-    expect(encryptionMetadata.iv).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(encryptionMetadata.tag).toMatch(/^[A-Za-z0-9_-]+$/);
-    expect(encryptedPii).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(encryptedPii).toBeInstanceOf(Uint8Array);
+    expect(encryptionMetadata.iv).toBeInstanceOf(Uint8Array);
+    expect(encryptionMetadata.tag).toBeInstanceOf(Uint8Array);
+    expect(Buffer.isBuffer(encryptedPii)).toBe(false);
+    expect(Buffer.isBuffer(encryptionMetadata.iv)).toBe(false);
+    expect(Buffer.isBuffer(encryptionMetadata.tag)).toBe(false);
+    expect(encryptionMetadata.iv).toHaveLength(12); // 96-bit IV
+    expect(encryptionMetadata.tag).toHaveLength(16); // 128-bit tag
   });
 
   it("uses a fresh IV per call", () => {
     const a = encryptPii("P1|a||||||", key);
     const b = encryptPii("P1|a||||||", key);
-    expect(a.encryptionMetadata.iv).not.toBe(b.encryptionMetadata.iv);
-    expect(a.encryptedPii).not.toBe(b.encryptedPii);
+    expect(a.encryptionMetadata.iv).not.toEqual(b.encryptionMetadata.iv);
+    expect(a.encryptedPii).not.toEqual(b.encryptedPii);
   });
 
   it("rejects keys that are not 32 bytes", () => {

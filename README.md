@@ -19,7 +19,7 @@ Requires Node.js 20+. No native dependencies: both the SVG and PNG renderers are
 This is the self-managed flow: register the payslip, encrypt the personal details locally, and generate the QR code yourself. You need three values from onboarding: your OAuth client ID and secret, and your encryption key.
 
 ```ts
-import { VerifiablClient, formatPii, encryptPii, createBarcodeSvg } from "@verifiabl/issuer";
+import { VerifiablClient, createBarcodeSvg, encryptPii, formatPii } from "@verifiabl/issuer";
 
 const client = new VerifiablClient({
   environment: "sandbox",
@@ -45,7 +45,8 @@ const pii = formatPii({
 });
 const { encryptedPii, encryptionMetadata } = encryptPii(pii, key);
 
-// 2. Register the non-PII data. Verifiabl returns a Verifiabl reference.
+// 2. Register the non-PII data. The SDK generates and sends a Verifiabl
+// reference, making its automatic retries idempotent.
 const { verifiablReference } = await client.registerNonPii({
   schema: "au.payslip.v1",
   issuedAt: new Date().toISOString(),
@@ -96,10 +97,16 @@ P2 preserves valid Unicode without normalization. Writers limit the complete pla
 framing and delimiters, to 1024 UTF-8 bytes. Readers continue to accept oversized P2 plaintext from
 legacy documents. The pipe and Unicode General Categories Cc (control), Cf (format), Zl (line
 separator), and Zp (paragraph separator) are rejected before encryption. Ordinary international
-Unicode remains valid. A v2 QR
-uses the short `v.verifiabl.io` scan host (`v.sandbox.verifiabl.io` in sandbox) with `#2.<BASE32>` and an explicit byte/alphanumeric segment split. Its XMP
-copy must be the matching `2|reference|BASE32`. Never mix QR and XMP versions. For rollback, pass
+Unicode remains valid. A v2 QR uses uppercase, unpadded RFC 4648 Base32 and the short
+`v.verifiabl.io` scan host (`v.sandbox.verifiabl.io` in sandbox), with `#2.<BASE32>` and an
+explicit byte/alphanumeric segment split. Its XMP copy must be the matching
+`2|reference|BASE32`. Never mix QR and XMP versions. For rollback, pass
 `{ format: "v1" }` to `createBarcodeSvg`, `createBarcodePng`, `buildScanUrl`, and `buildBarcodePayload`.
+
+Ciphertext, IV, and authentication tags are binary values. The SDK exposes all
+three as `Uint8Array` instances, which you can persist directly in binary database
+columns. It applies base64url or Base32 encoding only at API and barcode output
+boundaries.
 
 Prefer `createBarcodeSvg` when you can: SVG scales to any size without losing quality. Use `createBarcodePng` when your document pipeline needs a raster image; it composites the badge deterministically (no rasteriser involved), so the same record produces the byte-identical raster in every Verifiabl SDK. PNG output comes in fixed pixel widths (480, 720, 960 or 1440; the physical print size is set where you place the image in the PDF). The committed frame data is a centrally generated cross-SDK artifact; the test suite independently checks it against a fresh render of the live SVG. Verifiabl can also build the QR code for you instead of generating it locally. See the [docs](https://docs.verifiabl.io/) for both.
 
@@ -119,6 +126,34 @@ for (const { verifiablReference, encryptedPii } of records) {
 ```
 
 PNGs are lossless 8-bit palette images, the smallest encoding for the badge's low colour count.
+
+## Retries and idempotency
+
+Failed requests are retried automatically with exponential backoff
+(`VerifiablClientOptions.maxRetries`, default 2). The Verifiabl reference is the
+idempotency key, so retries are only applied where they are safe.
+`registerNonPii` generates and sends a reference when one is not supplied,
+allowing the SDK to retry throttling, timeouts, `5xx`, and network faults without
+creating another record. Batch registration has the same retry policy because
+its records also carry provider-generated references. `registerAndBuildBarcode`
+lets the API assign the reference and therefore retries only `429`, which is
+enforced before processing.
+
+To correlate retries made in a separate call or after a process restart,
+generate and persist a reference before registration, then pass the same value
+to each call:
+
+```ts
+import { generateVerifiablReference } from "@verifiabl/issuer";
+
+const verifiablReference = generateVerifiablReference();
+// Persist `verifiablReference` with the issuance record before registering.
+await client.registerNonPii({ ...request, verifiablReference });
+```
+
+The API returns `201` for the first registration and `200` for an identical
+replay. Reusing a reference with different content returns a
+`VerifiablApiError` with code `CONFLICT`.
 
 ## Batch registration
 
@@ -151,6 +186,10 @@ for (const result of results) {
   }
 }
 ```
+
+## Executable example
+
+[`examples/self-managed-issuer`](./examples/self-managed-issuer/) is a small executable version of the self-managed flow above. It registers one fictional payslip against the sandbox and writes its SVG barcode and matching PDF XMP payload. Repository CI installs the packed npm tarball into a copy of the example and compiles it as a package-consumer release test without making a sandbox request.
 
 ## Environments
 
@@ -221,6 +260,18 @@ Employee PII is encrypted on your infrastructure and never reaches Verifiabl. Ke
 ## Documentation
 
 Full API reference, the alternative API flow, barcode placement rules, and the security model are at [docs.verifiabl.io](https://docs.verifiabl.io/).
+
+## Development
+
+The published package supports Node.js 20+, but building and testing from source requires Node.js 26 and pnpm 12.3.4. The build toolchain uses tsdown, which requires Node.js 22.18 or newer. CI and releases use Node.js 26 and test the resulting package separately on every supported runtime.
+
+```bash
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm check:exports
+```
 
 ## License
 

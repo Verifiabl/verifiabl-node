@@ -7,10 +7,13 @@ reference paths or development tools outside the repository root.
 
 ## Environment
 
-- **Node.js 20+** (`engines: node >=20`), tested on Node.js 20, 22, and 26.
+- Published SDK runtime: **Node.js 20+** (`engines: node >=20`), tested from the packed output
+  on Node.js 20, 22, and 26.
+- Development and release toolchain: **Node.js 26**. The build requires Node.js 22.18+ because
+  tsdown does not run on Node.js 20.
 - Package manager: **pnpm 12.3.4** with a committed `pnpm-lock.yaml`.
 
-Install dependencies in the Codex **setup script**:
+Use Node.js 26 and install dependencies in the Codex **setup script**:
 
 ```bash
 pnpm install --frozen-lockfile
@@ -21,10 +24,10 @@ pnpm install --frozen-lockfile
 ```bash
 pnpm check:ci     # Biome lint + formatting + import order, exactly as CI runs it
 pnpm typecheck    # tsc --noEmit
-pnpm test         # Jest
+pnpm test         # Vitest
 ```
 
 `pnpm lint` is lint-only and will pass on formatting or import-order drift that
 `check:ci` fails on; `pnpm check` fixes both in place.
 
-Optionally `pnpm build` (tsup) to confirm the published bundle compiles.
+Optionally `pnpm build` (tsdown) to confirm the published ESM and CommonJS bundles compile.
