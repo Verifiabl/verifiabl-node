@@ -1,4 +1,8 @@
-import { resolveEnvironment, type VerifiablEnvironment } from "./payload.js";
+import {
+  generateVerifiablReference,
+  resolveEnvironment,
+  type VerifiablEnvironment,
+} from "./payload.js";
 import {
   type BatchRecordRequest,
   type BatchRecordResult,
@@ -105,26 +109,21 @@ export type { VerifiablEnvironment } from "./payload.js";
 /**
  * How the client authenticates to the Verifiabl API.
  *
- * Deployed environments use OAuth2 client credentials: pass the
- * `clientId`/`clientSecret` issued during onboarding and the client
- * fetches, caches, and refreshes access tokens automatically.
- * The static `apiKey` form sends a fixed bearer token and exists for
- * local development against a stack that accepts one.
+ * Pass the OAuth2 `clientId`/`clientSecret` issued during onboarding and
+ * the client fetches, caches, and refreshes access tokens automatically.
  */
-export type VerifiablAuth =
-  | { apiKey: string }
-  | {
-      /** OAuth client id issued by Verifiabl during onboarding. */
-      clientId: string;
-      /** OAuth client secret. Load from a secrets manager; never hard-code it. */
-      clientSecret: string;
-      /**
-       * OAuth token endpoint (default: the environment's auth service,
-       * e.g. https://auth.verifiabl.io/oauth/token). Overrides must use a
-       * Verifiabl auth host, or localhost for local development.
-       */
-      tokenUrl?: string;
-    };
+export interface VerifiablAuth {
+  /** OAuth client id issued by Verifiabl during onboarding. */
+  clientId: string;
+  /** OAuth client secret. Load from a secrets manager; never hard-code it. */
+  clientSecret: string;
+  /**
+   * OAuth token endpoint (default: the environment's auth service,
+   * e.g. https://auth.verifiabl.io/oauth/token). Overrides must use a
+   * Verifiabl auth host, or localhost for local development.
+   */
+  tokenUrl?: string;
+}
 
 const VERIFIABL_AUTH_HOSTS = new Set(["auth.verifiabl.io", "auth.sandbox.verifiabl.io"]);
 
@@ -132,6 +131,11 @@ const ISSUER_SCOPE = "verifiabl:issuer";
 
 /** Maximum time before expiry that an OAuth token is treated as stale. */
 const MAX_TOKEN_REFRESH_BUFFER_MS = 60_000;
+const DEFAULT_MAX_RETRIES = 2;
+const RETRY_BASE_DELAY_MS = 500;
+const RETRY_MAX_DELAY_MS = 8_000;
+// Node clamps larger setTimeout delays to 1 ms.
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
 
 interface CachedToken {
   accessToken: string;
@@ -201,6 +205,14 @@ export interface VerifiablClientOptions {
   issuerBaseUrl?: string;
   /** Request timeout in milliseconds (default: 30000). */
   timeoutMs?: number;
+  /**
+   * Maximum automatic retries after the first attempt (default: 2). Retries
+   * use exponential backoff with jitter and honour `Retry-After`. Registration
+   * calls carry client-generated references and retry `429`, `408`, `5xx`, and
+   * network faults. `registerAndBuildBarcode` retries only `429` because its
+   * server-generated reference cannot deduplicate an ambiguous replay.
+   */
+  maxRetries?: number;
   /** Custom fetch implementation (for testing or instrumentation). */
   fetch?: typeof globalThis.fetch;
   /** Called before each Verifiabl API request. Bodies are not included. */
@@ -220,6 +232,7 @@ export class VerifiablClient {
   private readonly tokenUrl: string;
   private readonly issuerBaseUrl: string;
   private readonly timeoutMs: number;
+  private readonly maxRetries: number;
   private readonly fetchImpl: typeof globalThis.fetch;
   private readonly onRequest: ((event: VerifiablRequestEvent) => void) | undefined;
   private readonly onResponse: ((event: VerifiablResponseEvent) => void) | undefined;
@@ -243,10 +256,15 @@ export class VerifiablClient {
     if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
       throw new Error("timeoutMs must be a positive number");
     }
+    const maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
+    if (!Number.isInteger(maxRetries) || maxRetries < 0) {
+      throw new Error("maxRetries must be a non-negative integer");
+    }
     if (options.fetch === undefined && globalThis.fetch === undefined) {
       throw new Error("A fetch implementation is required");
     }
     this.timeoutMs = timeoutMs;
+    this.maxRetries = maxRetries;
     this.fetchImpl = options.fetch ?? globalThis.fetch;
     this.onRequest = options.onRequest;
     this.onResponse = options.onResponse;
@@ -255,7 +273,10 @@ export class VerifiablClient {
 
   /**
    * Register non-PII payslip data and decryption metadata. Returns the
-   * Verifiabl reference to embed in a locally generated barcode.
+   * Verifiabl reference to embed in a locally generated barcode. The SDK
+   * generates and sends a reference when one is not supplied, making transient
+   * failures safe to retry. Supply and persist `verifiablReference` when retries
+   * must remain correlated across separate calls or process restarts.
    *
    * Throws {@link VerifiablIvReuseError} when the iv has already been
    * registered by this issuer.
@@ -264,8 +285,12 @@ export class VerifiablClient {
     request: RegisterNonPiiRequest,
     options: VerifiablRequestOptions = {},
   ): Promise<RegisterNonPiiResponse> {
-    const body = registrationToWire(registerNonPiiRequestSchema.parse(request));
-    return this.post("/v1/registerNonPII", body, options, registrationFromWire);
+    const parsed = registerNonPiiRequestSchema.parse(request);
+    const body = registrationToWire({
+      ...parsed,
+      verifiablReference: parsed.verifiablReference ?? generateVerifiablReference(),
+    });
+    return this.post("/v1/registerNonPII", body, options, registrationFromWire, true);
   }
 
   /**
@@ -280,7 +305,13 @@ export class VerifiablClient {
     options: VerifiablRequestOptions = {},
   ): Promise<RegisterAndBuildBarcodeResponse> {
     const body = registerAndBuildBarcodeToWire(registerAndBuildBarcodeRequestSchema.parse(request));
-    return this.post("/v1/registerAndBuildBarcode", body, options, registerAndBuildBarcodeFromWire);
+    return this.post(
+      "/v1/registerAndBuildBarcode",
+      body,
+      options,
+      registerAndBuildBarcodeFromWire,
+      false,
+    );
   }
 
   /**
@@ -337,6 +368,7 @@ export class VerifiablClient {
         body,
         options,
         registerNonPiiBatchFromWire,
+        true,
       );
       response.results.forEach((result, position) => {
         const entry = sendable[position];
@@ -375,23 +407,77 @@ export class VerifiablClient {
     body: unknown,
     options: VerifiablRequestOptions,
     parseResponse: (value: unknown) => T,
+    idempotent: boolean,
   ): Promise<T> {
     const requestOptions = resolveRequestOptions(options, this.timeoutMs);
-    let response = await this.send(path, body, requestOptions);
+    let attempt = 0;
 
-    if (response.status === 401 && "clientId" in this.auth) {
+    while (true) {
+      let response: Response;
+      try {
+        response = await this.sendWithAuth(path, body, requestOptions);
+      } catch (error) {
+        if (
+          !idempotent ||
+          attempt >= this.maxRetries ||
+          error instanceof VerifiablAuthError ||
+          requestOptions.signal?.aborted ||
+          isAbortLikeError(error)
+        ) {
+          throw error;
+        }
+        attempt += 1;
+        await retryAfter(backoffDelayMs(attempt), requestOptions);
+        continue;
+      }
+
+      if (attempt < this.maxRetries && isRetryableStatus(response.status, idempotent)) {
+        const delayMs = retryDelayMs(response.headers, attempt + 1);
+        await discardResponseBody(response);
+        attempt += 1;
+        await retryAfter(delayMs, requestOptions);
+        continue;
+      }
+
+      if (!response.ok) {
+        const errorBody = await readErrorBody(response);
+        throw createApiError(response.status, errorBody, extractRequestId(response.headers));
+      }
+
+      let responseText: string;
+      try {
+        responseText = await response.text();
+      } catch (error) {
+        if (
+          !idempotent ||
+          attempt >= this.maxRetries ||
+          requestOptions.signal?.aborted ||
+          isAbortLikeError(error)
+        ) {
+          throw error;
+        }
+        attempt += 1;
+        await retryAfter(backoffDelayMs(attempt), requestOptions);
+        continue;
+      }
+      return parseResponse(parseJsonBody(responseText, response.status));
+    }
+  }
+
+  private async sendWithAuth(
+    path: string,
+    body: unknown,
+    options: ResolvedRequestOptions,
+  ): Promise<Response> {
+    let response = await this.send(path, body, options);
+    if (response.status === 401) {
       // The cached token may have been revoked or expired early; fetch a
       // fresh one and retry exactly once.
       this.tokenCache = undefined;
-      response = await this.send(path, body, requestOptions);
+      await discardResponseBody(response);
+      response = await this.send(path, body, options);
     }
-
-    if (!response.ok) {
-      const errorBody = await readErrorBody(response);
-      throw createApiError(response.status, errorBody, extractRequestId(response.headers));
-    }
-
-    return parseResponse(await readJsonBody(response));
+    return response;
   }
 
   private async send(
@@ -440,10 +526,6 @@ export class VerifiablClient {
   }
 
   private async getBearerToken(audience: string, options: ResolvedRequestOptions): Promise<string> {
-    if ("apiKey" in this.auth) {
-      return this.auth.apiKey;
-    }
-
     if (this.tokenCache !== undefined && isTokenReusable(this.tokenCache)) {
       return this.tokenCache.accessToken;
     }
@@ -470,10 +552,6 @@ export class VerifiablClient {
     audience: string,
     options: ResolvedRequestOptions,
   ): Promise<CachedToken> {
-    if (!("clientId" in this.auth)) {
-      throw new VerifiablAuthError("OAuth credentials are not configured");
-    }
-
     let response: Response;
     const requestSignal = createRequestSignal(options);
     try {
@@ -534,38 +612,15 @@ function isTokenReusable(token: CachedToken): boolean {
 
 function validateAuth(auth: VerifiablAuth): VerifiablAuth {
   if (typeof auth !== "object" || auth === null) {
-    throw new Error("auth is required: pass { clientId, clientSecret } or { apiKey }");
+    throw new Error("auth is required: pass { clientId, clientSecret }");
   }
 
-  const apiKey = objectProperty(auth, "apiKey");
   const clientId = objectProperty(auth, "clientId");
   const clientSecret = objectProperty(auth, "clientSecret");
   const tokenUrl = objectProperty(auth, "tokenUrl");
-  const hasApiKey = apiKey !== undefined;
-  const hasOauthField = clientId !== undefined || clientSecret !== undefined;
-
-  if (hasApiKey && hasOauthField) {
-    throw new Error("auth must use either { apiKey } or { clientId, clientSecret }, not both");
-  }
-
-  if (hasApiKey) {
-    if (typeof apiKey !== "string") {
-      throw new Error("auth.apiKey must be a string");
-    }
-    const trimmedApiKey = apiKey.trim();
-    if (trimmedApiKey.length === 0) {
-      throw new Error("auth.apiKey must not be empty");
-    }
-    if (tokenUrl !== undefined) {
-      throw new Error("auth.tokenUrl requires OAuth client credentials");
-    }
-    return { apiKey: trimmedApiKey };
-  }
 
   if (typeof clientId !== "string" || typeof clientSecret !== "string") {
-    throw new Error(
-      "auth must include { apiKey: string } or { clientId: string, clientSecret: string }",
-    );
+    throw new Error("auth must include { clientId: string, clientSecret: string }");
   }
   const trimmedClientId = clientId.trim();
   const trimmedClientSecret = clientSecret.trim();
@@ -597,7 +652,8 @@ function parseTokenResponse(
   if (
     typeof accessToken !== "string" ||
     accessToken.length === 0 ||
-    tokenType !== "Bearer" ||
+    typeof tokenType !== "string" ||
+    tokenType.toLowerCase() !== "bearer" ||
     typeof expiresIn !== "number" ||
     !Number.isFinite(expiresIn) ||
     expiresIn <= 0
@@ -637,6 +693,77 @@ function remainingTimeoutMs(options: ResolvedRequestOptions): number {
     throw createTimeoutError();
   }
   return remainingMs;
+}
+
+function isRetryableStatus(status: number, idempotent: boolean): boolean {
+  // Rate limits are enforced before processing, so every endpoint can retry 429.
+  if (status === 429) {
+    return true;
+  }
+  return idempotent && (status === 408 || (status >= 500 && status <= 599));
+}
+
+function retryDelayMs(headers: Headers, attempt: number): number {
+  const retryAfterHeader = headers.get("retry-after");
+  if (retryAfterHeader !== null) {
+    if (/^\d+$/.test(retryAfterHeader)) {
+      return Number(retryAfterHeader) * 1_000;
+    }
+    const dateMs = Date.parse(retryAfterHeader);
+    if (Number.isFinite(dateMs)) {
+      return Math.max(0, dateMs - Date.now());
+    }
+  }
+  return backoffDelayMs(attempt);
+}
+
+function backoffDelayMs(attempt: number): number {
+  const cappedMs = Math.min(RETRY_MAX_DELAY_MS, RETRY_BASE_DELAY_MS * 2 ** (attempt - 1));
+  return cappedMs / 2 + (cappedMs / 2) * Math.random();
+}
+
+async function retryAfter(delayMs: number, options: ResolvedRequestOptions): Promise<void> {
+  const requestSignal = createRequestSignal(options);
+  const signal = requestSignal.signal;
+  const retryAtMs = Date.now() + delayMs;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  let removeAbortListener = () => {};
+
+  try {
+    if (signal.aborted) {
+      throw abortReason(signal);
+    }
+    await new Promise<void>((resolve, reject) => {
+      const onAbort = () => reject(abortReason(signal));
+      const scheduleNextChunk = () => {
+        try {
+          const remainingDelayMs = retryAtMs - Date.now();
+          if (remainingDelayMs <= 0) {
+            resolve();
+            return;
+          }
+          const chunkMs = Math.min(
+            remainingDelayMs,
+            remainingTimeoutMs(options),
+            MAX_TIMER_DELAY_MS,
+          );
+          timeout = setTimeout(scheduleNextChunk, chunkMs);
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      signal.addEventListener("abort", onAbort, { once: true });
+      removeAbortListener = () => signal.removeEventListener("abort", onAbort);
+      scheduleNextChunk();
+    });
+  } finally {
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+    }
+    removeAbortListener();
+    requestSignal.cleanup();
+  }
 }
 
 function isAbortSignalLike(value: unknown): value is AbortSignalLike {
@@ -846,8 +973,20 @@ function isLoopbackHost(hostname: string): boolean {
   return host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1";
 }
 
+async function discardResponseBody(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // A body that is already errored can reject cancellation. The response is
+    // being discarded, so that error must not prevent the next attempt.
+  }
+}
+
 async function readJsonBody(response: Response): Promise<unknown> {
-  const text = await response.text();
+  return parseJsonBody(await response.text(), response.status);
+}
+
+function parseJsonBody(text: string, status: number): unknown {
   if (text.trim().length === 0) {
     return undefined;
   }
@@ -856,7 +995,7 @@ async function readJsonBody(response: Response): Promise<unknown> {
     const parsed: unknown = JSON.parse(text);
     return parsed;
   } catch {
-    throw new Error(`Verifiabl API returned invalid JSON with status ${response.status}`);
+    throw new Error(`Verifiabl API returned invalid JSON with status ${status}`);
   }
 }
 

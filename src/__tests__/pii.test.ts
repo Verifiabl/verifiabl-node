@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   formatPii,
   formatPiiV1,
@@ -28,7 +29,7 @@ interface P2TextProfileVectors {
   invalidUtf16: Array<{ name: string; codeUnits: number[] }>;
 }
 
-const fixturesDirectory = join(__dirname, "fixtures");
+const fixturesDirectory = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const textProfile = JSON.parse(
   readFileSync(join(fixturesDirectory, "p2-pii-text-profile-v1.json"), "utf8"),
 ) as P2TextProfile;
@@ -193,12 +194,10 @@ describe("P2 formatting", () => {
     expect(() => formatPii({ employeeName: "bad\uDC00name" })).toThrow(PiiValidationError);
   });
 
-  it.each([
-    "bad|address",
-    "bad\naddress",
-    "bad\u200Baddress",
-  ])("rejects delimiter, control, and format characters: %j", (address) =>
-    expect(() => formatPii({ ...core, address })).toThrow(PiiValidationError));
+  it.each(["bad|address", "bad\naddress", "bad\u200Baddress"])(
+    "rejects delimiter, control, and format characters: %j",
+    (address) => expect(() => formatPii({ ...core, address })).toThrow(PiiValidationError),
+  );
 
   it("matches the canonical P2 text-profile identity", () => {
     expect(PII_TEXT_PROFILE_ID).toBe(textProfile.profileId);
@@ -241,29 +240,30 @@ describe("P2 formatting", () => {
     expect(formatPii({ address: value })).toContain(value);
   });
 
-  it.each(textProfileVectors.invalidText)("rejects canonical text vector: $name", ({
-    codePoints,
-    reason,
-  }) => {
-    const value = String.fromCodePoint(...codePoints.map((value) => Number.parseInt(value, 16)));
-    try {
-      formatPii({ employeeName: value });
-      throw new Error("expected formatPii to throw");
-    } catch (error) {
-      expect(error).toBeInstanceOf(PiiValidationError);
-      const expectedReason = reason === "line-separator" ? "control-character" : reason;
-      expect((error as PiiValidationError).violations).toEqual([
-        { field: "employeeName", reason: expectedReason },
-      ]);
-    }
-  });
+  it.each(textProfileVectors.invalidText)(
+    "rejects canonical text vector: $name",
+    ({ codePoints, reason }) => {
+      const value = String.fromCodePoint(...codePoints.map((value) => Number.parseInt(value, 16)));
+      try {
+        formatPii({ employeeName: value });
+        throw new Error("expected formatPii to throw");
+      } catch (error) {
+        expect(error).toBeInstanceOf(PiiValidationError);
+        const expectedReason = reason === "line-separator" ? "control-character" : reason;
+        expect((error as PiiValidationError).violations).toEqual([
+          { field: "employeeName", reason: expectedReason },
+        ]);
+      }
+    },
+  );
 
-  it.each(textProfileVectors.invalidUtf16)("rejects canonical malformed UTF-16 vector: $name", ({
-    codeUnits,
-  }) => {
-    const value = String.fromCharCode(...codeUnits);
-    expect(() => formatPii({ employeeName: value })).toThrow(PiiValidationError);
-  });
+  it.each(textProfileVectors.invalidUtf16)(
+    "rejects canonical malformed UTF-16 vector: $name",
+    ({ codeUnits }) => {
+      const value = String.fromCharCode(...codeUnits);
+      expect(() => formatPii({ employeeName: value })).toThrow(PiiValidationError);
+    },
+  );
 
   it("keeps a P1 writer only for rollback", () => {
     expect(formatPiiV1(core)).toBe(

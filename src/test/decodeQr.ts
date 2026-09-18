@@ -1,6 +1,6 @@
 import { readBarcodes, ZXING_CPP_COMMIT } from "zxing-wasm/reader";
 
-const EXPECTED_ZXING_CPP_COMMIT = "a17fd9dc65d6aa0dd2f660fdfca7a6a6613d938f";
+const EXPECTED_ZXING_CPP_COMMIT = "0b2d9a8fc81f420f369928c24331091ff0525976";
 
 if (ZXING_CPP_COMMIT !== EXPECTED_ZXING_CPP_COMMIT) {
   throw new Error("The packaged ZXing-C++ revision does not match the reviewed test pin");

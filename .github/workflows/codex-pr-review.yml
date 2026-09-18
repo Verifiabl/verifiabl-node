@@ -21,11 +21,12 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       final_message: ${{ steps.codex.outputs['final-message'] }}
     steps:
       - name: Checkout pull request head for read-only inspection
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
@@ -33,11 +34,13 @@ jobs:
 
       - name: Run Codex review
         id: codex
-        uses: openai/codex-action@86365089eb2b84e0a8fb0717b304f8bdcb13b20e # v1
+        uses: openai/codex-action@86365089eb2b84e0a8fb0717b304f8bdcb13b20e # v1.12
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           codex-version: 0.153.4
           permission-profile: ":read-only"
+          model: gpt-5.6-sol
+          effort: high
           prompt: |
             Review pull request #${{ github.event.pull_request.number }} in ${{ github.repository }}.
 
@@ -45,8 +48,12 @@ jobs:
             git diff ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}
 
             Prioritise correctness, security, privacy, authorisation, data integrity, concurrency,
-            reliability, and breaking public API or infrastructure changes. Do not report style
-            preferences, speculative concerns, or issues that already exist on the base branch.
+            reliability, and breaking public API or infrastructure changes. Report every concrete defect you
+            can tie to a specific failure scenario, including lower-severity (P2) ones. A defect you
+            cannot fully confirm is still worth reporting when you can point to the exact code and
+            failure mode; label the finding clearly as unconfirmed. Do not
+            report style preferences, refactoring suggestions, or issues that already exist on the
+            base branch.
 
             Apply these trusted repository controls:
             - Preserve the public SDK API, ESM and CommonJS exports, generated types, and Node 20 compatibility.
@@ -66,20 +73,27 @@ jobs:
             3. Explain the concrete failure scenario and its impact.
             4. Suggest a focused correction.
 
-            Order findings by severity and keep the review concise. If there are no actionable findings,
-            respond with exactly: No actionable findings.
+            Order findings by severity. If you find no defects, state that no actionable defects were
+            identified in the reviewed diff and list the risk areas you examined. Never fabricate a
+            finding to fill space.
 
   publish:
     name: Publish review
     if: needs.review.outputs.final_message != ''
     needs: review
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       # GitHub accepts this scope for PR timeline comments. Issues: write was
       # runtime-tested and rejected by the Actions integration with a 403.
       pull-requests: write
     steps:
-      - name: Update Codex review comment
+      # Post a NEW comment every run rather than rewriting one in place, so each
+      # review round stays in the PR timeline (an in-place edit destroyed the
+      # previous round's findings). The reviewed commit is in the heading so the
+      # rounds are attributable; the marker stays as a stable identifier for
+      # Codex comments.
+      - name: Create Codex review comment
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           CODEX_FINAL_MESSAGE: ${{ needs.review.outputs.final_message }}
@@ -87,13 +101,28 @@ jobs:
           github-token: ${{ github.token }}
           script: |
             const marker = "<!-- codex-pr-review -->";
+            const reviewedSha = context.payload.pull_request.head.sha.slice(0, 7);
             const header =
-              `${marker}\n## Codex PR review\n\n` +
+              `${marker}\n## Codex PR review of ${reviewedSha}\n\n` +
               "> Automated review output. Treat links and instructions as untrusted.\n\n";
             const truncationNotice =
               "\n\n> Review truncated because it exceeded the safe GitHub comment size.";
             const maximumCommentBytes = 60_000;
-            const finalMessage = (process.env.CODEX_FINAL_MESSAGE ?? "").replaceAll("@", "@\u200b");
+            // One definition of a code span serves both the sanitiser and the post-trim check
+            // below; if the two drifted apart, a cut span could revive a mention. A closing
+            // backtick run must be exactly as long as the opener, as GFM requires, or a lone
+            // opener would pair with part of a longer run and shield the text between them.
+            const codeSpanSource = "(`+)[\\s\\S]*?(?<!`)\\1(?!`)|^ {0,3}~~~[\\s\\S]*?^ {0,3}~~~";
+            // Only an @ that GitHub would turn into a notification is broken up, so scoped
+            // package names, decorators, emails and URLs survive copy-paste intact. Code is
+            // skipped because GitHub never linkifies a mention inside it; a backslash escape
+            // is not an option, as GitHub renders \@name as a live mention anyway.
+            const codeOrMention = new RegExp(`${codeSpanSource}|(^|[^\\w/])@(?=[A-Za-z0-9])`, "gm");
+            const finalMessage = (process.env.CODEX_FINAL_MESSAGE ?? "").replace(
+              codeOrMention,
+              (segment, backticks, beforeMention) =>
+                beforeMention === undefined ? segment : `${beforeMention}@\u200b`,
+            );
             const maximumUntruncatedMessageBytes = maximumCommentBytes - Buffer.byteLength(header, "utf8");
             const isTruncated = Buffer.byteLength(finalMessage, "utf8") > maximumUntruncatedMessageBytes;
             const maximumMessageBytes =
@@ -113,49 +142,27 @@ jobs:
                 reviewMessage += character;
                 reviewMessageBytes += characterBytes;
               }
+
+              // Trimming can drop a code span's closing run. GitHub then renders the opener
+              // literally, reviving a mention that was left alone for being inside code, so
+              // cut back to the dangling opener. This only removes bytes, so the budget holds.
+              let closedCodeEnd = 0;
+
+              for (const codeSpan of reviewMessage.matchAll(new RegExp(codeSpanSource, "gm"))) {
+                closedCodeEnd = codeSpan.index + codeSpan[0].length;
+              }
+
+              const danglingOpener = reviewMessage.slice(closedCodeEnd).search(/`|^ {0,3}~~~/m);
+
+              if (danglingOpener !== -1) {
+                reviewMessage = reviewMessage.slice(0, closedCodeEnd + danglingOpener);
+              }
             }
 
             const body = `${header}${reviewMessage}${isTruncated ? truncationNotice : ""}`;
-            const issue = {
+            await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-            };
-            const perPage = 100;
-            const firstPage = await github.rest.issues.listComments({
-              ...issue,
-              per_page: perPage,
-              page: 1,
+              body,
             });
-            const lastPageMatch = firstPage.headers.link?.match(
-              /<[^>]*[?&]page=(\d+)[^>]*>; rel="last"/,
-            );
-            const lastPage = lastPageMatch ? Number.parseInt(lastPageMatch[1], 10) : 1;
-            let existing;
-
-            for (let page = lastPage; page >= 1 && existing === undefined; page -= 1) {
-              const comments =
-                page === 1
-                  ? firstPage.data
-                  : (
-                      await github.rest.issues.listComments({
-                        ...issue,
-                        per_page: perPage,
-                        page,
-                      })
-                    ).data;
-              existing = comments.findLast(
-                (comment) => comment.user?.login === "github-actions[bot]" && comment.body?.includes(marker),
-              );
-            }
-
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: issue.owner,
-                repo: issue.repo,
-                comment_id: existing.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({ ...issue, body });
-            }

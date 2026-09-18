@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { Resvg } from "@resvg/resvg-js";
 
@@ -11,9 +12,11 @@ import { unpremultiplyInPlace } from "../qr/pngEncode.js";
 import { createBarcodeSvg } from "../qr/styled.js";
 import { decodeQrImage } from "../test/decodeQr.js";
 
+const fixturesDirectory = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+
 const PARTS: BarcodeParts = {
   verifiablReference: "AbCdEfGhIjKlMnOpQrStUv",
-  encryptedPii: "Zm9vYmFyYmF6cXV4Zm9vYmFyYmF6cXV4",
+  encryptedPii: Buffer.from("Zm9vYmFyYmF6cXV4Zm9vYmFyYmF6cXV4", "base64url"),
 };
 
 function decode(png: Buffer): { data: Buffer; width: number; height: number } {
@@ -55,7 +58,7 @@ describe("PNG pipeline visual identity", () => {
   // SDK holds the same rasters, so a deliberate change here means regenerating
   // both baselines together.
   it("output matches the committed baseline exactly", async () => {
-    const baseline = decode(readFileSync(join(__dirname, "fixtures", "badge-baseline-480.png")));
+    const baseline = decode(readFileSync(join(fixturesDirectory, "badge-baseline-480.png")));
     const { png } = await createBarcodePng(PARTS, { format: "v1" }, 480);
     const current = decode(png);
 
@@ -88,26 +91,27 @@ describe("frame asset freshness", () => {
   // A frame change in styled.ts without regenerating the committed artifacts
   // would silently drift the PNG output from the SVG. Re-render the frame from
   // the live SVG renderer and demand the committed asset matches it exactly.
-  it.each([
-    ...SUPPORTED_PNG_PIXEL_WIDTHS,
-  ])("committed frame at width %d matches the live SVG", (width) => {
-    const rendered = new Resvg(frameOnlySvg(width), {
-      fitTo: { mode: "width", value: width },
-      font: { loadSystemFonts: false },
-    }).render();
-    const fresh = unpremultiplyInPlace({
-      data: Buffer.from(rendered.pixels),
-      width: rendered.width,
-      height: rendered.height,
-    });
+  it.each([...SUPPORTED_PNG_PIXEL_WIDTHS])(
+    "committed frame at width %d matches the live SVG",
+    (width) => {
+      const rendered = new Resvg(frameOnlySvg(width), {
+        fitTo: { mode: "width", value: width },
+        font: { loadSystemFonts: false },
+      }).render();
+      const fresh = unpremultiplyInPlace({
+        data: Buffer.from(rendered.pixels),
+        width: rendered.width,
+        height: rendered.height,
+      });
 
-    const committed = frameRaster(width);
-    expect(committed.width).toBe(fresh.width);
-    expect(committed.height).toBe(fresh.height);
-    const { maxChannelDelta, differingPixels } = comparePixels(fresh.data, committed.data);
-    expect(maxChannelDelta).toBe(0);
-    expect(differingPixels).toBe(0);
-  });
+      const committed = frameRaster(width);
+      expect(committed.width).toBe(fresh.width);
+      expect(committed.height).toBe(fresh.height);
+      const { maxChannelDelta, differingPixels } = comparePixels(fresh.data, committed.data);
+      expect(maxChannelDelta).toBe(0);
+      expect(differingPixels).toBe(0);
+    },
+  );
 });
 
 describe("PNG scannability", () => {
@@ -122,7 +126,7 @@ describe("PNG scannability", () => {
   // compositor on the hardest-to-scan codes, not just sparse ones.
   const DENSE: BarcodeParts = {
     verifiablReference: "AbCdEfGhIjKlMnOpQrStUv",
-    encryptedPii: "A".repeat(220),
+    encryptedPii: Buffer.from("A".repeat(220), "base64url"),
   };
 
   function scan(png: Buffer): Promise<string | null> {

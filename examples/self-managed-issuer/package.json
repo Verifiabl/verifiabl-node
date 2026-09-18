@@ -1,0 +1,17 @@
+{
+  "name": "verifiabl-self-managed-issuer-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "pnpm run build && node dist/app.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "typescript": "^7.0.2"
+  }
+}
