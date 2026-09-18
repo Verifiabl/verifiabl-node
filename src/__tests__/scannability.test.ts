@@ -151,13 +151,13 @@ const DIVERSE_RECORDS: ReadonlyArray<{ label: string; fields: PiiFields }> = [
   },
 ] as const;
 
-function encryptFixture(plaintext: string): string {
+function encryptFixture(plaintext: string): Buffer {
   // Derive a unique IV per plaintext so distinct fixtures never reuse an
   // IV under the same key (the real AES-GCM footgun), while staying
   // deterministic for reproducible tests. Production uses a random IV.
   const iv = createHash("sha256").update(plaintext).digest().subarray(0, 12);
   const cipher = createCipheriv("aes-256-gcm", FIXTURE_KEY, iv);
-  return Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]).toString("base64url");
+  return Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
 }
 
 function partsFromPii(fields: PiiFields): { parts: BarcodeParts; plaintext: string } {
@@ -332,25 +332,26 @@ describe("styled QR scannability", () => {
     expect(plaintext).toBe(
       "P2|Jane A. Doe|Senior Developer|Engineering|12-345-678-901|062-000|12345678|Jane A Doe|12 Example St, Sydney NSW 2000",
     );
-    expect(parts.encryptedPii.length).toBeGreaterThan(plaintext.length);
+    expect(parts.encryptedPii.length).toBe(Buffer.byteLength(plaintext));
     expect(await decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(createBarcodeSvg(parts).content);
   });
 
   it("decodes longer real-world employee fields at the minimum raster width", async () => {
     const { parts, plaintext } = partsFromPii(LONG_NAME_FIELDS);
     expect(plaintext.length).toBeGreaterThan(formatPii(DOCS_EXAMPLE_FIELDS).length);
-    expect(parts.encryptedPii.length).toBeGreaterThan(plaintext.length);
+    expect(parts.encryptedPii.length).toBe(Buffer.byteLength(plaintext));
     expect(await decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(createBarcodeSvg(parts).content);
   });
 
-  it.each(
-    DIVERSE_RECORDS,
-  )("decodes a diverse real-world record at the minimum raster width ($label)", async ({
-    fields,
-  }) => {
-    const { parts } = partsFromPii(fields);
-    expect(await decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(createBarcodeSvg(parts).content);
-  });
+  it.each(DIVERSE_RECORDS)(
+    "decodes a diverse real-world record at the minimum raster width ($label)",
+    async ({ fields }) => {
+      const { parts } = partsFromPii(fields);
+      expect(await decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(
+        createBarcodeSvg(parts).content,
+      );
+    },
+  );
 
   it("defaults to error-correction M and renders a clean (non-degraded) code", () => {
     // The default ceiling is M, not Q: a realistic record is one or two QR
@@ -386,20 +387,20 @@ describe("styled QR scannability", () => {
     { label: "stays M, sub-ideal modules", plaintext: `P1|${"A".repeat(800)}`, ec: "M" },
     { label: "stays M near the floor", plaintext: `P1|${"A".repeat(1200)}`, ec: "M" },
     { label: "drops to L", plaintext: `P1|${"A".repeat(1400)}`, ec: "L" },
-  ])("decodes a $label record at the fixed frame and flags it degraded", async ({
-    plaintext,
-    ec,
-  }) => {
-    const parts: BarcodeParts = {
-      verifiablReference: VERIFIABL_REF,
-      encryptedPii: encryptFixture(plaintext),
-    };
-    const result = createBarcodeSvg(parts, { format: "v1" });
-    expect(result.errorCorrectionLevel).toBe(ec);
-    expect(result.degraded).toBe(true);
-    expect(result.width).toBe(480);
-    expect(await decode(parts, { format: "v1" }, REALISTIC_SCAN_RASTER)).toBe(result.content);
-  });
+  ])(
+    "decodes a $label record at the fixed frame and flags it degraded",
+    async ({ plaintext, ec }) => {
+      const parts: BarcodeParts = {
+        verifiablReference: VERIFIABL_REF,
+        encryptedPii: encryptFixture(plaintext),
+      };
+      const result = createBarcodeSvg(parts, { format: "v1" });
+      expect(result.errorCorrectionLevel).toBe(ec);
+      expect(result.degraded).toBe(true);
+      expect(result.width).toBe(480);
+      expect(await decode(parts, { format: "v1" }, REALISTIC_SCAN_RASTER)).toBe(result.content);
+    },
+  );
 
   it("hard-errors when PII cannot fit the fixed frame even degraded to L", () => {
     const parts: BarcodeParts = {

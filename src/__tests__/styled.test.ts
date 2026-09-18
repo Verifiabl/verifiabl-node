@@ -3,7 +3,7 @@ import { buildBarcodePayload, buildScanUrl } from "../payload.js";
 import { buildQrEncoding, createBarcodeSvg, QrCapacityError } from "../qr/styled.js";
 
 const VERIFIABL_REF = "AbCdEfGhIjKlMnOpQrStUv";
-const CIPHERTEXT = "Zm9vYmFyYmF6cXV4XzEyMzQ1Njc4OTBhYmNkZWZnaGlqa2xtbm9w";
+const CIPHERTEXT = Buffer.from("Zm9vYmFyYmF6cXV4XzEyMzQ1Njc4OTBhYmNkZWZnaGlqa2xtbm9w", "base64url");
 const PARTS = { verifiablReference: VERIFIABL_REF, encryptedPii: CIPHERTEXT };
 const FRAME_GEOMETRY = [
   'viewBox="0 0 96 150"',
@@ -87,7 +87,10 @@ describe("createBarcodeSvg", () => {
 
   it("keeps frame and QR placement fixed as payload size changes", () => {
     const short = createBarcodeSvg(PARTS);
-    const long = createBarcodeSvg({ ...PARTS, encryptedPii: "A".repeat(300) });
+    const long = createBarcodeSvg({
+      ...PARTS,
+      encryptedPii: Buffer.from("A".repeat(300), "base64url"),
+    });
 
     for (const expected of FRAME_GEOMETRY) {
       expect(short.svg).toContain(expected);
@@ -139,17 +142,19 @@ describe("createBarcodeSvg", () => {
   // host document supplies the other three sides). Every symbol, tiny or dense,
   // fills the QR box edge to edge; the gap is 4 modules or more for any full
   // record (version 10 and up) and proportionally less for shorter payloads.
-  it.each([
-    "AA",
-    CIPHERTEXT,
-    "a".repeat(600),
-  ])("places every symbol at the box origin, edge to edge (payload length %#)", (encryptedPii) => {
-    const { svg } = createBarcodeSvg({ ...PARTS, encryptedPii });
-    expect(svg).toContain(`${QR_TRANSFORM}><g shape-rendering="crispEdges"`);
-  });
+  it.each([Buffer.from("AA", "base64url"), CIPHERTEXT, Buffer.from("a".repeat(600), "base64url")])(
+    "places every symbol at the box origin, edge to edge (payload length %#)",
+    (encryptedPii) => {
+      const { svg } = createBarcodeSvg({ ...PARTS, encryptedPii });
+      expect(svg).toContain(`${QR_TRANSFORM}><g shape-rendering="crispEdges"`);
+    },
+  );
 
   it("keeps the gap below the header at >= 4 modules for a full record", () => {
-    const { svg, qrVersion } = createBarcodeSvg({ ...PARTS, encryptedPii: "a".repeat(600) });
+    const { svg, qrVersion } = createBarcodeSvg({
+      ...PARTS,
+      encryptedPii: Buffer.from("a".repeat(600), "base64url"),
+    });
     expect(qrVersion).toBeGreaterThanOrEqual(10);
     const moduleSize = Number(/width="([\d.]+)" height="\1" fill="#000000"/.exec(svg)?.[1]);
     expect(QR_GAP / moduleSize).toBeGreaterThanOrEqual(4 - 1e-6);
@@ -160,9 +165,21 @@ describe("createBarcodeSvg", () => {
   // never varying the fixed frame. Lowercase base64url ("a") forces byte mode
   // like real encrypted PII. Thresholds are at width 480.
   it.each([
-    { label: "stays M, sub-ideal modules", ciphertext: "a".repeat(1000), ec: "M" },
-    { label: "stays M near the floor", ciphertext: "a".repeat(1700), ec: "M" },
-    { label: "longest fittable: drops to L", ciphertext: "a".repeat(1800), ec: "L" },
+    {
+      label: "stays M, sub-ideal modules",
+      ciphertext: Buffer.from("a".repeat(1000), "base64url"),
+      ec: "M",
+    },
+    {
+      label: "stays M near the floor",
+      ciphertext: Buffer.from("a".repeat(1700), "base64url"),
+      ec: "M",
+    },
+    {
+      label: "longest fittable: drops to L",
+      ciphertext: Buffer.from("a".repeat(1800), "base64url"),
+      ec: "L",
+    },
   ])("degrades error correction in order for $label", ({ ciphertext, ec }) => {
     const result = createBarcodeSvg({ ...PARTS, encryptedPii: ciphertext }, { format: "v1" });
     expect(result.errorCorrectionLevel).toBe(ec);
@@ -175,7 +192,10 @@ describe("createBarcodeSvg", () => {
 
   it("hard-errors when PII cannot fit the fixed frame even at the lowest level", () => {
     // Too dense to clear the floor even at L, but still within QR capacity.
-    const parts = { ...PARTS, encryptedPii: "a".repeat(2500) };
+    const parts = {
+      ...PARTS,
+      encryptedPii: Buffer.from("a".repeat(2500), "base64url"),
+    };
     expect(() => createBarcodeSvg(parts, { format: "v1" })).toThrow(
       /too long to render a scannable barcode in the branded frame/,
     );
@@ -191,7 +211,7 @@ describe("createBarcodeSvg", () => {
   it("throws a clear error when PII exceeds QR code capacity entirely", () => {
     // Beyond what any QR version can hold at any level: the qrcode library
     // would otherwise throw a cryptic 'data too big' error deep in the renderer.
-    const parts = { ...PARTS, encryptedPii: "a".repeat(6000) };
+    const parts = { ...PARTS, encryptedPii: Buffer.from("a".repeat(6000), "base64url") };
     expect(() => createBarcodeSvg(parts)).toThrow(/too large to encode in a QR code/);
 
     const error = capacityErrorFrom(() => createBarcodeSvg(parts, { width: 720 }));

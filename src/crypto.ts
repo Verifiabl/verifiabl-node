@@ -1,12 +1,13 @@
 import { createCipheriv, randomBytes } from "node:crypto";
+import type { EncryptionMetadata } from "./types.js";
 
 /**
  * PII encryption helper.
  *
  * Verifiabl decrypts barcode ciphertext with AES-256-GCM using a 96-bit IV
- * and a 128-bit authentication tag. The IV, tag, and ciphertext are
- * base64url encoded without padding. This helper produces exactly that
- * shape from a formatted PII string and your provider key.
+ * and a 128-bit authentication tag. This helper returns the IV, tag, and
+ * ciphertext as buffers. The SDK applies the required encoding when it sends
+ * an API request or builds a barcode.
  *
  * Each provider has its own encryption key, so a ciphertext can only be
  * decrypted with the key of the provider that issued it. Verifiabl finds
@@ -24,17 +25,10 @@ const IV_BYTES = 12; // 96-bit IV, the NIST-recommended size for GCM
 const KEY_BYTES = 32; // AES-256
 
 export interface EncryptedPii {
-  /** Base64url ciphertext to embed in the barcode or send to registerAndBuildBarcode. */
-  encryptedPii: string;
+  /** AES-256-GCM ciphertext bytes to store or pass to the barcode and client APIs. */
+  encryptedPii: Uint8Array;
   /** Server-side decryption metadata for registration endpoints. */
-  encryptionMetadata: {
-    iv: string;
-    tag: string;
-  };
-}
-
-function base64Url(buf: Buffer): string {
-  return buf.toString("base64url");
+  encryptionMetadata: EncryptionMetadata;
 }
 
 /**
@@ -62,10 +56,10 @@ export function encryptPii(plaintext: string, key: Buffer): EncryptedPii {
   const tag = cipher.getAuthTag();
 
   return {
-    encryptedPii: base64Url(ciphertext),
+    encryptedPii: new Uint8Array(ciphertext),
     encryptionMetadata: {
-      iv: base64Url(iv),
-      tag: base64Url(tag),
+      iv: new Uint8Array(iv),
+      tag: new Uint8Array(tag),
     },
   };
 }

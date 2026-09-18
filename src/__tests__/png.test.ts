@@ -4,7 +4,7 @@ import { createBarcodeSvg, QrCapacityError } from "../qr/styled.js";
 
 const PARTS = {
   verifiablReference: "AbCdEfGhIjKlMnOpQrStUv",
-  encryptedPii: "Zm9vYmFyYmF6cXV4",
+  encryptedPii: Buffer.from("Zm9vYmFyYmF6cXV4", "base64url"),
 };
 
 // The baked frame's pixel height per supported width (750 = 480 * 150/96).
@@ -53,7 +53,7 @@ describe("createBarcodePng", () => {
   });
 
   it("rejects with the typed QrCapacityError when the PII is too long", async () => {
-    const parts = { ...PARTS, encryptedPii: "a".repeat(6000) };
+    const parts = { ...PARTS, encryptedPii: Buffer.alloc(4_500) };
     await expect(createBarcodePng(parts, {}, 480)).rejects.toBeInstanceOf(QrCapacityError);
     await expect(createBarcodePng(parts, {}, 480)).rejects.toMatchObject({
       reason: "qr-capacity",

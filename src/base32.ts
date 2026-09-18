@@ -39,12 +39,3 @@ export function encodeBase32(input: Uint8Array): string {
   }
   return output;
 }
-
-/** Decode and validate the SDK's canonical base64url ciphertext transport. */
-export function decodeCanonicalBase64url(value: string): Buffer {
-  const bytes = Buffer.from(value, "base64url");
-  if (bytes.length === 0 || bytes.toString("base64url") !== value) {
-    throw new Error("Ciphertext must be canonical unpadded base64url");
-  }
-  return bytes;
-}
