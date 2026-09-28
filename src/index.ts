@@ -1,4 +1,3 @@
-export { encodeBase32, getBase32EncodedLength } from "./base32.js";
 export {
   VerifiablApiError,
   type VerifiablAuth,
@@ -14,12 +13,9 @@ export {
 } from "./client.js";
 export { type EncryptedPii, encryptPii } from "./crypto.js";
 export {
-  type BarcodeFormat,
   type BarcodeParts,
-  type BarcodePayloadOptions,
   buildBarcodePayload,
   buildScanUrl,
-  ciphertextSchema,
   DEFAULT_ISSUER_BASE_URL,
   DEFAULT_SCAN_BASE_URL,
   generateVerifiablReference,
@@ -28,24 +24,30 @@ export {
   SANDBOX_ISSUER_BASE_URL,
   SANDBOX_SCAN_BASE_URL,
   type ScanUrlOptions,
-  verifiablReferenceSchema,
 } from "./payload.js";
 export {
+  AUSTRALIAN_PAYSLIP_V2_SCHEMA,
+  type AustralianPayslipV2,
+  NEW_ZEALAND_PAYSLIP_V2_SCHEMA,
+  type NewZealandPayslipV2,
+  type PayslipNumber,
+  payslipNumber,
+  supportedV2Currencies,
+} from "./payslipV2.js";
+export {
+  type AustralianAddress,
+  type AustralianPiiFields,
+  formatAustralianPii,
+  formatNewZealandPii,
   formatPii,
-  formatPiiV1,
-  PII_ADDRESS_MAX_BYTES,
-  PII_FIELD_MAX_LENGTH,
-  PII_FIELD_ORDER,
-  PII_PAYLOAD_MAX_BYTES,
-  PII_TEXT_PROFILE_ID,
-  PII_TEXT_PROFILE_UNICODE_VERSION,
+  type NewZealandAddress,
+  type NewZealandPiiFields,
   type PiiFieldName,
   type PiiFields,
   type PiiFieldViolation,
   type PiiFieldViolationReason,
   PiiValidationError,
   parsePii,
-  piiFieldsSchema,
 } from "./pii.js";
 
 export {
@@ -77,6 +79,7 @@ export {
   KNOWN_BATCH_RECORD_STATUSES,
   KNOWN_VERIFIABL_ERROR_CODES,
   type KnownBatchRecordStatus,
+  type KnownSchemaRegisterNonPiiBatchRequest,
   type KnownVerifiablErrorCode,
   MAX_BATCH_RECORDS,
   type PayslipNonPii,
@@ -86,7 +89,6 @@ export {
   type RegisterNonPiiBatchResponse,
   type RegisterNonPiiRequest,
   type RegisterNonPiiResponse,
-  SCHEMA_RE,
   supportedCurrencies,
   type VerifiablErrorBody,
   type VerifiablErrorCode,

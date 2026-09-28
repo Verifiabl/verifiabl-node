@@ -6,9 +6,9 @@ import {
 import {
   type BatchRecordRequest,
   type BatchRecordResult,
+  batchRecordRequestSchema,
   IV_REUSED_CODE,
   localBatchValidationError,
-  payslipNonPiiSchema,
   type RegisterAndBuildBarcodeRequest,
   type RegisterAndBuildBarcodeResponse,
   type RegisterNonPiiBatchRequest,
@@ -24,7 +24,7 @@ import {
   registerNonPiiRequestSchema,
   registrationFromWire,
   registrationToWire,
-  SUPPORTED_PAYSLIP_SCHEMA,
+  SUPPORTED_PAYSLIP_SCHEMAS,
   type VerifiablErrorBody,
   type VerifiablErrorCode,
   verifiablErrorBodySchema,
@@ -338,7 +338,7 @@ export class VerifiablClient {
     const results = new Array<BatchRecordResult | undefined>(records.length);
     const sendable: { index: number; record: BatchRecordRequest }[] = [];
     records.forEach((record, index) => {
-      if (record.schema !== SUPPORTED_PAYSLIP_SCHEMA) {
+      if (!SUPPORTED_PAYSLIP_SCHEMAS.some((schema) => schema === record.schema)) {
         // Safe to echo: the envelope already pinned this to the schema-id format,
         // so it cannot carry anything but a version identifier.
         results[index] = {
@@ -350,11 +350,11 @@ export class VerifiablClient {
         };
         return;
       }
-      const parsed = payslipNonPiiSchema.safeParse(record.payslipNonPii);
+      const parsed = batchRecordRequestSchema.safeParse(record);
       if (parsed.success) {
         sendable.push({
           index,
-          record: { ...record, schema: record.schema, payslipNonPii: parsed.data },
+          record: parsed.data,
         });
       } else {
         results[index] = localBatchValidationError(record, parsed.error);

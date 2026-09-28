@@ -11,7 +11,7 @@
       "ecosystem": "node",
       "language": "typescript",
       "source": "examples/self-managed-issuer/src/app.ts",
-      "code": "const plaintext = formatPii(payslip.pii);\nconst { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);"
+      "code": "const plaintext = payslip.formatPii();\nconst { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);"
     },
     "node.self-managed.prepare-registration": {
       "ecosystem": "node",
@@ -23,7 +23,7 @@
       "ecosystem": "node",
       "language": "typescript",
       "source": "examples/self-managed-issuer/src/app.ts",
-      "code": "await client.registerNonPii({\n  verifiablReference,\n  schema: \"au.payslip.v1\",\n  issuedAt,\n  payslipNonPii: payslip.nonPii,\n  encryptionMetadata,\n});"
+      "code": "await client.registerNonPii({\n  verifiablReference,\n  ...payslip.registration,\n  issuedAt,\n  encryptionMetadata,\n});"
     },
     "node.self-managed.build-qr": {
       "ecosystem": "node",
@@ -41,13 +41,13 @@
       "ecosystem": "node",
       "language": "typescript",
       "source": "examples/self-managed-issuer/src/app.ts",
-      "code": "const batch = payslips.map((payslip) => {\n  const plaintext = formatPii(payslip.pii);\n  const { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);\n\n  const verifiablReference = generateVerifiablReference();\n  const issuedAt = new Date().toISOString();\n\n  // Persist these values with the payslip before registration.\n  return { payslip, verifiablReference, issuedAt, encryptedPii, encryptionMetadata };\n});"
+      "code": "const batch = payslips.map((payslip) => {\n  const plaintext = payslip.formatPii();\n  const { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);\n\n  const verifiablReference = generateVerifiablReference();\n  const issuedAt = new Date().toISOString();\n\n  // Persist these values with the payslip before registration.\n  return { payslip, verifiablReference, issuedAt, encryptedPii, encryptionMetadata };\n});"
     },
     "node.self-managed.register-batch": {
       "ecosystem": "node",
       "language": "typescript",
       "source": "examples/self-managed-issuer/src/app.ts",
-      "code": "const response = await client.registerNonPiiBatch({\n  records: batch.map((record) => ({\n    verifiablReference: record.verifiablReference,\n    externalId: record.payslip.externalId,\n    schema: \"au.payslip.v1\",\n    issuedAt: record.issuedAt,\n    payslipNonPii: record.payslip.nonPii,\n    encryptionMetadata: record.encryptionMetadata,\n  })),\n});\n\nconst registeredOutcomes = response.results.map((result) => ({\n  externalId: result.externalId ?? \"unknown\",\n  verifiablReference: result.verifiablReference,\n  status: result.status,\n  ...(result.code === undefined ? {} : { code: result.code }),\n  ...(result.detail === undefined ? {} : { detail: result.detail }),\n}));"
+      "code": "const response = await client.registerNonPiiBatch({\n  records: batch.map((record) => ({\n    verifiablReference: record.verifiablReference,\n    externalId: record.payslip.externalId,\n    ...record.payslip.registration,\n    issuedAt: record.issuedAt,\n    encryptionMetadata: record.encryptionMetadata,\n  })),\n});\n\nconst registeredOutcomes = response.results.map((result) => ({\n  externalId: result.externalId ?? \"unknown\",\n  verifiablReference: result.verifiablReference,\n  status: result.status,\n  ...(result.code === undefined ? {} : { code: result.code }),\n  ...(result.detail === undefined ? {} : { detail: result.detail }),\n}));"
     }
   }
 }

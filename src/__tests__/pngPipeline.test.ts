@@ -1,7 +1,3 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { Resvg } from "@resvg/resvg-js";
 
 import { PNG } from "pngjs";
@@ -11,8 +7,6 @@ import { createBarcodePng } from "../qr/png.js";
 import { unpremultiplyInPlace } from "../qr/pngEncode.js";
 import { createBarcodeSvg } from "../qr/styled.js";
 import { decodeQrImage } from "../test/decodeQr.js";
-
-const fixturesDirectory = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 
 const PARTS: BarcodeParts = {
   verifiablReference: "AbCdEfGhIjKlMnOpQrStUv",
@@ -52,23 +46,6 @@ function comparePixels(
 }
 
 describe("PNG pipeline visual identity", () => {
-  // The compositor is deterministic by construction (integer arithmetic only),
-  // so the committed baseline must match byte for byte: zero tolerance, so a
-  // snapping or coverage regression cannot hide behind a threshold. The .NET
-  // SDK holds the same rasters, so a deliberate change here means regenerating
-  // both baselines together.
-  it("output matches the committed baseline exactly", async () => {
-    const baseline = decode(readFileSync(join(fixturesDirectory, "badge-baseline-480.png")));
-    const { png } = await createBarcodePng(PARTS, { format: "v1" }, 480);
-    const current = decode(png);
-
-    expect(current.width).toBe(baseline.width);
-    expect(current.height).toBe(baseline.height);
-    const { maxChannelDelta, differingPixels } = comparePixels(baseline.data, current.data);
-    expect(maxChannelDelta).toBe(0);
-    expect(differingPixels).toBe(0);
-  });
-
   it("the rendered SVG has no <text>, so the font-less frame bake is safe", () => {
     // The frame bake renders with loadSystemFonts:false. That is only safe
     // because every glyph is a vector path; a stray <text>/<tspan> would be

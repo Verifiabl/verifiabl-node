@@ -1,5 +1,13 @@
 import { z } from "zod";
 import { ciphertextSchema, verifiablReferenceSchema } from "./payload.js";
+import {
+  AUSTRALIAN_PAYSLIP_V2_SCHEMA,
+  australianPayslipV2Schema,
+  australianPayslipV2ToWire,
+  NEW_ZEALAND_PAYSLIP_V2_SCHEMA,
+  newZealandPayslipV2Schema,
+  newZealandPayslipV2ToWire,
+} from "./payslipV2.js";
 
 function tuple<const T extends readonly string[]>(value: T): T {
   return value;
@@ -298,7 +306,8 @@ const payslipNonPiiFields = z
 /**
  * Non-PII payslip data: the canonical `au.payslip.v1` schema.
  *
- * Closed and free-text-free by design, so no field can carry a person's name.
+ * This v1 schema is closed and free-text-free by design, so no field can carry a person's name.
+ * V2 permits printed strings in non-PII fields; integrators must keep employee PII out of them.
  * Every rule the API enforces is enforced here too, so an integration mistake
  * fails locally with a clear message instead of as a 400 from the API.
  *
@@ -336,14 +345,21 @@ export const payslipNonPiiSchema = payslipNonPiiFields.superRefine((value, ctx) 
 
 export type PayslipNonPii = z.infer<typeof payslipNonPiiSchema>;
 
-const basePayslipRegistrationSchema = z
+const registrationFields = {
+  issuedAt: z.iso.datetime({
+    error: "issuedAt must be an ISO 8601 UTC datetime ending in 'Z' (use new Date().toISOString())",
+  }),
+  encryptionMetadata: encryptionMetadataSchema,
+};
+
+const australianV1RegistrationSchema = z
   .object({
     /**
      * Payslip schema identifier. A literal, exactly as the API pins it on the
      * single-registration endpoints: `payslipNonPii` below IS the au.payslip.v1
      * shape, so accepting another identifier here would impose AU rules on a
-     * payload that does not claim to be AU. When a second version ships, this
-     * becomes a discriminated union keyed on `schema`, one member per version.
+     * payload that does not claim to be AU. The public registration schema is
+     * a discriminated union keyed on `schema`, with one member per version.
      */
     schema: z.literal("au.payslip.v1"),
     /**
@@ -351,22 +367,43 @@ const basePayslipRegistrationSchema = z
      * UTC ("Z") timestamps; convert local times first, e.g. with
      * `new Date().toISOString()`.
      */
-    issuedAt: z.iso.datetime({
-      error:
-        "issuedAt must be an ISO 8601 UTC datetime ending in 'Z' (use new Date().toISOString())",
-    }),
+    issuedAt: registrationFields.issuedAt,
     payslipNonPii: payslipNonPiiSchema,
-    encryptionMetadata: encryptionMetadataSchema,
+    encryptionMetadata: registrationFields.encryptionMetadata,
   })
   .strict();
+
+const australianV2RegistrationSchema = z
+  .object({
+    schema: z.literal(AUSTRALIAN_PAYSLIP_V2_SCHEMA),
+    issuedAt: registrationFields.issuedAt,
+    payslipNonPii: australianPayslipV2Schema,
+    encryptionMetadata: registrationFields.encryptionMetadata,
+  })
+  .strict();
+
+const newZealandV2RegistrationSchema = z
+  .object({
+    schema: z.literal(NEW_ZEALAND_PAYSLIP_V2_SCHEMA),
+    issuedAt: registrationFields.issuedAt,
+    payslipNonPii: newZealandPayslipV2Schema,
+    encryptionMetadata: registrationFields.encryptionMetadata,
+  })
+  .strict();
+
+const basePayslipRegistrationSchema = z.discriminatedUnion("schema", [
+  australianV1RegistrationSchema,
+  australianV2RegistrationSchema,
+  newZealandV2RegistrationSchema,
+]);
 
 /**
  * Request for `client.registerNonPii`. Calls POST /v1/registerNonPII.
  * The encrypted PII stays with you and goes into a locally generated
  * barcode; only non-PII data and decryption metadata are sent.
  */
-export const registerNonPiiRequestSchema = basePayslipRegistrationSchema
-  .extend({
+export const registerNonPiiRequestSchema = z.discriminatedUnion("schema", [
+  australianV1RegistrationSchema.extend({
     /**
      * Optional provider-generated reference (from `generateVerifiablReference`).
      * When omitted, the SDK generates one for this call. The reference makes
@@ -376,10 +413,16 @@ export const registerNonPiiRequestSchema = basePayslipRegistrationSchema
      * restart or occur in a separate call.
      */
     verifiablReference: verifiablReferenceSchema.optional(),
-  })
-  .strict();
+  }),
+  australianV2RegistrationSchema.extend({
+    verifiablReference: verifiablReferenceSchema.optional(),
+  }),
+  newZealandV2RegistrationSchema.extend({
+    verifiablReference: verifiablReferenceSchema.optional(),
+  }),
+]);
 
-export type RegisterNonPiiRequest = z.infer<typeof registerNonPiiRequestSchema>;
+export type RegisterNonPiiRequest = z.input<typeof registerNonPiiRequestSchema>;
 
 export const registerNonPiiResponseSchema = z.object({
   /** 22-char base64url Verifiabl reference to embed in the barcode. */
@@ -393,14 +436,16 @@ export type RegisterNonPiiResponse = z.infer<typeof registerNonPiiResponseSchema
  * /v1/registerAndBuildBarcode. This API-managed flow also sends the
  * ciphertext, and the server returns a ready-made barcode image.
  */
-export const registerAndBuildBarcodeRequestSchema = basePayslipRegistrationSchema
-  .extend({
+export const registerAndBuildBarcodeRequestSchema = z.discriminatedUnion("schema", [
+  australianV1RegistrationSchema.extend({
     /** AES-256-GCM ciphertext bytes for the formatted PII plaintext. */
     encryptedPii: ciphertextSchema,
-  })
-  .strict();
+  }),
+  australianV2RegistrationSchema.extend({ encryptedPii: ciphertextSchema }),
+  newZealandV2RegistrationSchema.extend({ encryptedPii: ciphertextSchema }),
+]);
 
-export type RegisterAndBuildBarcodeRequest = z.infer<typeof registerAndBuildBarcodeRequestSchema>;
+export type RegisterAndBuildBarcodeRequest = z.input<typeof registerAndBuildBarcodeRequestSchema>;
 
 export const barcodeImageSchema = z.object({
   format: z.literal("png"),
@@ -436,7 +481,7 @@ function encryptionMetadataToWire(metadata: EncryptionMetadata): Record<string, 
 
 /** Include a key only when the value was supplied, so optionals stay absent rather than null. */
 function when<T>(value: T | undefined, key: string): Record<string, T> {
-  return value === undefined ? {} : ({ [key]: value } as Record<string, T>);
+  return value === undefined ? {} : { [key]: value };
 }
 
 function earningsLineToWire(line: EarningsLine): Record<string, unknown> {
@@ -525,14 +570,33 @@ function payslipNonPiiToWire(data: PayslipNonPii): Record<string, unknown> {
   };
 }
 
-/** Map a validated registration request to the snake_case wire body. */
-export function registrationToWire(request: RegisterNonPiiRequest): Record<string, unknown> {
+type NormalizedRegistration = z.output<typeof basePayslipRegistrationSchema>;
+
+function registrationFieldsToWire(request: NormalizedRegistration): Record<string, unknown> {
+  const payslipNonPii = (() => {
+    switch (request.schema) {
+      case "au.payslip.v1":
+        return payslipNonPiiToWire(request.payslipNonPii);
+      case AUSTRALIAN_PAYSLIP_V2_SCHEMA:
+        return australianPayslipV2ToWire(request.payslipNonPii);
+      case NEW_ZEALAND_PAYSLIP_V2_SCHEMA:
+        return newZealandPayslipV2ToWire(request.payslipNonPii);
+    }
+  })();
   return {
-    ...when(request.verifiablReference, "verifiabl_reference"),
     schema: request.schema,
     issued_at: request.issuedAt,
-    payslip_non_pii: payslipNonPiiToWire(request.payslipNonPii),
+    payslip_non_pii: payslipNonPii,
     encryption_metadata: encryptionMetadataToWire(request.encryptionMetadata),
+  };
+}
+
+/** Validate and map a registration request to the snake_case wire body. */
+export function registrationToWire(request: RegisterNonPiiRequest): Record<string, unknown> {
+  const validated = registerNonPiiRequestSchema.parse(request);
+  return {
+    ...when(validated.verifiablReference, "verifiabl_reference"),
+    ...registrationFieldsToWire(validated),
   };
 }
 
@@ -540,9 +604,10 @@ export function registrationToWire(request: RegisterNonPiiRequest): Record<strin
 export function registerAndBuildBarcodeToWire(
   request: RegisterAndBuildBarcodeRequest,
 ): Record<string, unknown> {
+  const validated = registerAndBuildBarcodeRequestSchema.parse(request);
   return {
-    ...registrationToWire(request),
-    encrypted_pii: Buffer.from(request.encryptedPii).toString("base64url"),
+    ...registrationFieldsToWire(validated),
+    encrypted_pii: Buffer.from(validated.encryptedPii).toString("base64url"),
   };
 }
 
@@ -604,14 +669,22 @@ const externalIdSchema = z
   .max(MAX_EXTERNAL_ID_LENGTH)
   .regex(/^[\x20-\x7e]+$/);
 
-export const batchRecordRequestSchema = basePayslipRegistrationSchema
-  .extend({
+export const batchRecordRequestSchema = z.discriminatedUnion("schema", [
+  australianV1RegistrationSchema.extend({
     verifiablReference: verifiablReferenceSchema,
     externalId: externalIdSchema.optional(),
-  })
-  .strict();
+  }),
+  australianV2RegistrationSchema.extend({
+    verifiablReference: verifiablReferenceSchema,
+    externalId: externalIdSchema.optional(),
+  }),
+  newZealandV2RegistrationSchema.extend({
+    verifiablReference: verifiablReferenceSchema,
+    externalId: externalIdSchema.optional(),
+  }),
+]);
 
-export type BatchRecordRequest = z.infer<typeof batchRecordRequestSchema>;
+export type BatchRecordRequest = z.input<typeof batchRecordRequestSchema>;
 
 export const registerNonPiiBatchRequestSchema = z
   .object({
@@ -622,8 +695,6 @@ export const registerNonPiiBatchRequestSchema = z
   })
   .strict();
 
-export type RegisterNonPiiBatchRequest = z.infer<typeof registerNonPiiBatchRequestSchema>;
-
 /**
  * Batch record with the payslip body left unvalidated, mirroring the API's own
  * batch envelope exactly: reference, schema id, timestamp and encryption
@@ -631,19 +702,28 @@ export type RegisterNonPiiBatchRequest = z.infer<typeof registerNonPiiBatchReque
  * `payslipNonPii` is checked per record so one non-conforming payslip becomes
  * that record's error result rather than costing the caller the whole pay run.
  */
-const batchRecordEnvelopeSchema = basePayslipRegistrationSchema
-  .extend({
+const batchRecordEnvelopeSchema = z
+  .object({
     verifiablReference: verifiablReferenceSchema,
     externalId: externalIdSchema.optional(),
     payslipNonPii: z.unknown(),
     // Format-checked here, version-checked per record, as the API does: an
     // unsupported version is one record's error, not the whole batch's.
     schema: payslipSchemaIdSchema,
+    issuedAt: registrationFields.issuedAt,
+    encryptionMetadata: registrationFields.encryptionMetadata,
   })
   .strict();
 
-/** The only payslip schema version this SDK can validate and map. */
+/** Backwards-compatible name for the original schema identifier. */
 export const SUPPORTED_PAYSLIP_SCHEMA = "au.payslip.v1";
+
+/** Every payslip schema this SDK can validate and map. */
+export const SUPPORTED_PAYSLIP_SCHEMAS = tuple([
+  SUPPORTED_PAYSLIP_SCHEMA,
+  AUSTRALIAN_PAYSLIP_V2_SCHEMA,
+  NEW_ZEALAND_PAYSLIP_V2_SCHEMA,
+]);
 
 export const registerNonPiiBatchEnvelopeSchema = z
   .object({
@@ -653,6 +733,14 @@ export const registerNonPiiBatchEnvelopeSchema = z
       .max(MAX_BATCH_RECORDS, `records must contain at most ${MAX_BATCH_RECORDS} records`),
   })
   .strict();
+
+/** Batch input accepts future schema ids and invalid payslips for per-record error reporting. */
+export type RegisterNonPiiBatchRequest = z.input<typeof registerNonPiiBatchEnvelopeSchema>;
+
+/** Opt-in typed batch input for the payslip schemas currently known to this SDK. */
+export type KnownSchemaRegisterNonPiiBatchRequest = z.input<
+  typeof registerNonPiiBatchRequestSchema
+>;
 
 export type BatchRecordEnvelope = z.infer<typeof batchRecordEnvelopeSchema>;
 
@@ -739,16 +827,12 @@ export interface RegisterNonPiiBatchResponse {
 export function registerNonPiiBatchToWire(
   request: RegisterNonPiiBatchRequest,
 ): Record<string, unknown> {
+  const validated = registerNonPiiBatchRequestSchema.parse(request);
   return {
-    records: request.records.map((record) => ({
+    records: validated.records.map((record) => ({
       verifiabl_reference: record.verifiablReference,
       ...(record.externalId !== undefined && { external_id: record.externalId }),
-      ...registrationToWire({
-        schema: record.schema,
-        issuedAt: record.issuedAt,
-        payslipNonPii: record.payslipNonPii,
-        encryptionMetadata: record.encryptionMetadata,
-      }),
+      ...registrationFieldsToWire(record),
     })),
   };
 }

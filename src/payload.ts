@@ -6,25 +6,12 @@ const BASE64URL_RE = /^[A-Za-z0-9_-]+$/;
 const VERIFIABL_REFERENCE_BYTES = 16;
 const VERIFIABL_REFERENCE_LENGTH = 22;
 const MAX_CIPHERTEXT_BYTES = 7_500;
-const CURRENT_BARCODE_FORMAT = "v2";
-const LEGACY_BARCODE_FORMAT = "v1";
 const PAYLOAD_DELIMITER = "|";
 const SCAN_PATH_PREFIX = "/v/";
-const V1_PAYLOAD_VERSION = "1";
-const V2_PAYLOAD_VERSION = "2";
-const SCAN_URL_FRAGMENT_SEPARATOR = ".";
-const V1_SCAN_URL_FRAGMENT_MARKER = `#${V1_PAYLOAD_VERSION}${SCAN_URL_FRAGMENT_SEPARATOR}`;
-const V2_SCAN_URL_FRAGMENT_MARKER = `#${V2_PAYLOAD_VERSION}${SCAN_URL_FRAGMENT_SEPARATOR}`;
+const PAYLOAD_VERSION = "2";
+const SCAN_URL_FRAGMENT_MARKER = `#${PAYLOAD_VERSION}.`;
 
 export type VerifiablEnvironment = "production" | "sandbox";
-
-/** Printed barcode format. V2 is the default; select V1 only for rollback. */
-export type BarcodeFormat = "v1" | "v2";
-
-export interface BarcodePayloadOptions {
-  /** Printed format. Defaults to `v2`; select `v1` only for rollback. */
-  format?: BarcodeFormat;
-}
 
 /**
  * Verifiabl reference wire format: exactly 22 base64url characters. This is a
@@ -86,21 +73,15 @@ export interface EnvironmentOrigins {
 
 // Frozen so resolveEnvironment can hand back the singleton entry by reference
 // without a caller being able to mutate shared config and misroute later traffic.
-interface ResolvedEnvironmentOrigins extends EnvironmentOrigins {
-  readonly v2ScanBaseUrl: string;
-}
-
-const ENVIRONMENTS: Record<VerifiablEnvironment, ResolvedEnvironmentOrigins> = {
+const ENVIRONMENTS: Record<VerifiablEnvironment, EnvironmentOrigins> = {
   production: Object.freeze({
     issuerBaseUrl: "https://register.verifiabl.io",
-    scanBaseUrl: "https://verify.verifiabl.io",
-    v2ScanBaseUrl: "https://v.verifiabl.io",
+    scanBaseUrl: "https://v.verifiabl.io",
     tokenUrl: "https://auth.verifiabl.io/oauth/token",
   }),
   sandbox: Object.freeze({
     issuerBaseUrl: "https://register.sandbox.verifiabl.io",
-    scanBaseUrl: "https://verify.sandbox.verifiabl.io",
-    v2ScanBaseUrl: "https://v.sandbox.verifiabl.io",
+    scanBaseUrl: "https://v.sandbox.verifiabl.io",
     tokenUrl: "https://auth.sandbox.verifiabl.io/oauth/token",
   }),
 };
@@ -120,24 +101,19 @@ export const SANDBOX_ISSUER_BASE_URL = ENVIRONMENTS.sandbox.issuerBaseUrl;
 export const SANDBOX_SCAN_BASE_URL = ENVIRONMENTS.sandbox.scanBaseUrl;
 
 /**
- * Build the barcode payload for the PDF metadata copy.
- *
- * V2 is the default and writes `2|<verifiablReference>|<BASE32 ciphertext>`.
- * Select V1 only for rollback to the legacy `1|<verifiablReference>|<ciphertext>`
- * payload.
+ * Build the current barcode payload for the PDF metadata copy:
+ * `2|<verifiablReference>|<BASE32 ciphertext>`.
  */
 export function buildBarcodePayload(
   { verifiablReference, encryptedPii }: BarcodeParts,
-  options: BarcodePayloadOptions = {},
+  ...legacyOptions: never[]
 ): string {
+  // JavaScript callers can still supply the removed second argument. Do not
+  // silently issue v2 when a caller explicitly requested v1.
+  rejectRemovedBarcodeFormat(legacyOptions[0]);
   const id = verifiablReferenceSchema.parse(verifiablReference);
   const ciphertext = ciphertextSchema.parse(encryptedPii);
-  if (normaliseFormat(options.format ?? CURRENT_BARCODE_FORMAT) === LEGACY_BARCODE_FORMAT) {
-    return [V1_PAYLOAD_VERSION, id, Buffer.from(ciphertext).toString("base64url")].join(
-      PAYLOAD_DELIMITER,
-    );
-  }
-  return [V2_PAYLOAD_VERSION, id, encodeBase32(ciphertext)].join(PAYLOAD_DELIMITER);
+  return [PAYLOAD_VERSION, id, encodeBase32(ciphertext)].join(PAYLOAD_DELIMITER);
 }
 
 /**
@@ -163,7 +139,7 @@ export function buildBarcodePayload(
 export const PDF_PAYLOAD_XMP_NAMESPACE = "https://verifiabl.io/ns/";
 export const PDF_PAYLOAD_XMP_PROPERTY = "payload";
 
-export interface ScanUrlOptions extends BarcodePayloadOptions {
+export interface ScanUrlOptions {
   /** API environment for the public QR scan URL. Defaults to "production". */
   environment?: VerifiablEnvironment;
   /**
@@ -196,34 +172,29 @@ export function buildScanUrl(parts: BarcodeParts, options: ScanUrlOptions = {}):
 export interface ScanUrlParts {
   readonly content: string;
   readonly bytePrefix: string;
-  readonly alphanumericCiphertext?: string;
+  readonly alphanumericCiphertext: string;
 }
 
 export function buildScanUrlParts(parts: BarcodeParts, options: ScanUrlOptions = {}): ScanUrlParts {
+  rejectRemovedBarcodeFormat(options);
   const environment = normaliseEnvironment(options.environment ?? "production");
-  const format = normaliseFormat(options.format ?? CURRENT_BARCODE_FORMAT);
   const origins = ENVIRONMENTS[environment];
-  const baseUrl = normaliseScanBaseUrl(
-    options.scanBaseUrl ??
-      (format === CURRENT_BARCODE_FORMAT ? origins.v2ScanBaseUrl : origins.scanBaseUrl),
-  );
+  const baseUrl = normaliseScanBaseUrl(options.scanBaseUrl ?? origins.scanBaseUrl);
   const id = verifiablReferenceSchema.parse(parts.verifiablReference);
   const ciphertext = ciphertextSchema.parse(parts.encryptedPii);
-  if (format === LEGACY_BARCODE_FORMAT) {
-    const bytePrefix = `${baseUrl}${SCAN_PATH_PREFIX}${id}${V1_SCAN_URL_FRAGMENT_MARKER}`;
-    return {
-      content: bytePrefix + Buffer.from(ciphertext).toString("base64url"),
-      bytePrefix,
-    };
-  }
-
   const base32 = encodeBase32(ciphertext);
-  const bytePrefix = `${baseUrl}${SCAN_PATH_PREFIX}${id}${V2_SCAN_URL_FRAGMENT_MARKER}`;
+  const bytePrefix = `${baseUrl}${SCAN_PATH_PREFIX}${id}${SCAN_URL_FRAGMENT_MARKER}`;
   return {
     content: bytePrefix + base32,
     bytePrefix,
     alphanumericCiphertext: base32,
   };
+}
+
+export function rejectRemovedBarcodeFormat(options: unknown): void {
+  if (typeof options === "object" && options !== null && "format" in options) {
+    throw new Error("barcode format is no longer supported; this SDK only issues v2 barcodes");
+  }
 }
 
 function normaliseScanBaseUrl(scanBaseUrl: string): string {
@@ -237,11 +208,6 @@ function normaliseScanBaseUrl(scanBaseUrl: string): string {
     throw new Error("scanBaseUrl must use https");
   }
   return url.origin;
-}
-
-function normaliseFormat(format: BarcodeFormat): BarcodeFormat {
-  if (format === LEGACY_BARCODE_FORMAT || format === CURRENT_BARCODE_FORMAT) return format;
-  throw new Error("format must be 'v1' or 'v2'");
 }
 
 function normaliseEnvironment(environment: VerifiablEnvironment): VerifiablEnvironment {

@@ -1,0 +1,244 @@
+{
+  "format": "verifiabl-jurisdiction-pii-vectors-v1",
+  "payloadMaxBytes": 1024,
+  "profiles": {
+    "AU2": {
+      "profileId": "io.verifiabl.au2-pii-text.v1",
+      "trailingEmptyFields": "preserve",
+      "fieldOrder": [
+        "employeeName",
+        "position",
+        "department",
+        "employerIdentity",
+        "bsb",
+        "accountNumber",
+        "accountName",
+        "address"
+      ]
+    },
+    "NZ2": {
+      "profileId": "io.verifiabl.nz2-pii-text.v1",
+      "trailingEmptyFields": "preserve",
+      "fieldOrder": [
+        "employeeName",
+        "irdNumber",
+        "position",
+        "department",
+        "employerName",
+        "accountNumber",
+        "accountName",
+        "address"
+      ]
+    }
+  },
+  "valid": [
+    {
+      "id": "au-full",
+      "profile": "AU2",
+      "fields": {
+        "employeeName": "Jo Worker",
+        "position": "Analyst",
+        "department": "Finance",
+        "employerName": "Acme Pty Ltd",
+        "employerAbn": "12 345 678 901",
+        "bsb": "062-000",
+        "accountNumber": "****5678",
+        "accountName": "J Worker",
+        "address": {
+          "lines": ["A204/11-17 Eve Street"],
+          "suburb": "Erskineville",
+          "stateOrTerritory": "NSW",
+          "postcode": "2043"
+        }
+      },
+      "plaintext": "AU2|Jo Worker|Analyst|Finance|12 345 678 901|062-000|****5678|J Worker|A204/11-17 Eve Street, Erskineville NSW 2043",
+      "plaintextUtf8Hex": "4155327c4a6f20576f726b65727c416e616c7973747c46696e616e63657c31322033343520363738203930317c3036322d3030307c2a2a2a2a353637387c4a20576f726b65727c413230342f31312d313720457665205374726565742c204572736b696e6576696c6c65204e53572032303433"
+    },
+    {
+      "id": "au-employer-name-fallback",
+      "profile": "AU2",
+      "fields": {
+        "employerName": "Acme Pty Ltd"
+      },
+      "plaintext": "AU2||||Acme Pty Ltd||||",
+      "plaintextUtf8Hex": "4155327c7c7c7c41636d6520507479204c74647c7c7c7c"
+    },
+    {
+      "id": "au-empty-abn-falls-back-to-name",
+      "profile": "AU2",
+      "fields": {
+        "employerName": "Acme Pty Ltd",
+        "employerAbn": ""
+      },
+      "plaintext": "AU2||||Acme Pty Ltd||||",
+      "plaintextUtf8Hex": "4155327c7c7c7c41636d6520507479204c74647c7c7c7c"
+    },
+    {
+      "id": "au-empty",
+      "profile": "AU2",
+      "fields": {},
+      "plaintext": "AU2||||||||",
+      "plaintextUtf8Hex": "4155327c7c7c7c7c7c7c7c"
+    },
+    {
+      "id": "au-address-skips-empty-parts",
+      "profile": "AU2",
+      "fields": {
+        "address": {
+          "lines": ["", "Unit 4", ""],
+          "postcode": "2000"
+        }
+      },
+      "plaintext": "AU2||||||||Unit 4, 2000",
+      "plaintextUtf8Hex": "4155327c7c7c7c7c7c7c7c556e697420342c2032303030"
+    },
+    {
+      "id": "au-address-locality-only",
+      "profile": "AU2",
+      "fields": {
+        "address": {
+          "suburb": "Erskineville",
+          "stateOrTerritory": "NSW"
+        }
+      },
+      "plaintext": "AU2||||||||Erskineville NSW",
+      "plaintextUtf8Hex": "4155327c7c7c7c7c7c7c7c4572736b696e6576696c6c65204e5357"
+    },
+    {
+      "id": "au-international-text",
+      "profile": "AU2",
+      "fields": {
+        "employeeName": "José Müller",
+        "department": "Engineering – R&D",
+        "accountName": "給与明細"
+      },
+      "plaintext": "AU2|José Müller||Engineering – R&D||||給与明細|",
+      "plaintextUtf8Hex": "4155327c4a6f73c3a9204dc3bc6c6c65727c7c456e67696e656572696e6720e28093205226447c7c7c7ce7b5a6e4b88ee6988ee7b4b07c"
+    },
+    {
+      "id": "au-at-byte-limit",
+      "profile": "AU2",
+      "fields": {
+        "employeeName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "plaintext": "AU2|aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa|||||||",
+      "plaintextUtf8Hex": "4155327c61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161617c7c7c7c7c7c7c"
+    },
+    {
+      "id": "nz-full",
+      "profile": "NZ2",
+      "fields": {
+        "employeeName": "Jo Worker",
+        "irdNumber": "***-***-789",
+        "position": "Analyst",
+        "department": "Finance",
+        "employerName": "Acme Limited",
+        "accountNumber": "**-****-****5678-**",
+        "accountName": "J Worker",
+        "address": {
+          "lines": ["Level 2", "10 Lambton Quay"],
+          "suburb": "Wellington Central",
+          "city": "Wellington",
+          "postcode": "6011"
+        }
+      },
+      "plaintext": "NZ2|Jo Worker|***-***-789|Analyst|Finance|Acme Limited|**-****-****5678-**|J Worker|Level 2, 10 Lambton Quay, Wellington Central, Wellington 6011",
+      "plaintextUtf8Hex": "4e5a327c4a6f20576f726b65727c2a2a2a2d2a2a2a2d3738397c416e616c7973747c46696e616e63657c41636d65204c696d697465647c2a2a2d2a2a2a2a2d2a2a2a2a353637382d2a2a7c4a20576f726b65727c4c6576656c20322c203130204c616d62746f6e20517561792c2057656c6c696e67746f6e2043656e7472616c2c2057656c6c696e67746f6e2036303131"
+    },
+    {
+      "id": "nz-address-without-suburb",
+      "profile": "NZ2",
+      "fields": {
+        "address": {
+          "lines": ["10 Lambton Quay"],
+          "city": "Wellington",
+          "postcode": "6011"
+        }
+      },
+      "plaintext": "NZ2||||||||10 Lambton Quay, Wellington 6011",
+      "plaintextUtf8Hex": "4e5a327c7c7c7c7c7c7c7c3130204c616d62746f6e20517561792c2057656c6c696e67746f6e2036303131"
+    },
+    {
+      "id": "nz-address-suburb-only",
+      "profile": "NZ2",
+      "fields": {
+        "address": {
+          "suburb": "Te Aro"
+        }
+      },
+      "plaintext": "NZ2||||||||Te Aro",
+      "plaintextUtf8Hex": "4e5a327c7c7c7c7c7c7c7c54652041726f"
+    },
+    {
+      "id": "nz-empty",
+      "profile": "NZ2",
+      "fields": {},
+      "plaintext": "NZ2||||||||",
+      "plaintextUtf8Hex": "4e5a327c7c7c7c7c7c7c7c"
+    }
+  ],
+  "invalid": [
+    {
+      "id": "au-pipe-in-field",
+      "profile": "AU2",
+      "fields": {
+        "accountNumber": "12|34"
+      },
+      "expectedError": "invalid-text"
+    },
+    {
+      "id": "au-pipe-in-address-line",
+      "profile": "AU2",
+      "fields": {
+        "address": {
+          "lines": ["1|2 Main St"]
+        }
+      },
+      "expectedError": "invalid-text"
+    },
+    {
+      "id": "au-line-feed-in-postcode",
+      "profile": "AU2",
+      "fields": {
+        "address": {
+          "postcode": "20\n00"
+        }
+      },
+      "expectedError": "invalid-text"
+    },
+    {
+      "id": "nz-control-character-in-suburb",
+      "profile": "NZ2",
+      "fields": {
+        "address": {
+          "suburb": "Te\u0007Aro"
+        }
+      },
+      "expectedError": "invalid-text"
+    },
+    {
+      "id": "nz-format-character-in-ird-number",
+      "profile": "NZ2",
+      "fields": {
+        "irdNumber": "123\u202e456"
+      },
+      "expectedError": "invalid-text"
+    },
+    {
+      "id": "au-over-byte-limit",
+      "profile": "AU2",
+      "fields": {
+        "employeeName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expectedError": "payload-too-large"
+    },
+    {
+      "id": "nz-over-byte-limit",
+      "profile": "NZ2",
+      "fields": {
+        "employerName": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expectedError": "payload-too-large"
+    }
+  ]
+}

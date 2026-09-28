@@ -1,5 +1,14 @@
 import { z } from "zod";
 import {
+  AU2_FIELD_ORDER,
+  AU2_MARKER,
+  AU2_TEXT_PROFILE_ID,
+  JURISDICTION_PII_MAX_BYTES,
+  NZ2_FIELD_ORDER,
+  NZ2_MARKER,
+  NZ2_TEXT_PROFILE_ID,
+} from "./generated/jurisdictionPiiProfiles.js";
+import {
   PII_FORMAT_CHARACTER_RANGES,
   PII_TEXT_PROFILE_UNICODE_VERSION,
 } from "./generated/piiTextProfile.js";
@@ -13,6 +22,8 @@ function tuple<const T extends readonly string[]>(value: T): T {
 const PII_FIELD_DELIMITER = "|";
 const PII_V1_VERSION = "P1";
 const PII_V2_VERSION = "P2";
+const AUSTRALIAN_PII_VERSION = AU2_MARKER;
+const NEW_ZEALAND_PII_VERSION = NZ2_MARKER;
 const PII_V1_PREFIX = `${PII_V1_VERSION}${PII_FIELD_DELIMITER}`;
 const PII_V2_PREFIX = `${PII_V2_VERSION}${PII_FIELD_DELIMITER}`;
 
@@ -30,7 +41,7 @@ const PII_V2_PREFIX = `${PII_V2_VERSION}${PII_FIELD_DELIMITER}`;
  *   P2|Jane A. Doe|Senior Developer|Engineering|12345678901|062-000|12345678|Jane A Doe|12 Example St, Sydney NSW 2000
  *
  * Omitted fields are encoded as empty segments and skipped by Verifiabl.
- * P1 remains available through `formatPiiV1` for rollback and is parsed permanently.
+ * Legacy P1 plaintext remains readable for existing documents, but cannot be generated.
  */
 
 /** P1's field order is the wire contract for documents already issued. Never reorder. */
@@ -46,24 +57,25 @@ const P1_FIELD_ORDER = tuple([
 
 /** Field order is the current P2 wire contract. Never reorder. */
 export const PII_FIELD_ORDER = tuple([...P1_FIELD_ORDER, "address"]);
+type P2PiiFieldName = (typeof PII_FIELD_ORDER)[number];
 
-export type PiiFieldName = (typeof PII_FIELD_ORDER)[number];
+export const AUSTRALIAN_PII_FIELD_ORDER = AU2_FIELD_ORDER;
 
-/**
- * @deprecated P2 has no per-field limit. Retained for API compatibility and
- * still used by the legacy P1 writer and reader.
- */
-export const PII_FIELD_MAX_LENGTH = 256;
+export const NEW_ZEALAND_PII_FIELD_ORDER = NZ2_FIELD_ORDER;
 
-/**
- * @deprecated P2 has no address-specific limit. Retained for API compatibility.
- */
-export const PII_ADDRESS_MAX_BYTES = 320;
+export type PiiFieldName =
+  | (typeof PII_FIELD_ORDER)[number]
+  | (typeof AUSTRALIAN_PII_FIELD_ORDER)[number]
+  | (typeof NEW_ZEALAND_PII_FIELD_ORDER)[number];
+
+const PII_V1_FIELD_MAX_LENGTH = 256;
 
 /** Maximum UTF-8 size of complete newly written P2 plaintext, including framing. */
 export const PII_PAYLOAD_MAX_BYTES = 1024;
 
 export const PII_TEXT_PROFILE_ID = "io.verifiabl.p2-pii-text.v1";
+export const AUSTRALIAN_PII_TEXT_PROFILE_ID = AU2_TEXT_PROFILE_ID;
+export const NEW_ZEALAND_PII_TEXT_PROFILE_ID = NZ2_TEXT_PROFILE_ID;
 
 // Cc is permanently assigned to C0/C1. U+2028 and U+2029 are Zl/Zp rather
 // than Cc, but are forbidden because every P2 field is one line.
@@ -155,14 +167,63 @@ export const piiFieldsSchema = z
 
 export type PiiFields = z.infer<typeof piiFieldsSchema>;
 
+export const australianAddressSchema = z
+  .object({
+    lines: z.array(piiFieldSchema).optional(),
+    suburb: piiFieldSchema.optional(),
+    stateOrTerritory: piiFieldSchema.optional(),
+    postcode: piiFieldSchema.optional(),
+  })
+  .strict();
+
+export const australianPiiFieldsSchema = z
+  .object({
+    employeeName: piiFieldSchema.optional(),
+    position: piiFieldSchema.optional(),
+    department: piiFieldSchema.optional(),
+    employerName: piiFieldSchema.optional(),
+    employerAbn: piiFieldSchema.optional(),
+    bsb: piiFieldSchema.optional(),
+    accountNumber: piiFieldSchema.optional(),
+    accountName: piiFieldSchema.optional(),
+    address: australianAddressSchema.optional(),
+  })
+  .strict();
+
+export type AustralianAddress = z.infer<typeof australianAddressSchema>;
+export type AustralianPiiFields = z.infer<typeof australianPiiFieldsSchema>;
+
+export const newZealandAddressSchema = z
+  .object({
+    lines: z.array(piiFieldSchema).optional(),
+    suburb: piiFieldSchema.optional(),
+    city: piiFieldSchema.optional(),
+    postcode: piiFieldSchema.optional(),
+  })
+  .strict();
+
+export const newZealandPiiFieldsSchema = z
+  .object({
+    employeeName: piiFieldSchema.optional(),
+    irdNumber: piiFieldSchema.optional(),
+    position: piiFieldSchema.optional(),
+    department: piiFieldSchema.optional(),
+    employerName: piiFieldSchema.optional(),
+    accountNumber: piiFieldSchema.optional(),
+    accountName: piiFieldSchema.optional(),
+    address: newZealandAddressSchema.optional(),
+  })
+  .strict();
+
+export type NewZealandAddress = z.infer<typeof newZealandAddressSchema>;
+export type NewZealandPiiFields = z.infer<typeof newZealandPiiFieldsSchema>;
+
 /** Why a PII field value cannot be encoded in the PII wire format. */
 export type PiiFieldViolationReason =
   | "pipe"
   | "control-character"
   | "format-character"
-  | "invalid-unicode"
-  | "too-long"
-  | "too-many-bytes";
+  | "invalid-unicode";
 
 /** A single field `formatPii` refused to encode, and why. */
 export interface PiiFieldViolation {
@@ -175,8 +236,6 @@ const VIOLATION_DESCRIPTIONS: Record<PiiFieldViolationReason, string> = {
   "control-character": "must not contain control characters or line separators",
   "format-character": "must not contain format characters",
   "invalid-unicode": "must contain valid Unicode",
-  "too-long": `exceeds the legacy ${PII_FIELD_MAX_LENGTH} UTF-16 code-unit limit`,
-  "too-many-bytes": `exceeds the legacy ${PII_ADDRESS_MAX_BYTES} UTF-8 bytes`,
 };
 
 /**
@@ -259,37 +318,86 @@ export function formatPii(fields: PiiFields): string {
   return plaintext;
 }
 
-/**
- * Format the permanent legacy P1 plaintext for rollback. New documents use
- * {@link formatPii}.
- */
-export function formatPiiV1(fields: Omit<PiiFields, "address">): string {
-  if (typeof fields === "object" && fields !== null) {
-    for (const field of P1_FIELD_ORDER) {
-      const value = fields[field];
-      if (typeof value !== "string") continue;
-      if (value.length > PII_FIELD_MAX_LENGTH || !isLegacyText(value)) {
-        throw new PiiValidationError([
-          fieldViolation(field, value) ?? { field, reason: "too-long" },
-        ]);
-      }
-    }
+function nonEmpty(values: readonly (string | undefined)[]): string[] {
+  return values.filter((value): value is string => value !== undefined && value.length > 0);
+}
+
+function formatAustralianAddress(address: AustralianAddress | undefined): string {
+  if (address === undefined) return "";
+  const locality = nonEmpty([address.suburb, address.stateOrTerritory, address.postcode]).join(" ");
+  return [...nonEmpty(address.lines ?? []), ...nonEmpty([locality])].join(", ");
+}
+
+function formatNewZealandAddress(address: NewZealandAddress | undefined): string {
+  if (address === undefined) return "";
+  const city = nonEmpty([address.city, address.postcode]).join(" ");
+  return [...nonEmpty(address.lines ?? []), ...nonEmpty([address.suburb, city])].join(", ");
+}
+
+function formatCurrentProfile(version: string, segments: readonly string[]): string {
+  const plaintext = `${version}${PII_FIELD_DELIMITER}${segments.join(PII_FIELD_DELIMITER)}`;
+  if (Buffer.byteLength(plaintext, "utf8") > JURISDICTION_PII_MAX_BYTES) {
+    throw new RangeError(`${version} plaintext exceeds ${JURISDICTION_PII_MAX_BYTES} UTF-8 bytes`);
   }
-  const validated = piiFieldsSchema.omit({ address: true }).parse(fields);
-  const segments = P1_FIELD_ORDER.map((name) => validated[name] ?? "");
-  return PII_V1_PREFIX + segments.join(PII_FIELD_DELIMITER);
+  return plaintext;
+}
+
+/** Format Australian employee PII as fixed-arity AU2 plaintext. */
+export function formatAustralianPii(fields: AustralianPiiFields): string {
+  const validated = australianPiiFieldsSchema.parse(fields);
+  const employerIdentity =
+    validated.employerAbn === undefined || validated.employerAbn.length === 0
+      ? (validated.employerName ?? "")
+      : validated.employerAbn;
+  const values: Record<(typeof AU2_FIELD_ORDER)[number], string> = {
+    employeeName: validated.employeeName ?? "",
+    position: validated.position ?? "",
+    department: validated.department ?? "",
+    employerIdentity,
+    bsb: validated.bsb ?? "",
+    accountNumber: validated.accountNumber ?? "",
+    accountName: validated.accountName ?? "",
+    address: formatAustralianAddress(validated.address),
+  };
+  return formatCurrentProfile(
+    AUSTRALIAN_PII_VERSION,
+    AU2_FIELD_ORDER.map((field) => values[field]),
+  );
+}
+
+/** Format New Zealand employee PII as fixed-arity NZ2 plaintext. */
+export function formatNewZealandPii(fields: NewZealandPiiFields): string {
+  const validated = newZealandPiiFieldsSchema.parse(fields);
+  const values: Record<(typeof NZ2_FIELD_ORDER)[number], string> = {
+    employeeName: validated.employeeName ?? "",
+    irdNumber: validated.irdNumber ?? "",
+    position: validated.position ?? "",
+    department: validated.department ?? "",
+    employerName: validated.employerName ?? "",
+    accountNumber: validated.accountNumber ?? "",
+    accountName: validated.accountName ?? "",
+    address: formatNewZealandAddress(validated.address),
+  };
+  return formatCurrentProfile(
+    NEW_ZEALAND_PII_VERSION,
+    NZ2_FIELD_ORDER.map((field) => values[field]),
+  );
 }
 
 const PII_LAYOUTS: ReadonlyArray<{
   version: string;
-  order: readonly PiiFieldName[];
+  order: readonly P2PiiFieldName[];
   currentValidation: boolean;
 }> = [
   { version: PII_V1_VERSION, order: P1_FIELD_ORDER, currentValidation: false },
   { version: PII_V2_VERSION, order: PII_FIELD_ORDER, currentValidation: true },
 ];
 
-function validateParsedValue(field: PiiFieldName, value: string, currentValidation: boolean): void {
+function validateParsedValue(
+  field: P2PiiFieldName,
+  value: string,
+  currentValidation: boolean,
+): void {
   if (field === "address") {
     addressSchema.parse(value);
     return;
@@ -298,7 +406,7 @@ function validateParsedValue(field: PiiFieldName, value: string, currentValidati
     piiFieldSchema.parse(value);
     return;
   }
-  if (value.length > PII_FIELD_MAX_LENGTH || !isLegacyText(value)) {
+  if (value.length > PII_V1_FIELD_MAX_LENGTH || !isLegacyText(value)) {
     throw new Error(`PII field '${field}' is not a valid field value`);
   }
 }

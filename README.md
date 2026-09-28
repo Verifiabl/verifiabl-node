@@ -74,7 +74,82 @@ const { svg } = createBarcodeSvg(
 );
 ```
 
-### V2 / P2 writers
+### AU2 and NZ2 payslip profiles
+
+Use `formatAustralianPii` with `au.payslip.v2`. The formatter accepts employer
+name and ABN separately, then writes the ABN when present or falls back to the
+name. Structured address components collapse into the profile's single address
+display field.
+
+```ts
+import {
+  createBarcodeSvg,
+  encryptPii,
+  formatAustralianPii,
+  payslipNumber,
+} from "@verifiabl/issuer";
+
+const plaintext = formatAustralianPii({
+  employeeName: "Jane A. Doe",
+  employerName: "Example Payroll Pty Ltd",
+  employerAbn: "12 345 678 901",
+  bsb: "062-000",
+  accountNumber: "****5678",
+  accountName: "Jane A Doe",
+  address: {
+    lines: ["A204/11-17 Eve Street"],
+    suburb: "Erskineville",
+    stateOrTerritory: "NSW",
+    postcode: "2043",
+  },
+});
+const encrypted = encryptPii(plaintext, key);
+const { verifiablReference } = await client.registerNonPii({
+  schema: "au.payslip.v2",
+  issuedAt: new Date().toISOString(),
+  payslipNonPii: {
+    // periodStart is optional on AU2 and NZ2.
+    periodEnd: "2026-05-31",
+    paymentDate: "2026-06-04",
+    currency: "AUD",
+    gross: payslipNumber("8125.00", "$8,125.00"),
+    paygw: payslipNumber(2030, "$2,030.00"),
+    net: payslipNumber("6095.00", "$6,095.00"),
+  },
+  encryptionMetadata: encrypted.encryptionMetadata,
+});
+const { svg } = createBarcodeSvg(
+  { verifiablReference, encryptedPii: encrypted.encryptedPii },
+  { environment: "sandbox" },
+);
+```
+
+For `nz.payslip.v2`, use `formatNewZealandPii`. NZ2 carries the printed
+employee IRD number, employer name, account number and account name. It has no
+BSB or NZBN field.
+
+Both formatters always write eight positions, including empty trailing fields.
+AU addresses render as address lines followed by `suburb state postcode`; NZ
+addresses render as address lines, optional suburb, then `city postcode`.
+Country is implicit. The complete UTF-8 plaintext is limited to 1024 bytes.
+
+The registration `schema` selects only the non-PII payload contract. Choose the
+PII formatter separately: AU2 for Australian records or NZ2 for New Zealand
+records. Today the examples use AU2 with `au.payslip.v2` and NZ2 with
+`nz.payslip.v2`, but those matching `2` suffixes are not a version-coupling
+rule. A future non-PII schema can still use the same jurisdictional PII format,
+or the PII format can evolve without renaming the non-PII schema. The verifier
+checks the PII marker against the record's jurisdiction, not the schema version;
+a jurisdiction mismatch fails verification. Legacy v1 verification returns this
+plaintext without parsing it.
+
+`payslipNumber` accepts a JavaScript number or an exact decimal string and
+produces the required `{ value, display? }` object. A JavaScript number has no
+scale, so `payslipNumber(6000.0)` sends `"6000"`. Use a string when scale must
+remain exact. Currency is optional and supports AUD, NZD, USD, GBP, EUR, CAD,
+SGD, HKD, CHF or ZAR.
+
+### Legacy P2 compatibility writer
 
 The SDK writes the current P2 plaintext and v2 barcode payload by default:
 
@@ -99,9 +174,9 @@ legacy documents. The pipe and Unicode General Categories Cc (control), Cf (form
 separator), and Zp (paragraph separator) are rejected before encryption. Ordinary international
 Unicode remains valid. A v2 QR uses uppercase, unpadded RFC 4648 Base32 and the short
 `v.verifiabl.io` scan host (`v.sandbox.verifiabl.io` in sandbox), with `#2.<BASE32>` and an
-explicit byte/alphanumeric segment split. Its XMP copy must be the matching
-`2|reference|BASE32`. Never mix QR and XMP versions. For rollback, pass
-`{ format: "v1" }` to `createBarcodeSvg`, `createBarcodePng`, `buildScanUrl`, and `buildBarcodePayload`.
+explicit byte/alphanumeric segment split. Its XMP copy is the matching
+`2|reference|BASE32`. The SDK reads P1 plaintext for existing-document tooling, but all issuer
+writers generate only P2/v2.
 
 Ciphertext, IV, and authentication tags are binary values. The SDK exposes all
 three as `Uint8Array` instances, which you can persist directly in binary database
@@ -157,7 +232,7 @@ replay. Reusing a reference with different content returns a
 
 ## Batch registration
 
-For pay runs, register up to 1000 records in one request with `registerNonPiiBatch`. The provider generates each Verifiabl reference up-front with `generateVerifiablReference` and includes it on each record, so the whole batch can go in one round trip. Results come back in the same order as the input records (`results[i]` is the outcome of `records[i]`); one bad record never fails the whole batch.
+For pay runs, register up to 1000 records in one request with `registerNonPiiBatch`. The provider generates each Verifiabl reference up-front with `generateVerifiablReference` and includes it on each record, so the whole batch can go in one round trip. Results come back in the same order as the input records (`results[i]` is the outcome of `records[i]`); one bad record never fails the whole batch. `RegisterNonPiiBatchRequest` accepts future schema IDs and per-record invalid payslips; use `KnownSchemaRegisterNonPiiBatchRequest` when you want TypeScript to check the payslip shapes of currently supported schemas before submission.
 
 ```ts
 import { encryptPii, formatPii, generateVerifiablReference } from "@verifiabl/issuer";
@@ -271,6 +346,20 @@ pnpm typecheck
 pnpm test
 pnpm build
 pnpm check:exports
+```
+
+### Generated API reference
+
+The public API reference is generated from the `src/index.ts` package exports and source comments with the pinned [TypeDoc](https://typedoc.org/) toolchain. Generate the deterministic catalogue with:
+
+```sh
+node script/api-reference.mjs
+```
+
+The command replaces `generated/api/node.json`. The catalogue is checked in so the customer docs can import an exact SDK revision without running Node.js or accessing this repository at build time. The TypeDoc tooling uses its own supported TypeScript compiler under `docs/`; the SDK continues to build with the compiler pinned in the root package. CI runs the non-mutating freshness check, which can also be run directly:
+
+```sh
+node script/api-reference.mjs --check
 ```
 
 ## License
