@@ -60,9 +60,9 @@ try {
       periodEnd: "2026-08-31",
       paymentDate: "2026-09-04",
       currency,
-      gross: { value: gross },
-      [taxField]: { value: tax },
-      net: { value: net },
+      gross,
+      [taxField]: tax,
+      net,
     });
   }
   const single = manifest("single", "PAY-1001").registrationRequest;

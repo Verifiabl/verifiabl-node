@@ -2835,15 +2835,11 @@
 																					},
 																					{
 																						"type": "literal",
-																						"value": "NZD"
+																						"value": "CAD"
 																					},
 																					{
 																						"type": "literal",
-																						"value": "USD"
-																					},
-																					{
-																						"type": "literal",
-																						"value": "GBP"
+																						"value": "CHF"
 																					},
 																					{
 																						"type": "literal",
@@ -2851,11 +2847,7 @@
 																					},
 																					{
 																						"type": "literal",
-																						"value": "CAD"
-																					},
-																					{
-																						"type": "literal",
-																						"value": "SGD"
+																						"value": "GBP"
 																					},
 																					{
 																						"type": "literal",
@@ -2863,7 +2855,15 @@
 																					},
 																					{
 																						"type": "literal",
-																						"value": "CHF"
+																						"value": "NZD"
+																					},
+																					{
+																						"type": "literal",
+																						"value": "SGD"
+																					},
+																					{
+																						"type": "literal",
+																						"value": "USD"
 																					},
 																					{
 																						"type": "literal",
@@ -4884,15 +4884,11 @@
 																					},
 																					{
 																						"type": "literal",
-																						"value": "NZD"
+																						"value": "CAD"
 																					},
 																					{
 																						"type": "literal",
-																						"value": "USD"
-																					},
-																					{
-																						"type": "literal",
-																						"value": "GBP"
+																						"value": "CHF"
 																					},
 																					{
 																						"type": "literal",
@@ -4900,11 +4896,7 @@
 																					},
 																					{
 																						"type": "literal",
-																						"value": "CAD"
-																					},
-																					{
-																						"type": "literal",
-																						"value": "SGD"
+																						"value": "GBP"
 																					},
 																					{
 																						"type": "literal",
@@ -4912,7 +4904,15 @@
 																					},
 																					{
 																						"type": "literal",
-																						"value": "CHF"
+																						"value": "NZD"
+																					},
+																					{
+																						"type": "literal",
+																						"value": "SGD"
+																					},
+																					{
+																						"type": "literal",
+																						"value": "USD"
 																					},
 																					{
 																						"type": "literal",
@@ -7894,10 +7894,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -7934,7 +7932,6 @@
 					"variant": "declaration",
 					"kind": 1024,
 					"flags": {
-						"isOptional": true,
 						"isInherited": true
 					},
 					"type": {
@@ -7942,23 +7939,95 @@
 						"types": [
 							{
 								"type": "literal",
+								"value": "AED"
+							},
+							{
+								"type": "literal",
+								"value": "AFN"
+							},
+							{
+								"type": "literal",
+								"value": "ALL"
+							},
+							{
+								"type": "literal",
+								"value": "AMD"
+							},
+							{
+								"type": "literal",
+								"value": "AOA"
+							},
+							{
+								"type": "literal",
+								"value": "ARS"
+							},
+							{
+								"type": "literal",
 								"value": "AUD"
 							},
 							{
 								"type": "literal",
-								"value": "NZD"
+								"value": "AWG"
 							},
 							{
 								"type": "literal",
-								"value": "USD"
+								"value": "AZN"
 							},
 							{
 								"type": "literal",
-								"value": "GBP"
+								"value": "BAM"
 							},
 							{
 								"type": "literal",
-								"value": "EUR"
+								"value": "BBD"
+							},
+							{
+								"type": "literal",
+								"value": "BDT"
+							},
+							{
+								"type": "literal",
+								"value": "BHD"
+							},
+							{
+								"type": "literal",
+								"value": "BIF"
+							},
+							{
+								"type": "literal",
+								"value": "BMD"
+							},
+							{
+								"type": "literal",
+								"value": "BND"
+							},
+							{
+								"type": "literal",
+								"value": "BOB"
+							},
+							{
+								"type": "literal",
+								"value": "BRL"
+							},
+							{
+								"type": "literal",
+								"value": "BSD"
+							},
+							{
+								"type": "literal",
+								"value": "BTN"
+							},
+							{
+								"type": "literal",
+								"value": "BWP"
+							},
+							{
+								"type": "literal",
+								"value": "BYN"
+							},
+							{
+								"type": "literal",
+								"value": "BZD"
 							},
 							{
 								"type": "literal",
@@ -7966,11 +8035,7 @@
 							},
 							{
 								"type": "literal",
-								"value": "SGD"
-							},
-							{
-								"type": "literal",
-								"value": "HKD"
+								"value": "CDF"
 							},
 							{
 								"type": "literal",
@@ -7978,7 +8043,519 @@
 							},
 							{
 								"type": "literal",
+								"value": "CLP"
+							},
+							{
+								"type": "literal",
+								"value": "CNY"
+							},
+							{
+								"type": "literal",
+								"value": "COP"
+							},
+							{
+								"type": "literal",
+								"value": "CRC"
+							},
+							{
+								"type": "literal",
+								"value": "CUP"
+							},
+							{
+								"type": "literal",
+								"value": "CVE"
+							},
+							{
+								"type": "literal",
+								"value": "CZK"
+							},
+							{
+								"type": "literal",
+								"value": "DJF"
+							},
+							{
+								"type": "literal",
+								"value": "DKK"
+							},
+							{
+								"type": "literal",
+								"value": "DOP"
+							},
+							{
+								"type": "literal",
+								"value": "DZD"
+							},
+							{
+								"type": "literal",
+								"value": "EGP"
+							},
+							{
+								"type": "literal",
+								"value": "ERN"
+							},
+							{
+								"type": "literal",
+								"value": "ETB"
+							},
+							{
+								"type": "literal",
+								"value": "EUR"
+							},
+							{
+								"type": "literal",
+								"value": "FJD"
+							},
+							{
+								"type": "literal",
+								"value": "FKP"
+							},
+							{
+								"type": "literal",
+								"value": "GBP"
+							},
+							{
+								"type": "literal",
+								"value": "GEL"
+							},
+							{
+								"type": "literal",
+								"value": "GHS"
+							},
+							{
+								"type": "literal",
+								"value": "GIP"
+							},
+							{
+								"type": "literal",
+								"value": "GMD"
+							},
+							{
+								"type": "literal",
+								"value": "GNF"
+							},
+							{
+								"type": "literal",
+								"value": "GTQ"
+							},
+							{
+								"type": "literal",
+								"value": "GYD"
+							},
+							{
+								"type": "literal",
+								"value": "HKD"
+							},
+							{
+								"type": "literal",
+								"value": "HNL"
+							},
+							{
+								"type": "literal",
+								"value": "HTG"
+							},
+							{
+								"type": "literal",
+								"value": "HUF"
+							},
+							{
+								"type": "literal",
+								"value": "IDR"
+							},
+							{
+								"type": "literal",
+								"value": "ILS"
+							},
+							{
+								"type": "literal",
+								"value": "INR"
+							},
+							{
+								"type": "literal",
+								"value": "IQD"
+							},
+							{
+								"type": "literal",
+								"value": "IRR"
+							},
+							{
+								"type": "literal",
+								"value": "ISK"
+							},
+							{
+								"type": "literal",
+								"value": "JMD"
+							},
+							{
+								"type": "literal",
+								"value": "JOD"
+							},
+							{
+								"type": "literal",
+								"value": "JPY"
+							},
+							{
+								"type": "literal",
+								"value": "KES"
+							},
+							{
+								"type": "literal",
+								"value": "KGS"
+							},
+							{
+								"type": "literal",
+								"value": "KHR"
+							},
+							{
+								"type": "literal",
+								"value": "KMF"
+							},
+							{
+								"type": "literal",
+								"value": "KPW"
+							},
+							{
+								"type": "literal",
+								"value": "KRW"
+							},
+							{
+								"type": "literal",
+								"value": "KWD"
+							},
+							{
+								"type": "literal",
+								"value": "KYD"
+							},
+							{
+								"type": "literal",
+								"value": "KZT"
+							},
+							{
+								"type": "literal",
+								"value": "LAK"
+							},
+							{
+								"type": "literal",
+								"value": "LBP"
+							},
+							{
+								"type": "literal",
+								"value": "LKR"
+							},
+							{
+								"type": "literal",
+								"value": "LRD"
+							},
+							{
+								"type": "literal",
+								"value": "LSL"
+							},
+							{
+								"type": "literal",
+								"value": "LYD"
+							},
+							{
+								"type": "literal",
+								"value": "MAD"
+							},
+							{
+								"type": "literal",
+								"value": "MDL"
+							},
+							{
+								"type": "literal",
+								"value": "MGA"
+							},
+							{
+								"type": "literal",
+								"value": "MKD"
+							},
+							{
+								"type": "literal",
+								"value": "MMK"
+							},
+							{
+								"type": "literal",
+								"value": "MNT"
+							},
+							{
+								"type": "literal",
+								"value": "MOP"
+							},
+							{
+								"type": "literal",
+								"value": "MRU"
+							},
+							{
+								"type": "literal",
+								"value": "MUR"
+							},
+							{
+								"type": "literal",
+								"value": "MVR"
+							},
+							{
+								"type": "literal",
+								"value": "MWK"
+							},
+							{
+								"type": "literal",
+								"value": "MXN"
+							},
+							{
+								"type": "literal",
+								"value": "MYR"
+							},
+							{
+								"type": "literal",
+								"value": "MZN"
+							},
+							{
+								"type": "literal",
+								"value": "NAD"
+							},
+							{
+								"type": "literal",
+								"value": "NGN"
+							},
+							{
+								"type": "literal",
+								"value": "NIO"
+							},
+							{
+								"type": "literal",
+								"value": "NOK"
+							},
+							{
+								"type": "literal",
+								"value": "NPR"
+							},
+							{
+								"type": "literal",
+								"value": "NZD"
+							},
+							{
+								"type": "literal",
+								"value": "OMR"
+							},
+							{
+								"type": "literal",
+								"value": "PAB"
+							},
+							{
+								"type": "literal",
+								"value": "PEN"
+							},
+							{
+								"type": "literal",
+								"value": "PGK"
+							},
+							{
+								"type": "literal",
+								"value": "PHP"
+							},
+							{
+								"type": "literal",
+								"value": "PKR"
+							},
+							{
+								"type": "literal",
+								"value": "PLN"
+							},
+							{
+								"type": "literal",
+								"value": "PYG"
+							},
+							{
+								"type": "literal",
+								"value": "QAR"
+							},
+							{
+								"type": "literal",
+								"value": "RON"
+							},
+							{
+								"type": "literal",
+								"value": "RSD"
+							},
+							{
+								"type": "literal",
+								"value": "RUB"
+							},
+							{
+								"type": "literal",
+								"value": "RWF"
+							},
+							{
+								"type": "literal",
+								"value": "SAR"
+							},
+							{
+								"type": "literal",
+								"value": "SBD"
+							},
+							{
+								"type": "literal",
+								"value": "SCR"
+							},
+							{
+								"type": "literal",
+								"value": "SDG"
+							},
+							{
+								"type": "literal",
+								"value": "SEK"
+							},
+							{
+								"type": "literal",
+								"value": "SGD"
+							},
+							{
+								"type": "literal",
+								"value": "SHP"
+							},
+							{
+								"type": "literal",
+								"value": "SLE"
+							},
+							{
+								"type": "literal",
+								"value": "SOS"
+							},
+							{
+								"type": "literal",
+								"value": "SRD"
+							},
+							{
+								"type": "literal",
+								"value": "SSP"
+							},
+							{
+								"type": "literal",
+								"value": "STN"
+							},
+							{
+								"type": "literal",
+								"value": "SVC"
+							},
+							{
+								"type": "literal",
+								"value": "SYP"
+							},
+							{
+								"type": "literal",
+								"value": "SZL"
+							},
+							{
+								"type": "literal",
+								"value": "THB"
+							},
+							{
+								"type": "literal",
+								"value": "TJS"
+							},
+							{
+								"type": "literal",
+								"value": "TMT"
+							},
+							{
+								"type": "literal",
+								"value": "TND"
+							},
+							{
+								"type": "literal",
+								"value": "TOP"
+							},
+							{
+								"type": "literal",
+								"value": "TRY"
+							},
+							{
+								"type": "literal",
+								"value": "TTD"
+							},
+							{
+								"type": "literal",
+								"value": "TWD"
+							},
+							{
+								"type": "literal",
+								"value": "TZS"
+							},
+							{
+								"type": "literal",
+								"value": "UAH"
+							},
+							{
+								"type": "literal",
+								"value": "UGX"
+							},
+							{
+								"type": "literal",
+								"value": "USD"
+							},
+							{
+								"type": "literal",
+								"value": "UYU"
+							},
+							{
+								"type": "literal",
+								"value": "UZS"
+							},
+							{
+								"type": "literal",
+								"value": "VED"
+							},
+							{
+								"type": "literal",
+								"value": "VES"
+							},
+							{
+								"type": "literal",
+								"value": "VND"
+							},
+							{
+								"type": "literal",
+								"value": "VUV"
+							},
+							{
+								"type": "literal",
+								"value": "WST"
+							},
+							{
+								"type": "literal",
+								"value": "XAF"
+							},
+							{
+								"type": "literal",
+								"value": "XCD"
+							},
+							{
+								"type": "literal",
+								"value": "XCG"
+							},
+							{
+								"type": "literal",
+								"value": "XOF"
+							},
+							{
+								"type": "literal",
+								"value": "XPF"
+							},
+							{
+								"type": "literal",
+								"value": "YER"
+							},
+							{
+								"type": "literal",
 								"value": "ZAR"
+							},
+							{
+								"type": "literal",
+								"value": "ZMW"
+							},
+							{
+								"type": "literal",
+								"value": "ZWG"
 							}
 						]
 					},
@@ -8016,12 +8593,10 @@
 										"kind": 1024,
 										"flags": {},
 										"type": {
-											"type": "reference",
-											"target": 827,
-											"name": "PayslipNumber",
-											"package": "@verifiabl/issuer"
+											"type": "intrinsic",
+											"name": "string"
 										},
-										"defaultValue": "payslipNumberSchema"
+										"defaultValue": "payslipDecimalSchema"
 									},
 									{
 										"id": 717,
@@ -8065,10 +8640,8 @@
 											"isOptional": true
 										},
 										"type": {
-											"type": "reference",
-											"target": 827,
-											"name": "PayslipNumber",
-											"package": "@verifiabl/issuer"
+											"type": "intrinsic",
+											"name": "string"
 										},
 										"defaultValue": "..."
 									}
@@ -8124,12 +8697,10 @@
 												"kind": 1024,
 												"flags": {},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
-												"defaultValue": "payslipNumberSchema"
+												"defaultValue": "payslipDecimalSchema"
 											},
 											{
 												"id": 693,
@@ -8177,10 +8748,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											},
@@ -8205,10 +8774,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											},
@@ -8221,10 +8788,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											}
@@ -8309,12 +8874,10 @@
 												"kind": 1024,
 												"flags": {},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
-												"defaultValue": "payslipNumberSchema"
+												"defaultValue": "payslipDecimalSchema"
 											},
 											{
 												"id": 703,
@@ -8364,10 +8927,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											},
@@ -8392,10 +8953,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											},
@@ -8408,10 +8967,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											}
@@ -8448,12 +9005,10 @@
 												"kind": 1024,
 												"flags": {},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
-												"defaultValue": "payslipNumberSchema"
+												"defaultValue": "payslipDecimalSchema"
 											},
 											{
 												"id": 708,
@@ -8464,10 +9019,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											},
@@ -8517,10 +9070,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											},
@@ -8533,10 +9084,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											}
@@ -8655,12 +9204,10 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
-					"defaultValue": "payslipNumberSchema",
+					"defaultValue": "payslipDecimalSchema",
 					"inheritedFrom": {
 						"type": "reference",
 						"target": -1,
@@ -8693,12 +9240,10 @@
 									"kind": 1024,
 									"flags": {},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
-									"defaultValue": "payslipNumberSchema"
+									"defaultValue": "payslipDecimalSchema"
 								},
 								{
 									"id": 685,
@@ -8707,12 +9252,10 @@
 									"kind": 1024,
 									"flags": {},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
-									"defaultValue": "payslipNumberSchema"
+									"defaultValue": "payslipDecimalSchema"
 								},
 								{
 									"id": 684,
@@ -8721,12 +9264,10 @@
 									"kind": 1024,
 									"flags": {},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
-									"defaultValue": "payslipNumberSchema"
+									"defaultValue": "payslipDecimalSchema"
 								}
 							],
 							"groups": [
@@ -8758,12 +9299,10 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
-					"defaultValue": "payslipNumberSchema",
+					"defaultValue": "payslipDecimalSchema",
 					"inheritedFrom": {
 						"type": "reference",
 						"target": -1,
@@ -8818,12 +9357,10 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
-					"defaultValue": "payslipNumberSchema",
+					"defaultValue": "payslipDecimalSchema",
 					"inheritedFrom": {
 						"type": "reference",
 						"target": -1,
@@ -8902,10 +9439,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -8942,12 +9477,10 @@
 										"kind": 1024,
 										"flags": {},
 										"type": {
-											"type": "reference",
-											"target": 827,
-											"name": "PayslipNumber",
-											"package": "@verifiabl/issuer"
+											"type": "intrinsic",
+											"name": "string"
 										},
-										"defaultValue": "payslipNumberSchema"
+										"defaultValue": "payslipDecimalSchema"
 									},
 									{
 										"id": 712,
@@ -8979,10 +9512,8 @@
 											"isOptional": true
 										},
 										"type": {
-											"type": "reference",
-											"target": 827,
-											"name": "PayslipNumber",
-											"package": "@verifiabl/issuer"
+											"type": "intrinsic",
+											"name": "string"
 										},
 										"defaultValue": "..."
 									}
@@ -9018,10 +9549,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -9058,12 +9587,10 @@
 										"kind": 1024,
 										"flags": {},
 										"type": {
-											"type": "reference",
-											"target": 827,
-											"name": "PayslipNumber",
-											"package": "@verifiabl/issuer"
+											"type": "intrinsic",
+											"name": "string"
 										},
-										"defaultValue": "payslipNumberSchema"
+										"defaultValue": "payslipDecimalSchema"
 									},
 									{
 										"id": 722,
@@ -9099,10 +9626,8 @@
 											"isOptional": true
 										},
 										"type": {
-											"type": "reference",
-											"target": 827,
-											"name": "PayslipNumber",
-											"package": "@verifiabl/issuer"
+											"type": "intrinsic",
+											"name": "string"
 										},
 										"defaultValue": "..."
 									},
@@ -9129,10 +9654,8 @@
 											"isOptional": true
 										},
 										"type": {
-											"type": "reference",
-											"target": 827,
-											"name": "PayslipNumber",
-											"package": "@verifiabl/issuer"
+											"type": "intrinsic",
+											"name": "string"
 										},
 										"defaultValue": "..."
 									}
@@ -9170,10 +9693,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -9210,10 +9731,8 @@
 										"isOptional": true
 									},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
 									"defaultValue": "..."
 								},
@@ -9226,10 +9745,8 @@
 										"isOptional": true
 									},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
 									"defaultValue": "..."
 								},
@@ -9242,10 +9759,8 @@
 										"isOptional": true
 									},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
 									"defaultValue": "..."
 								},
@@ -9258,10 +9773,8 @@
 										"isOptional": true
 									},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
 									"defaultValue": "..."
 								},
@@ -9274,10 +9787,8 @@
 										"isOptional": true
 									},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
 									"defaultValue": "..."
 								}
@@ -9314,10 +9825,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -9337,10 +9846,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -10502,10 +11009,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -10525,10 +11030,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -10544,7 +11047,6 @@
 					"variant": "declaration",
 					"kind": 1024,
 					"flags": {
-						"isOptional": true,
 						"isInherited": true
 					},
 					"type": {
@@ -10552,23 +11054,95 @@
 						"types": [
 							{
 								"type": "literal",
+								"value": "AED"
+							},
+							{
+								"type": "literal",
+								"value": "AFN"
+							},
+							{
+								"type": "literal",
+								"value": "ALL"
+							},
+							{
+								"type": "literal",
+								"value": "AMD"
+							},
+							{
+								"type": "literal",
+								"value": "AOA"
+							},
+							{
+								"type": "literal",
+								"value": "ARS"
+							},
+							{
+								"type": "literal",
 								"value": "AUD"
 							},
 							{
 								"type": "literal",
-								"value": "NZD"
+								"value": "AWG"
 							},
 							{
 								"type": "literal",
-								"value": "USD"
+								"value": "AZN"
 							},
 							{
 								"type": "literal",
-								"value": "GBP"
+								"value": "BAM"
 							},
 							{
 								"type": "literal",
-								"value": "EUR"
+								"value": "BBD"
+							},
+							{
+								"type": "literal",
+								"value": "BDT"
+							},
+							{
+								"type": "literal",
+								"value": "BHD"
+							},
+							{
+								"type": "literal",
+								"value": "BIF"
+							},
+							{
+								"type": "literal",
+								"value": "BMD"
+							},
+							{
+								"type": "literal",
+								"value": "BND"
+							},
+							{
+								"type": "literal",
+								"value": "BOB"
+							},
+							{
+								"type": "literal",
+								"value": "BRL"
+							},
+							{
+								"type": "literal",
+								"value": "BSD"
+							},
+							{
+								"type": "literal",
+								"value": "BTN"
+							},
+							{
+								"type": "literal",
+								"value": "BWP"
+							},
+							{
+								"type": "literal",
+								"value": "BYN"
+							},
+							{
+								"type": "literal",
+								"value": "BZD"
 							},
 							{
 								"type": "literal",
@@ -10576,11 +11150,7 @@
 							},
 							{
 								"type": "literal",
-								"value": "SGD"
-							},
-							{
-								"type": "literal",
-								"value": "HKD"
+								"value": "CDF"
 							},
 							{
 								"type": "literal",
@@ -10588,7 +11158,519 @@
 							},
 							{
 								"type": "literal",
+								"value": "CLP"
+							},
+							{
+								"type": "literal",
+								"value": "CNY"
+							},
+							{
+								"type": "literal",
+								"value": "COP"
+							},
+							{
+								"type": "literal",
+								"value": "CRC"
+							},
+							{
+								"type": "literal",
+								"value": "CUP"
+							},
+							{
+								"type": "literal",
+								"value": "CVE"
+							},
+							{
+								"type": "literal",
+								"value": "CZK"
+							},
+							{
+								"type": "literal",
+								"value": "DJF"
+							},
+							{
+								"type": "literal",
+								"value": "DKK"
+							},
+							{
+								"type": "literal",
+								"value": "DOP"
+							},
+							{
+								"type": "literal",
+								"value": "DZD"
+							},
+							{
+								"type": "literal",
+								"value": "EGP"
+							},
+							{
+								"type": "literal",
+								"value": "ERN"
+							},
+							{
+								"type": "literal",
+								"value": "ETB"
+							},
+							{
+								"type": "literal",
+								"value": "EUR"
+							},
+							{
+								"type": "literal",
+								"value": "FJD"
+							},
+							{
+								"type": "literal",
+								"value": "FKP"
+							},
+							{
+								"type": "literal",
+								"value": "GBP"
+							},
+							{
+								"type": "literal",
+								"value": "GEL"
+							},
+							{
+								"type": "literal",
+								"value": "GHS"
+							},
+							{
+								"type": "literal",
+								"value": "GIP"
+							},
+							{
+								"type": "literal",
+								"value": "GMD"
+							},
+							{
+								"type": "literal",
+								"value": "GNF"
+							},
+							{
+								"type": "literal",
+								"value": "GTQ"
+							},
+							{
+								"type": "literal",
+								"value": "GYD"
+							},
+							{
+								"type": "literal",
+								"value": "HKD"
+							},
+							{
+								"type": "literal",
+								"value": "HNL"
+							},
+							{
+								"type": "literal",
+								"value": "HTG"
+							},
+							{
+								"type": "literal",
+								"value": "HUF"
+							},
+							{
+								"type": "literal",
+								"value": "IDR"
+							},
+							{
+								"type": "literal",
+								"value": "ILS"
+							},
+							{
+								"type": "literal",
+								"value": "INR"
+							},
+							{
+								"type": "literal",
+								"value": "IQD"
+							},
+							{
+								"type": "literal",
+								"value": "IRR"
+							},
+							{
+								"type": "literal",
+								"value": "ISK"
+							},
+							{
+								"type": "literal",
+								"value": "JMD"
+							},
+							{
+								"type": "literal",
+								"value": "JOD"
+							},
+							{
+								"type": "literal",
+								"value": "JPY"
+							},
+							{
+								"type": "literal",
+								"value": "KES"
+							},
+							{
+								"type": "literal",
+								"value": "KGS"
+							},
+							{
+								"type": "literal",
+								"value": "KHR"
+							},
+							{
+								"type": "literal",
+								"value": "KMF"
+							},
+							{
+								"type": "literal",
+								"value": "KPW"
+							},
+							{
+								"type": "literal",
+								"value": "KRW"
+							},
+							{
+								"type": "literal",
+								"value": "KWD"
+							},
+							{
+								"type": "literal",
+								"value": "KYD"
+							},
+							{
+								"type": "literal",
+								"value": "KZT"
+							},
+							{
+								"type": "literal",
+								"value": "LAK"
+							},
+							{
+								"type": "literal",
+								"value": "LBP"
+							},
+							{
+								"type": "literal",
+								"value": "LKR"
+							},
+							{
+								"type": "literal",
+								"value": "LRD"
+							},
+							{
+								"type": "literal",
+								"value": "LSL"
+							},
+							{
+								"type": "literal",
+								"value": "LYD"
+							},
+							{
+								"type": "literal",
+								"value": "MAD"
+							},
+							{
+								"type": "literal",
+								"value": "MDL"
+							},
+							{
+								"type": "literal",
+								"value": "MGA"
+							},
+							{
+								"type": "literal",
+								"value": "MKD"
+							},
+							{
+								"type": "literal",
+								"value": "MMK"
+							},
+							{
+								"type": "literal",
+								"value": "MNT"
+							},
+							{
+								"type": "literal",
+								"value": "MOP"
+							},
+							{
+								"type": "literal",
+								"value": "MRU"
+							},
+							{
+								"type": "literal",
+								"value": "MUR"
+							},
+							{
+								"type": "literal",
+								"value": "MVR"
+							},
+							{
+								"type": "literal",
+								"value": "MWK"
+							},
+							{
+								"type": "literal",
+								"value": "MXN"
+							},
+							{
+								"type": "literal",
+								"value": "MYR"
+							},
+							{
+								"type": "literal",
+								"value": "MZN"
+							},
+							{
+								"type": "literal",
+								"value": "NAD"
+							},
+							{
+								"type": "literal",
+								"value": "NGN"
+							},
+							{
+								"type": "literal",
+								"value": "NIO"
+							},
+							{
+								"type": "literal",
+								"value": "NOK"
+							},
+							{
+								"type": "literal",
+								"value": "NPR"
+							},
+							{
+								"type": "literal",
+								"value": "NZD"
+							},
+							{
+								"type": "literal",
+								"value": "OMR"
+							},
+							{
+								"type": "literal",
+								"value": "PAB"
+							},
+							{
+								"type": "literal",
+								"value": "PEN"
+							},
+							{
+								"type": "literal",
+								"value": "PGK"
+							},
+							{
+								"type": "literal",
+								"value": "PHP"
+							},
+							{
+								"type": "literal",
+								"value": "PKR"
+							},
+							{
+								"type": "literal",
+								"value": "PLN"
+							},
+							{
+								"type": "literal",
+								"value": "PYG"
+							},
+							{
+								"type": "literal",
+								"value": "QAR"
+							},
+							{
+								"type": "literal",
+								"value": "RON"
+							},
+							{
+								"type": "literal",
+								"value": "RSD"
+							},
+							{
+								"type": "literal",
+								"value": "RUB"
+							},
+							{
+								"type": "literal",
+								"value": "RWF"
+							},
+							{
+								"type": "literal",
+								"value": "SAR"
+							},
+							{
+								"type": "literal",
+								"value": "SBD"
+							},
+							{
+								"type": "literal",
+								"value": "SCR"
+							},
+							{
+								"type": "literal",
+								"value": "SDG"
+							},
+							{
+								"type": "literal",
+								"value": "SEK"
+							},
+							{
+								"type": "literal",
+								"value": "SGD"
+							},
+							{
+								"type": "literal",
+								"value": "SHP"
+							},
+							{
+								"type": "literal",
+								"value": "SLE"
+							},
+							{
+								"type": "literal",
+								"value": "SOS"
+							},
+							{
+								"type": "literal",
+								"value": "SRD"
+							},
+							{
+								"type": "literal",
+								"value": "SSP"
+							},
+							{
+								"type": "literal",
+								"value": "STN"
+							},
+							{
+								"type": "literal",
+								"value": "SVC"
+							},
+							{
+								"type": "literal",
+								"value": "SYP"
+							},
+							{
+								"type": "literal",
+								"value": "SZL"
+							},
+							{
+								"type": "literal",
+								"value": "THB"
+							},
+							{
+								"type": "literal",
+								"value": "TJS"
+							},
+							{
+								"type": "literal",
+								"value": "TMT"
+							},
+							{
+								"type": "literal",
+								"value": "TND"
+							},
+							{
+								"type": "literal",
+								"value": "TOP"
+							},
+							{
+								"type": "literal",
+								"value": "TRY"
+							},
+							{
+								"type": "literal",
+								"value": "TTD"
+							},
+							{
+								"type": "literal",
+								"value": "TWD"
+							},
+							{
+								"type": "literal",
+								"value": "TZS"
+							},
+							{
+								"type": "literal",
+								"value": "UAH"
+							},
+							{
+								"type": "literal",
+								"value": "UGX"
+							},
+							{
+								"type": "literal",
+								"value": "USD"
+							},
+							{
+								"type": "literal",
+								"value": "UYU"
+							},
+							{
+								"type": "literal",
+								"value": "UZS"
+							},
+							{
+								"type": "literal",
+								"value": "VED"
+							},
+							{
+								"type": "literal",
+								"value": "VES"
+							},
+							{
+								"type": "literal",
+								"value": "VND"
+							},
+							{
+								"type": "literal",
+								"value": "VUV"
+							},
+							{
+								"type": "literal",
+								"value": "WST"
+							},
+							{
+								"type": "literal",
+								"value": "XAF"
+							},
+							{
+								"type": "literal",
+								"value": "XCD"
+							},
+							{
+								"type": "literal",
+								"value": "XCG"
+							},
+							{
+								"type": "literal",
+								"value": "XOF"
+							},
+							{
+								"type": "literal",
+								"value": "XPF"
+							},
+							{
+								"type": "literal",
+								"value": "YER"
+							},
+							{
+								"type": "literal",
 								"value": "ZAR"
+							},
+							{
+								"type": "literal",
+								"value": "ZMW"
+							},
+							{
+								"type": "literal",
+								"value": "ZWG"
 							}
 						]
 					},
@@ -10626,12 +11708,10 @@
 										"kind": 1024,
 										"flags": {},
 										"type": {
-											"type": "reference",
-											"target": 827,
-											"name": "PayslipNumber",
-											"package": "@verifiabl/issuer"
+											"type": "intrinsic",
+											"name": "string"
 										},
-										"defaultValue": "payslipNumberSchema"
+										"defaultValue": "payslipDecimalSchema"
 									},
 									{
 										"id": 792,
@@ -10675,10 +11755,8 @@
 											"isOptional": true
 										},
 										"type": {
-											"type": "reference",
-											"target": 827,
-											"name": "PayslipNumber",
-											"package": "@verifiabl/issuer"
+											"type": "intrinsic",
+											"name": "string"
 										},
 										"defaultValue": "..."
 									}
@@ -10734,12 +11812,10 @@
 												"kind": 1024,
 												"flags": {},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
-												"defaultValue": "payslipNumberSchema"
+												"defaultValue": "payslipDecimalSchema"
 											},
 											{
 												"id": 761,
@@ -10787,10 +11863,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											},
@@ -10815,10 +11889,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											},
@@ -10831,10 +11903,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											}
@@ -10874,10 +11944,6 @@
 													"types": [
 														{
 															"type": "literal",
-															"value": "shift"
-														},
-														{
-															"type": "literal",
 															"value": "travel"
 														},
 														{
@@ -10891,6 +11957,10 @@
 														{
 															"type": "literal",
 															"value": "uniform"
+														},
+														{
+															"type": "literal",
+															"value": "shift"
 														},
 														{
 															"type": "literal",
@@ -10935,12 +12005,10 @@
 												"kind": 1024,
 												"flags": {},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
-												"defaultValue": "payslipNumberSchema"
+												"defaultValue": "payslipDecimalSchema"
 											},
 											{
 												"id": 770,
@@ -10951,10 +12019,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											},
@@ -10979,10 +12045,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											},
@@ -10995,10 +12059,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											}
@@ -11034,12 +12096,10 @@
 												"kind": 1024,
 												"flags": {},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
-												"defaultValue": "payslipNumberSchema"
+												"defaultValue": "payslipDecimalSchema"
 											},
 											{
 												"id": 776,
@@ -11050,10 +12110,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											},
@@ -11131,10 +12189,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											},
@@ -11147,10 +12203,8 @@
 													"isOptional": true
 												},
 												"type": {
-													"type": "reference",
-													"target": 827,
-													"name": "PayslipNumber",
-													"package": "@verifiabl/issuer"
+													"type": "intrinsic",
+													"name": "string"
 												},
 												"defaultValue": "..."
 											}
@@ -11190,10 +12244,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -11213,10 +12265,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -11257,10 +12307,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -11279,12 +12327,10 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
-					"defaultValue": "payslipNumberSchema",
+					"defaultValue": "payslipDecimalSchema",
 					"inheritedFrom": {
 						"type": "reference",
 						"target": -1,
@@ -11317,12 +12363,10 @@
 									"kind": 1024,
 									"flags": {},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
-									"defaultValue": "payslipNumberSchema"
+									"defaultValue": "payslipDecimalSchema"
 								},
 								{
 									"id": 753,
@@ -11331,12 +12375,10 @@
 									"kind": 1024,
 									"flags": {},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
-									"defaultValue": "payslipNumberSchema"
+									"defaultValue": "payslipDecimalSchema"
 								},
 								{
 									"id": 752,
@@ -11345,12 +12387,10 @@
 									"kind": 1024,
 									"flags": {},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
-									"defaultValue": "payslipNumberSchema"
+									"defaultValue": "payslipDecimalSchema"
 								}
 							],
 							"groups": [
@@ -11383,10 +12423,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -11406,10 +12444,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -11429,10 +12465,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -11452,10 +12486,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -11507,12 +12539,10 @@
 													"kind": 1024,
 													"flags": {},
 													"type": {
-														"type": "reference",
-														"target": 827,
-														"name": "PayslipNumber",
-														"package": "@verifiabl/issuer"
+														"type": "intrinsic",
+														"name": "string"
 													},
-													"defaultValue": "payslipNumberSchema"
+													"defaultValue": "payslipDecimalSchema"
 												},
 												{
 													"id": 817,
@@ -11577,12 +12607,10 @@
 													"kind": 1024,
 													"flags": {},
 													"type": {
-														"type": "reference",
-														"target": 827,
-														"name": "PayslipNumber",
-														"package": "@verifiabl/issuer"
+														"type": "intrinsic",
+														"name": "string"
 													},
-													"defaultValue": "payslipNumberSchema"
+													"defaultValue": "payslipDecimalSchema"
 												},
 												{
 													"id": 801,
@@ -11647,12 +12675,10 @@
 													"kind": 1024,
 													"flags": {},
 													"type": {
-														"type": "reference",
-														"target": 827,
-														"name": "PayslipNumber",
-														"package": "@verifiabl/issuer"
+														"type": "intrinsic",
+														"name": "string"
 													},
-													"defaultValue": "payslipNumberSchema"
+													"defaultValue": "payslipDecimalSchema"
 												},
 												{
 													"id": 805,
@@ -11717,12 +12743,10 @@
 													"kind": 1024,
 													"flags": {},
 													"type": {
-														"type": "reference",
-														"target": 827,
-														"name": "PayslipNumber",
-														"package": "@verifiabl/issuer"
+														"type": "intrinsic",
+														"name": "string"
 													},
-													"defaultValue": "payslipNumberSchema"
+													"defaultValue": "payslipDecimalSchema"
 												},
 												{
 													"id": 809,
@@ -11787,12 +12811,10 @@
 													"kind": 1024,
 													"flags": {},
 													"type": {
-														"type": "reference",
-														"target": 827,
-														"name": "PayslipNumber",
-														"package": "@verifiabl/issuer"
+														"type": "intrinsic",
+														"name": "string"
 													},
-													"defaultValue": "payslipNumberSchema"
+													"defaultValue": "payslipDecimalSchema"
 												},
 												{
 													"id": 813,
@@ -11865,12 +12887,10 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
-					"defaultValue": "payslipNumberSchema",
+					"defaultValue": "payslipDecimalSchema",
 					"inheritedFrom": {
 						"type": "reference",
 						"target": -1,
@@ -11908,12 +12928,10 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
-					"defaultValue": "payslipNumberSchema",
+					"defaultValue": "payslipDecimalSchema",
 					"inheritedFrom": {
 						"type": "reference",
 						"target": -1,
@@ -11951,10 +12969,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -12015,10 +13031,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -12038,10 +13052,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -12061,10 +13073,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -12084,10 +13094,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -12107,10 +13115,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -12130,10 +13136,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -12191,10 +13195,8 @@
 										"isOptional": true
 									},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
 									"defaultValue": "..."
 								},
@@ -12207,10 +13209,8 @@
 										"isOptional": true
 									},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
 									"defaultValue": "..."
 								},
@@ -12223,10 +13223,8 @@
 										"isOptional": true
 									},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
 									"defaultValue": "..."
 								},
@@ -12239,10 +13237,8 @@
 										"isOptional": true
 									},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
 									"defaultValue": "..."
 								},
@@ -12255,10 +13251,8 @@
 										"isOptional": true
 									},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
 									"defaultValue": "..."
 								},
@@ -12271,10 +13265,8 @@
 										"isOptional": true
 									},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
 									"defaultValue": "..."
 								},
@@ -12287,10 +13279,8 @@
 										"isOptional": true
 									},
 									"type": {
-										"type": "reference",
-										"target": 827,
-										"name": "PayslipNumber",
-										"package": "@verifiabl/issuer"
+										"type": "intrinsic",
+										"name": "string"
 									},
 									"defaultValue": "..."
 								}
@@ -12329,10 +13319,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -12352,10 +13340,8 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "reference",
-						"target": 827,
-						"name": "PayslipNumber",
-						"package": "@verifiabl/issuer"
+						"type": "intrinsic",
+						"name": "string"
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
@@ -12425,110 +13411,6 @@
 									"qualifiedName": "newZealandPayslipV2Fields"
 								},
 								"name": "newZealandPayslipV2Fields",
-								"package": "@verifiabl/issuer",
-								"preferValues": true
-							}
-						}
-					],
-					"name": "input",
-					"package": "zod"
-				}
-			]
-		},
-		{
-			"id": 827,
-			"name": "PayslipNumber",
-			"variant": "declaration",
-			"kind": 256,
-			"flags": {},
-			"comment": {
-				"summary": [
-					{
-						"kind": "text",
-						"text": "A v2 amount, rate, or quantity with an optional printed representation."
-					}
-				]
-			},
-			"children": [
-				{
-					"id": 829,
-					"name": "display",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {
-						"isOptional": true,
-						"isInherited": true
-					},
-					"type": {
-						"type": "intrinsic",
-						"name": "string"
-					},
-					"defaultValue": "...",
-					"inheritedFrom": {
-						"type": "reference",
-						"target": -1,
-						"name": "z.input.display",
-						"package": "@verifiabl/issuer"
-					}
-				},
-				{
-					"id": 828,
-					"name": "value",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {
-						"isInherited": true
-					},
-					"type": {
-						"type": "union",
-						"types": [
-							{
-								"type": "intrinsic",
-								"name": "string"
-							},
-							{
-								"type": "intrinsic",
-								"name": "number"
-							}
-						]
-					},
-					"defaultValue": "decimalValueSchema",
-					"inheritedFrom": {
-						"type": "reference",
-						"target": -1,
-						"name": "z.input.value",
-						"package": "@verifiabl/issuer"
-					}
-				}
-			],
-			"groups": [
-				{
-					"title": "Properties",
-					"children": [
-						829,
-						828
-					]
-				}
-			],
-			"extendedTypes": [
-				{
-					"type": "reference",
-					"target": {
-						"packageName": "zod",
-						"packagePath": "v4/classic/in-out.d.cts",
-						"qualifiedName": "input"
-					},
-					"typeArguments": [
-						{
-							"type": "query",
-							"queryType": {
-								"type": "reference",
-								"target": {
-									"packageName": "@verifiabl/issuer",
-									"packagePath": "src/payslipV2.ts",
-									"qualifiedName": "payslipNumberObject"
-								},
-								"name": "payslipNumberObject",
 								"package": "@verifiabl/issuer",
 								"preferValues": true
 							}
@@ -15114,6 +15996,14 @@
 			"flags": {
 				"isConst": true
 			},
+			"comment": {
+				"summary": [
+					{
+						"kind": "text",
+						"text": "ISO 4217 codes from SIX List One (published 2026-09-17), excluding fund codes and codes with no minor unit."
+					}
+				]
+			},
 			"type": {
 				"type": "typeOperator",
 				"operator": "readonly",
@@ -15122,23 +16012,95 @@
 					"elements": [
 						{
 							"type": "literal",
+							"value": "AED"
+						},
+						{
+							"type": "literal",
+							"value": "AFN"
+						},
+						{
+							"type": "literal",
+							"value": "ALL"
+						},
+						{
+							"type": "literal",
+							"value": "AMD"
+						},
+						{
+							"type": "literal",
+							"value": "AOA"
+						},
+						{
+							"type": "literal",
+							"value": "ARS"
+						},
+						{
+							"type": "literal",
 							"value": "AUD"
 						},
 						{
 							"type": "literal",
-							"value": "NZD"
+							"value": "AWG"
 						},
 						{
 							"type": "literal",
-							"value": "USD"
+							"value": "AZN"
 						},
 						{
 							"type": "literal",
-							"value": "GBP"
+							"value": "BAM"
 						},
 						{
 							"type": "literal",
-							"value": "EUR"
+							"value": "BBD"
+						},
+						{
+							"type": "literal",
+							"value": "BDT"
+						},
+						{
+							"type": "literal",
+							"value": "BHD"
+						},
+						{
+							"type": "literal",
+							"value": "BIF"
+						},
+						{
+							"type": "literal",
+							"value": "BMD"
+						},
+						{
+							"type": "literal",
+							"value": "BND"
+						},
+						{
+							"type": "literal",
+							"value": "BOB"
+						},
+						{
+							"type": "literal",
+							"value": "BRL"
+						},
+						{
+							"type": "literal",
+							"value": "BSD"
+						},
+						{
+							"type": "literal",
+							"value": "BTN"
+						},
+						{
+							"type": "literal",
+							"value": "BWP"
+						},
+						{
+							"type": "literal",
+							"value": "BYN"
+						},
+						{
+							"type": "literal",
+							"value": "BZD"
 						},
 						{
 							"type": "literal",
@@ -15146,11 +16108,7 @@
 						},
 						{
 							"type": "literal",
-							"value": "SGD"
-						},
-						{
-							"type": "literal",
-							"value": "HKD"
+							"value": "CDF"
 						},
 						{
 							"type": "literal",
@@ -15158,7 +16116,519 @@
 						},
 						{
 							"type": "literal",
+							"value": "CLP"
+						},
+						{
+							"type": "literal",
+							"value": "CNY"
+						},
+						{
+							"type": "literal",
+							"value": "COP"
+						},
+						{
+							"type": "literal",
+							"value": "CRC"
+						},
+						{
+							"type": "literal",
+							"value": "CUP"
+						},
+						{
+							"type": "literal",
+							"value": "CVE"
+						},
+						{
+							"type": "literal",
+							"value": "CZK"
+						},
+						{
+							"type": "literal",
+							"value": "DJF"
+						},
+						{
+							"type": "literal",
+							"value": "DKK"
+						},
+						{
+							"type": "literal",
+							"value": "DOP"
+						},
+						{
+							"type": "literal",
+							"value": "DZD"
+						},
+						{
+							"type": "literal",
+							"value": "EGP"
+						},
+						{
+							"type": "literal",
+							"value": "ERN"
+						},
+						{
+							"type": "literal",
+							"value": "ETB"
+						},
+						{
+							"type": "literal",
+							"value": "EUR"
+						},
+						{
+							"type": "literal",
+							"value": "FJD"
+						},
+						{
+							"type": "literal",
+							"value": "FKP"
+						},
+						{
+							"type": "literal",
+							"value": "GBP"
+						},
+						{
+							"type": "literal",
+							"value": "GEL"
+						},
+						{
+							"type": "literal",
+							"value": "GHS"
+						},
+						{
+							"type": "literal",
+							"value": "GIP"
+						},
+						{
+							"type": "literal",
+							"value": "GMD"
+						},
+						{
+							"type": "literal",
+							"value": "GNF"
+						},
+						{
+							"type": "literal",
+							"value": "GTQ"
+						},
+						{
+							"type": "literal",
+							"value": "GYD"
+						},
+						{
+							"type": "literal",
+							"value": "HKD"
+						},
+						{
+							"type": "literal",
+							"value": "HNL"
+						},
+						{
+							"type": "literal",
+							"value": "HTG"
+						},
+						{
+							"type": "literal",
+							"value": "HUF"
+						},
+						{
+							"type": "literal",
+							"value": "IDR"
+						},
+						{
+							"type": "literal",
+							"value": "ILS"
+						},
+						{
+							"type": "literal",
+							"value": "INR"
+						},
+						{
+							"type": "literal",
+							"value": "IQD"
+						},
+						{
+							"type": "literal",
+							"value": "IRR"
+						},
+						{
+							"type": "literal",
+							"value": "ISK"
+						},
+						{
+							"type": "literal",
+							"value": "JMD"
+						},
+						{
+							"type": "literal",
+							"value": "JOD"
+						},
+						{
+							"type": "literal",
+							"value": "JPY"
+						},
+						{
+							"type": "literal",
+							"value": "KES"
+						},
+						{
+							"type": "literal",
+							"value": "KGS"
+						},
+						{
+							"type": "literal",
+							"value": "KHR"
+						},
+						{
+							"type": "literal",
+							"value": "KMF"
+						},
+						{
+							"type": "literal",
+							"value": "KPW"
+						},
+						{
+							"type": "literal",
+							"value": "KRW"
+						},
+						{
+							"type": "literal",
+							"value": "KWD"
+						},
+						{
+							"type": "literal",
+							"value": "KYD"
+						},
+						{
+							"type": "literal",
+							"value": "KZT"
+						},
+						{
+							"type": "literal",
+							"value": "LAK"
+						},
+						{
+							"type": "literal",
+							"value": "LBP"
+						},
+						{
+							"type": "literal",
+							"value": "LKR"
+						},
+						{
+							"type": "literal",
+							"value": "LRD"
+						},
+						{
+							"type": "literal",
+							"value": "LSL"
+						},
+						{
+							"type": "literal",
+							"value": "LYD"
+						},
+						{
+							"type": "literal",
+							"value": "MAD"
+						},
+						{
+							"type": "literal",
+							"value": "MDL"
+						},
+						{
+							"type": "literal",
+							"value": "MGA"
+						},
+						{
+							"type": "literal",
+							"value": "MKD"
+						},
+						{
+							"type": "literal",
+							"value": "MMK"
+						},
+						{
+							"type": "literal",
+							"value": "MNT"
+						},
+						{
+							"type": "literal",
+							"value": "MOP"
+						},
+						{
+							"type": "literal",
+							"value": "MRU"
+						},
+						{
+							"type": "literal",
+							"value": "MUR"
+						},
+						{
+							"type": "literal",
+							"value": "MVR"
+						},
+						{
+							"type": "literal",
+							"value": "MWK"
+						},
+						{
+							"type": "literal",
+							"value": "MXN"
+						},
+						{
+							"type": "literal",
+							"value": "MYR"
+						},
+						{
+							"type": "literal",
+							"value": "MZN"
+						},
+						{
+							"type": "literal",
+							"value": "NAD"
+						},
+						{
+							"type": "literal",
+							"value": "NGN"
+						},
+						{
+							"type": "literal",
+							"value": "NIO"
+						},
+						{
+							"type": "literal",
+							"value": "NOK"
+						},
+						{
+							"type": "literal",
+							"value": "NPR"
+						},
+						{
+							"type": "literal",
+							"value": "NZD"
+						},
+						{
+							"type": "literal",
+							"value": "OMR"
+						},
+						{
+							"type": "literal",
+							"value": "PAB"
+						},
+						{
+							"type": "literal",
+							"value": "PEN"
+						},
+						{
+							"type": "literal",
+							"value": "PGK"
+						},
+						{
+							"type": "literal",
+							"value": "PHP"
+						},
+						{
+							"type": "literal",
+							"value": "PKR"
+						},
+						{
+							"type": "literal",
+							"value": "PLN"
+						},
+						{
+							"type": "literal",
+							"value": "PYG"
+						},
+						{
+							"type": "literal",
+							"value": "QAR"
+						},
+						{
+							"type": "literal",
+							"value": "RON"
+						},
+						{
+							"type": "literal",
+							"value": "RSD"
+						},
+						{
+							"type": "literal",
+							"value": "RUB"
+						},
+						{
+							"type": "literal",
+							"value": "RWF"
+						},
+						{
+							"type": "literal",
+							"value": "SAR"
+						},
+						{
+							"type": "literal",
+							"value": "SBD"
+						},
+						{
+							"type": "literal",
+							"value": "SCR"
+						},
+						{
+							"type": "literal",
+							"value": "SDG"
+						},
+						{
+							"type": "literal",
+							"value": "SEK"
+						},
+						{
+							"type": "literal",
+							"value": "SGD"
+						},
+						{
+							"type": "literal",
+							"value": "SHP"
+						},
+						{
+							"type": "literal",
+							"value": "SLE"
+						},
+						{
+							"type": "literal",
+							"value": "SOS"
+						},
+						{
+							"type": "literal",
+							"value": "SRD"
+						},
+						{
+							"type": "literal",
+							"value": "SSP"
+						},
+						{
+							"type": "literal",
+							"value": "STN"
+						},
+						{
+							"type": "literal",
+							"value": "SVC"
+						},
+						{
+							"type": "literal",
+							"value": "SYP"
+						},
+						{
+							"type": "literal",
+							"value": "SZL"
+						},
+						{
+							"type": "literal",
+							"value": "THB"
+						},
+						{
+							"type": "literal",
+							"value": "TJS"
+						},
+						{
+							"type": "literal",
+							"value": "TMT"
+						},
+						{
+							"type": "literal",
+							"value": "TND"
+						},
+						{
+							"type": "literal",
+							"value": "TOP"
+						},
+						{
+							"type": "literal",
+							"value": "TRY"
+						},
+						{
+							"type": "literal",
+							"value": "TTD"
+						},
+						{
+							"type": "literal",
+							"value": "TWD"
+						},
+						{
+							"type": "literal",
+							"value": "TZS"
+						},
+						{
+							"type": "literal",
+							"value": "UAH"
+						},
+						{
+							"type": "literal",
+							"value": "UGX"
+						},
+						{
+							"type": "literal",
+							"value": "USD"
+						},
+						{
+							"type": "literal",
+							"value": "UYU"
+						},
+						{
+							"type": "literal",
+							"value": "UZS"
+						},
+						{
+							"type": "literal",
+							"value": "VED"
+						},
+						{
+							"type": "literal",
+							"value": "VES"
+						},
+						{
+							"type": "literal",
+							"value": "VND"
+						},
+						{
+							"type": "literal",
+							"value": "VUV"
+						},
+						{
+							"type": "literal",
+							"value": "WST"
+						},
+						{
+							"type": "literal",
+							"value": "XAF"
+						},
+						{
+							"type": "literal",
+							"value": "XCD"
+						},
+						{
+							"type": "literal",
+							"value": "XCG"
+						},
+						{
+							"type": "literal",
+							"value": "XOF"
+						},
+						{
+							"type": "literal",
+							"value": "XPF"
+						},
+						{
+							"type": "literal",
+							"value": "YER"
+						},
+						{
+							"type": "literal",
 							"value": "ZAR"
+						},
+						{
+							"type": "literal",
+							"value": "ZMW"
+						},
+						{
+							"type": "literal",
+							"value": "ZWG"
 						}
 					]
 				}
@@ -16635,75 +18105,6 @@
 					}
 				}
 			]
-		},
-		{
-			"id": 830,
-			"name": "payslipNumber",
-			"variant": "declaration",
-			"kind": 64,
-			"flags": {},
-			"signatures": [
-				{
-					"id": 831,
-					"name": "payslipNumber",
-					"variant": "signature",
-					"kind": 4096,
-					"flags": {},
-					"comment": {
-						"summary": [
-							{
-								"kind": "text",
-								"text": "Build and validate a v2 number while preserving an exact string when supplied."
-							}
-						]
-					},
-					"parameters": [
-						{
-							"id": 832,
-							"name": "value",
-							"variant": "param",
-							"kind": 32768,
-							"flags": {},
-							"type": {
-								"type": "union",
-								"types": [
-									{
-										"type": "intrinsic",
-										"name": "string"
-									},
-									{
-										"type": "intrinsic",
-										"name": "number"
-									}
-								]
-							}
-						},
-						{
-							"id": 833,
-							"name": "display",
-							"variant": "param",
-							"kind": 32768,
-							"flags": {
-								"isOptional": true
-							},
-							"type": {
-								"type": "intrinsic",
-								"name": "string"
-							}
-						}
-					],
-					"type": {
-						"type": "reference",
-						"target": {
-							"packageName": "@verifiabl/issuer",
-							"packagePath": "src/payslipV2.ts",
-							"qualifiedName": "NormalizedPayslipNumber"
-						},
-						"name": "NormalizedPayslipNumber",
-						"package": "@verifiabl/issuer"
-					}
-				}
-			]
 		}
 	],
 	"groups": [
@@ -16730,7 +18131,6 @@
 				608,
 				445,
 				736,
-				827,
 				496,
 				602,
 				630,
@@ -16807,8 +18207,7 @@
 				478,
 				468,
 				618,
-				518,
-				830
+				518
 			]
 		}
 	],
@@ -19383,41 +20782,6 @@
 			"packageName": "@verifiabl/issuer",
 			"packagePath": "src/payslipV2.ts",
 			"qualifiedName": "reimbursements"
-		},
-		"827": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "PayslipNumber"
-		},
-		"828": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "value"
-		},
-		"829": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "display"
-		},
-		"830": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "payslipNumber"
-		},
-		"831": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "payslipNumber"
-		},
-		"832": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "value"
-		},
-		"833": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "display"
 		},
 		"834": {
 			"packageName": "@verifiabl/issuer",

@@ -7,69 +7,174 @@ function tuple<const T extends readonly string[]>(value: T): T {
 export const AUSTRALIAN_PAYSLIP_V2_SCHEMA = "au.payslip.v2";
 export const NEW_ZEALAND_PAYSLIP_V2_SCHEMA = "nz.payslip.v2";
 
+/** ISO 4217 codes from SIX List One (published 2026-09-17), excluding fund codes and codes with no minor unit. */
 export const supportedV2Currencies = tuple([
+  "AED",
+  "AFN",
+  "ALL",
+  "AMD",
+  "AOA",
+  "ARS",
   "AUD",
-  "NZD",
-  "USD",
-  "GBP",
-  "EUR",
+  "AWG",
+  "AZN",
+  "BAM",
+  "BBD",
+  "BDT",
+  "BHD",
+  "BIF",
+  "BMD",
+  "BND",
+  "BOB",
+  "BRL",
+  "BSD",
+  "BTN",
+  "BWP",
+  "BYN",
+  "BZD",
   "CAD",
-  "SGD",
-  "HKD",
+  "CDF",
   "CHF",
+  "CLP",
+  "CNY",
+  "COP",
+  "CRC",
+  "CUP",
+  "CVE",
+  "CZK",
+  "DJF",
+  "DKK",
+  "DOP",
+  "DZD",
+  "EGP",
+  "ERN",
+  "ETB",
+  "EUR",
+  "FJD",
+  "FKP",
+  "GBP",
+  "GEL",
+  "GHS",
+  "GIP",
+  "GMD",
+  "GNF",
+  "GTQ",
+  "GYD",
+  "HKD",
+  "HNL",
+  "HTG",
+  "HUF",
+  "IDR",
+  "ILS",
+  "INR",
+  "IQD",
+  "IRR",
+  "ISK",
+  "JMD",
+  "JOD",
+  "JPY",
+  "KES",
+  "KGS",
+  "KHR",
+  "KMF",
+  "KPW",
+  "KRW",
+  "KWD",
+  "KYD",
+  "KZT",
+  "LAK",
+  "LBP",
+  "LKR",
+  "LRD",
+  "LSL",
+  "LYD",
+  "MAD",
+  "MDL",
+  "MGA",
+  "MKD",
+  "MMK",
+  "MNT",
+  "MOP",
+  "MRU",
+  "MUR",
+  "MVR",
+  "MWK",
+  "MXN",
+  "MYR",
+  "MZN",
+  "NAD",
+  "NGN",
+  "NIO",
+  "NOK",
+  "NPR",
+  "NZD",
+  "OMR",
+  "PAB",
+  "PEN",
+  "PGK",
+  "PHP",
+  "PKR",
+  "PLN",
+  "PYG",
+  "QAR",
+  "RON",
+  "RSD",
+  "RUB",
+  "RWF",
+  "SAR",
+  "SBD",
+  "SCR",
+  "SDG",
+  "SEK",
+  "SGD",
+  "SHP",
+  "SLE",
+  "SOS",
+  "SRD",
+  "SSP",
+  "STN",
+  "SVC",
+  "SYP",
+  "SZL",
+  "THB",
+  "TJS",
+  "TMT",
+  "TND",
+  "TOP",
+  "TRY",
+  "TTD",
+  "TWD",
+  "TZS",
+  "UAH",
+  "UGX",
+  "USD",
+  "UYU",
+  "UZS",
+  "VED",
+  "VES",
+  "VND",
+  "VUV",
+  "WST",
+  "XAF",
+  "XCD",
+  "XCG",
+  "XOF",
+  "XPF",
+  "YER",
   "ZAR",
+  "ZMW",
+  "ZWG",
 ]);
 
-const decimalStringSchema = z
+/** A v2 amount, rate, or quantity: a plain decimal string sent exactly as given, for example "1234.56". */
+const payslipDecimalSchema = z
   .string()
-  .regex(/^-?\d+(\.\d+)?$/, "value must be a decimal number, for example 1234.56");
-
-// Number.toString() uses exponent notation below 1e-6 and at 1e21. The
-// wire contract requires plain decimals; expanding the string avoids any
-// additional floating-point arithmetic or loss of significant digits.
-function numberToDecimalString(value: number): string {
-  const text = value.toString();
-  const match = /^(-?)(\d+)(?:\.(\d+))?e([+-]?\d+)$/i.exec(text);
-  if (!match) return text;
-
-  const [, sign = "", integer = "", fraction = "", exponent = "0"] = match;
-  const digits = integer + fraction;
-  const point = integer.length + Number(exponent);
-  if (point <= 0) return `${sign}0.${"0".repeat(-point)}${digits}`;
-  if (point >= digits.length) return `${sign}${digits}${"0".repeat(point - digits.length)}`;
-  return `${sign}${digits.slice(0, point)}.${digits.slice(point)}`;
-}
-
-const decimalValueSchema = z.union([
-  decimalStringSchema,
-  z.number().finite().transform(numberToDecimalString).pipe(decimalStringSchema),
-]);
-
-const payslipNumberObject = z
-  .object({
-    value: decimalValueSchema,
-    display: z.string().min(1).optional(),
-  })
-  .strict();
-
-// Interfaces, not z.input/z.output aliases: TypeDoc expands an inferred alias at every use site.
-/** A v2 amount, rate, or quantity with an optional printed representation. */
-export interface PayslipNumber extends z.input<typeof payslipNumberObject> {}
-export interface NormalizedPayslipNumber extends z.output<typeof payslipNumberObject> {}
-
-/** A v2 amount, rate, or quantity with an optional printed representation. */
-export const payslipNumberSchema: z.ZodType<NormalizedPayslipNumber, PayslipNumber> =
-  payslipNumberObject;
-
-/** Build and validate a v2 number while preserving an exact string when supplied. */
-export function payslipNumber(value: string | number, display?: string): NormalizedPayslipNumber {
-  return payslipNumberSchema.parse({ value, ...(display === undefined ? {} : { display }) });
-}
+  .regex(/^-?\d+(\.\d+)?$/, "must be a plain decimal string, for example 1234.56");
 
 // The v2 wire contract preserves printed strings in non-PII fields. Integrators must
 // keep employee PII out of these values; syntax validation cannot establish that.
 const printedText = z.string().min(1);
-const currency = z.enum(supportedV2Currencies).optional();
+const currency = z.enum(supportedV2Currencies);
 
 export const australianPaidLeaveTypes = tuple([
   "cash_out_in_service",
@@ -154,10 +259,10 @@ const usiSchema = z
   );
 
 const australianEarningsFields = {
-  amount: payslipNumberSchema,
-  units: payslipNumberSchema.optional(),
-  rate: payslipNumberSchema.optional(),
-  ytdAmount: payslipNumberSchema.optional(),
+  amount: payslipDecimalSchema,
+  units: payslipDecimalSchema.optional(),
+  rate: payslipDecimalSchema.optional(),
+  ytdAmount: payslipDecimalSchema.optional(),
 };
 
 const australianEarningsLineSchema = z.discriminatedUnion("type", [
@@ -187,34 +292,34 @@ const australianPayslipV2Fields = z
     periodEnd: z.iso.date(),
     paymentDate: z.iso.date(),
     currency,
-    gross: payslipNumberSchema,
-    paygw: payslipNumberSchema,
-    net: payslipNumberSchema,
-    ytdGross: payslipNumberSchema.optional(),
-    ytdPaygw: payslipNumberSchema.optional(),
+    gross: payslipDecimalSchema,
+    paygw: payslipDecimalSchema,
+    net: payslipDecimalSchema,
+    ytdGross: payslipDecimalSchema.optional(),
+    ytdPaygw: payslipDecimalSchema.optional(),
     payFrequency: z.enum(australianPayFrequencies).optional(),
     employmentBasis: z.enum(australianEmploymentBases).optional(),
     engagementType: z.enum(australianEngagementTypes).optional(),
     award: printedText.optional(),
     hourly: z
       .object({
-        ordinaryRate: payslipNumberSchema,
-        hours: payslipNumberSchema,
-        amount: payslipNumberSchema,
+        ordinaryRate: payslipDecimalSchema,
+        hours: payslipDecimalSchema,
+        amount: payslipDecimalSchema,
       })
       .strict()
       .optional(),
-    annualRate: payslipNumberSchema.optional(),
-    taxableGross: payslipNumberSchema.optional(),
-    stslWithholding: payslipNumberSchema.optional(),
+    annualRate: payslipDecimalSchema.optional(),
+    taxableGross: payslipDecimalSchema.optional(),
+    stslWithholding: payslipDecimalSchema.optional(),
     earnings: z.array(australianEarningsLineSchema).optional(),
     salarySacrifice: z
       .array(
         z
           .object({
             type: z.enum(australianSalarySacrificeTypes),
-            amount: payslipNumberSchema,
-            ytdAmount: payslipNumberSchema.optional(),
+            amount: payslipDecimalSchema,
+            ytdAmount: payslipDecimalSchema.optional(),
           })
           .strict(),
       )
@@ -224,8 +329,8 @@ const australianPayslipV2Fields = z
         z
           .object({
             type: z.enum(australianDeductionTypes),
-            amount: payslipNumberSchema,
-            ytdAmount: payslipNumberSchema.optional(),
+            amount: payslipDecimalSchema,
+            ytdAmount: payslipDecimalSchema.optional(),
           })
           .strict(),
       )
@@ -235,28 +340,29 @@ const australianPayslipV2Fields = z
         z
           .object({
             contributionType: z.enum(australianSuperContributionTypes),
-            amount: payslipNumberSchema,
-            rate: payslipNumberSchema.optional(),
-            ytdAmount: payslipNumberSchema.optional(),
+            amount: payslipDecimalSchema,
+            rate: payslipDecimalSchema.optional(),
+            ytdAmount: payslipDecimalSchema.optional(),
             usi: usiSchema.optional(),
           })
           .strict(),
       )
       .optional(),
-    reimbursements: payslipNumberSchema.optional(),
+    reimbursements: payslipDecimalSchema.optional(),
     ytd: z
       .object({
-        taxable: payslipNumberSchema.optional(),
-        super: payslipNumberSchema.optional(),
-        nonTaxable: payslipNumberSchema.optional(),
-        postTaxDeductions: payslipNumberSchema.optional(),
-        reimbursements: payslipNumberSchema.optional(),
+        taxable: payslipDecimalSchema.optional(),
+        super: payslipDecimalSchema.optional(),
+        nonTaxable: payslipDecimalSchema.optional(),
+        postTaxDeductions: payslipDecimalSchema.optional(),
+        reimbursements: payslipDecimalSchema.optional(),
       })
       .strict()
       .optional(),
   })
   .strict();
 
+// Interfaces, not z.input/z.output aliases: TypeDoc expands an inferred alias at every use site.
 export interface AustralianPayslipV2 extends z.input<typeof australianPayslipV2Fields> {}
 export interface NormalizedAustralianPayslipV2 extends z.output<typeof australianPayslipV2Fields> {}
 
@@ -337,10 +443,10 @@ const newZealandPlainEarningsTypes = tuple([
 ]);
 
 const newZealandEarningsFields = {
-  amount: payslipNumberSchema,
-  units: payslipNumberSchema.optional(),
-  rate: payslipNumberSchema.optional(),
-  ytdAmount: payslipNumberSchema.optional(),
+  amount: payslipDecimalSchema,
+  units: payslipDecimalSchema.optional(),
+  rate: payslipDecimalSchema.optional(),
+  ytdAmount: payslipDecimalSchema.optional(),
 };
 
 const newZealandEarningsLineSchema = z.discriminatedUnion("type", [
@@ -364,7 +470,7 @@ const newZealandEarningsLineSchema = z.discriminatedUnion("type", [
 ]);
 
 const leaveBalanceSchema = z
-  .object({ amount: payslipNumberSchema, unit: z.enum(newZealandLeaveBalanceUnits) })
+  .object({ amount: payslipDecimalSchema, unit: z.enum(newZealandLeaveBalanceUnits) })
   .strict();
 
 const newZealandPayslipV2Fields = z
@@ -373,50 +479,50 @@ const newZealandPayslipV2Fields = z
     periodEnd: z.iso.date(),
     paymentDate: z.iso.date(),
     currency,
-    gross: payslipNumberSchema,
-    paye: payslipNumberSchema,
-    net: payslipNumberSchema,
-    ytdGross: payslipNumberSchema.optional(),
-    ytdPaye: payslipNumberSchema.optional(),
+    gross: payslipDecimalSchema,
+    paye: payslipDecimalSchema,
+    net: payslipDecimalSchema,
+    ytdGross: payslipDecimalSchema.optional(),
+    ytdPaye: payslipDecimalSchema.optional(),
     payCycle: printedText.optional(),
     taxCode: printedText.optional(),
     employmentType: printedText.optional(),
-    hoursPaid: payslipNumberSchema.optional(),
+    hoursPaid: payslipDecimalSchema.optional(),
     hourly: z
       .object({
-        ordinaryRate: payslipNumberSchema,
-        hours: payslipNumberSchema,
-        amount: payslipNumberSchema,
+        ordinaryRate: payslipDecimalSchema,
+        hours: payslipDecimalSchema,
+        amount: payslipDecimalSchema,
       })
       .strict()
       .optional(),
-    annualRate: payslipNumberSchema.optional(),
-    earningsNotLiableForAcc: payslipNumberSchema.optional(),
+    annualRate: payslipDecimalSchema.optional(),
+    earningsNotLiableForAcc: payslipDecimalSchema.optional(),
     earnings: z.array(newZealandEarningsLineSchema).optional(),
-    employeeShareScheme: payslipNumberSchema.optional(),
-    priorPeriodGrossAdjustment: payslipNumberSchema.optional(),
-    priorPeriodPayeAdjustment: payslipNumberSchema.optional(),
-    payrollDonationTaxCredit: payslipNumberSchema.optional(),
-    studentLoan: payslipNumberSchema.optional(),
-    slcir: payslipNumberSchema.optional(),
-    slbor: payslipNumberSchema.optional(),
-    childSupport: payslipNumberSchema.optional(),
-    kiwisaverEmployeeDeduction: payslipNumberSchema.optional(),
-    kiwisaverEmployeeRate: payslipNumberSchema.optional(),
-    kiwisaverEmployerContribution: payslipNumberSchema.optional(),
-    esct: payslipNumberSchema.optional(),
+    employeeShareScheme: payslipDecimalSchema.optional(),
+    priorPeriodGrossAdjustment: payslipDecimalSchema.optional(),
+    priorPeriodPayeAdjustment: payslipDecimalSchema.optional(),
+    payrollDonationTaxCredit: payslipDecimalSchema.optional(),
+    studentLoan: payslipDecimalSchema.optional(),
+    slcir: payslipDecimalSchema.optional(),
+    slbor: payslipDecimalSchema.optional(),
+    childSupport: payslipDecimalSchema.optional(),
+    kiwisaverEmployeeDeduction: payslipDecimalSchema.optional(),
+    kiwisaverEmployeeRate: payslipDecimalSchema.optional(),
+    kiwisaverEmployerContribution: payslipDecimalSchema.optional(),
+    esct: payslipDecimalSchema.optional(),
     deductions: z
       .array(
         z
           .object({
             type: z.enum(newZealandDeductionTypes),
-            amount: payslipNumberSchema,
-            ytdAmount: payslipNumberSchema.optional(),
+            amount: payslipDecimalSchema,
+            ytdAmount: payslipDecimalSchema.optional(),
           })
           .strict(),
       )
       .optional(),
-    reimbursements: payslipNumberSchema.optional(),
+    reimbursements: payslipDecimalSchema.optional(),
     leaveBalances: z
       .object({
         annual: leaveBalanceSchema.optional(),
@@ -429,13 +535,13 @@ const newZealandPayslipV2Fields = z
       .optional(),
     ytd: z
       .object({
-        studentLoan: payslipNumberSchema.optional(),
-        kiwisaverEmployee: payslipNumberSchema.optional(),
-        kiwisaverEmployer: payslipNumberSchema.optional(),
-        childSupport: payslipNumberSchema.optional(),
-        nonTaxable: payslipNumberSchema.optional(),
-        postTaxDeductions: payslipNumberSchema.optional(),
-        reimbursements: payslipNumberSchema.optional(),
+        studentLoan: payslipDecimalSchema.optional(),
+        kiwisaverEmployee: payslipDecimalSchema.optional(),
+        kiwisaverEmployer: payslipDecimalSchema.optional(),
+        childSupport: payslipDecimalSchema.optional(),
+        nonTaxable: payslipDecimalSchema.optional(),
+        postTaxDeductions: payslipDecimalSchema.optional(),
+        reimbursements: payslipDecimalSchema.optional(),
       })
       .strict()
       .optional(),
@@ -462,17 +568,9 @@ function when<T>(value: T | undefined, key: string): Record<string, T> {
   return value === undefined ? {} : { [key]: value };
 }
 
-function numberToWire(value: NormalizedPayslipNumber): Record<string, string> {
-  return { value: value.value, ...when(value.display, "display") };
-}
-
-function numbersToWire<T extends Record<string, NormalizedPayslipNumber | undefined>>(
-  values: T,
-): Record<string, unknown> {
+function defined(values: Record<string, string | undefined>): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(values)
-      .filter((entry): entry is [string, NormalizedPayslipNumber] => entry[1] !== undefined)
-      .map(([key, value]) => [key, numberToWire(value)]),
+    Object.entries(values).filter((entry): entry is [string, string] => entry[1] !== undefined),
   );
 }
 
@@ -483,8 +581,8 @@ export function australianPayslipV2ToWire(
     ...when(data.periodStart, "period_start"),
     period_end: data.periodEnd,
     payment_date: data.paymentDate,
-    ...when(data.currency, "currency"),
-    ...numbersToWire({
+    currency: data.currency,
+    ...defined({
       gross: data.gross,
       paygw: data.paygw,
       net: data.net,
@@ -503,9 +601,9 @@ export function australianPayslipV2ToWire(
       ? {}
       : {
           hourly: {
-            ordinary_rate: numberToWire(data.hourly.ordinaryRate),
-            hours: numberToWire(data.hourly.hours),
-            amount: numberToWire(data.hourly.amount),
+            ordinary_rate: data.hourly.ordinaryRate,
+            hours: data.hourly.hours,
+            amount: data.hourly.amount,
           },
         }),
     ...(data.earnings === undefined
@@ -520,8 +618,8 @@ export function australianPayslipV2ToWire(
                   ...when(line.otherCategory, "other_category"),
                 }
               : {}),
-            amount: numberToWire(line.amount),
-            ...numbersToWire({ units: line.units, rate: line.rate, ytd_amount: line.ytdAmount }),
+            amount: line.amount,
+            ...defined({ units: line.units, rate: line.rate, ytd_amount: line.ytdAmount }),
           })),
         }),
     ...(data.salarySacrifice === undefined
@@ -529,8 +627,8 @@ export function australianPayslipV2ToWire(
       : {
           salary_sacrifice: data.salarySacrifice.map((line) => ({
             type: line.type,
-            amount: numberToWire(line.amount),
-            ...numbersToWire({ ytd_amount: line.ytdAmount }),
+            amount: line.amount,
+            ...defined({ ytd_amount: line.ytdAmount }),
           })),
         }),
     ...(data.deductions === undefined
@@ -538,8 +636,8 @@ export function australianPayslipV2ToWire(
       : {
           deductions: data.deductions.map((line) => ({
             type: line.type,
-            amount: numberToWire(line.amount),
-            ...numbersToWire({ ytd_amount: line.ytdAmount }),
+            amount: line.amount,
+            ...defined({ ytd_amount: line.ytdAmount }),
           })),
         }),
     ...(data.superannuation === undefined
@@ -547,15 +645,15 @@ export function australianPayslipV2ToWire(
       : {
           superannuation: data.superannuation.map((line) => ({
             contribution_type: line.contributionType,
-            amount: numberToWire(line.amount),
-            ...numbersToWire({ rate: line.rate, ytd_amount: line.ytdAmount }),
+            amount: line.amount,
+            ...defined({ rate: line.rate, ytd_amount: line.ytdAmount }),
             ...when(line.usi, "usi"),
           })),
         }),
     ...(data.ytd === undefined
       ? {}
       : {
-          ytd: numbersToWire({
+          ytd: defined({
             taxable: data.ytd.taxable,
             super: data.ytd.super,
             non_taxable: data.ytd.nonTaxable,
@@ -569,16 +667,16 @@ export function australianPayslipV2ToWire(
 export function newZealandPayslipV2ToWire(
   data: NormalizedNewZealandPayslipV2,
 ): Record<string, unknown> {
-  const balance = (value: { amount: NormalizedPayslipNumber; unit: string }) => ({
-    amount: numberToWire(value.amount),
+  const balance = (value: { amount: string; unit: string }) => ({
+    amount: value.amount,
     unit: value.unit,
   });
   return {
     ...when(data.periodStart, "period_start"),
     period_end: data.periodEnd,
     payment_date: data.paymentDate,
-    ...when(data.currency, "currency"),
-    ...numbersToWire({
+    currency: data.currency,
+    ...defined({
       gross: data.gross,
       paye: data.paye,
       net: data.net,
@@ -608,9 +706,9 @@ export function newZealandPayslipV2ToWire(
       ? {}
       : {
           hourly: {
-            ordinary_rate: numberToWire(data.hourly.ordinaryRate),
-            hours: numberToWire(data.hourly.hours),
-            amount: numberToWire(data.hourly.amount),
+            ordinary_rate: data.hourly.ordinaryRate,
+            hours: data.hourly.hours,
+            amount: data.hourly.amount,
           },
         }),
     ...(data.earnings === undefined
@@ -620,8 +718,8 @@ export function newZealandPayslipV2ToWire(
             type: line.type,
             ...(line.type === "paid_leave" ? { leave_type: line.leaveType } : {}),
             ...(line.type === "allowance" ? { allowance_type: line.allowanceType } : {}),
-            amount: numberToWire(line.amount),
-            ...numbersToWire({ units: line.units, rate: line.rate, ytd_amount: line.ytdAmount }),
+            amount: line.amount,
+            ...defined({ units: line.units, rate: line.rate, ytd_amount: line.ytdAmount }),
           })),
         }),
     ...(data.deductions === undefined
@@ -629,8 +727,8 @@ export function newZealandPayslipV2ToWire(
       : {
           deductions: data.deductions.map((line) => ({
             type: line.type,
-            amount: numberToWire(line.amount),
-            ...numbersToWire({ ytd_amount: line.ytdAmount }),
+            amount: line.amount,
+            ...defined({ ytd_amount: line.ytdAmount }),
           })),
         }),
     ...(data.leaveBalances === undefined
@@ -658,7 +756,7 @@ export function newZealandPayslipV2ToWire(
     ...(data.ytd === undefined
       ? {}
       : {
-          ytd: numbersToWire({
+          ytd: defined({
             student_loan: data.ytd.studentLoan,
             kiwisaver_employee: data.ytd.kiwisaverEmployee,
             kiwisaver_employer: data.ytd.kiwisaverEmployer,

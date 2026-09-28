@@ -1,18 +1,8 @@
 import { readFileSync } from "node:fs";
-import { defineConfig } from "tsdown";
+import { defineConfig } from "vitest/config";
 
 const { version } = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
 
 export default defineConfig({
   define: { __VERIFIABL_ISSUER_VERSION__: JSON.stringify(version) },
-  entry: ["src/index.ts"],
-  format: ["esm", "cjs"],
-  dts: true,
-  clean: true,
-  platform: "node",
-  target: "node20",
-  fixedExtension: false,
-  deps: {
-    neverBundle: ["qrcode", "zod"],
-  },
 });

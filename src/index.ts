@@ -30,8 +30,6 @@ export {
   type AustralianPayslipV2,
   NEW_ZEALAND_PAYSLIP_V2_SCHEMA,
   type NewZealandPayslipV2,
-  type PayslipNumber,
-  payslipNumber,
   supportedV2Currencies,
 } from "./payslipV2.js";
 export {

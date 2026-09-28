@@ -2,7 +2,11 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ZodError } from "zod";
-import { australianPayslipV2Schema, payslipNumber, supportedV2Currencies } from "../payslipV2.js";
+import {
+  australianPayslipV2Schema,
+  newZealandPayslipV2Schema,
+  supportedV2Currencies,
+} from "../payslipV2.js";
 import {
   AUSTRALIAN_PII_FIELD_ORDER,
   AUSTRALIAN_PII_TEXT_PROFILE_ID,
@@ -149,18 +153,75 @@ describe("AU2 and NZ2 conformance vectors", () => {
 });
 
 describe("AU2 and NZ2 registration", () => {
-  it("normalizes Node numbers and preserves exact string scale", () => {
-    expect(payslipNumber(47.3684, "$47.3684/hr")).toEqual({
-      value: "47.3684",
-      display: "$47.3684/hr",
-    });
-    expect(payslipNumber("1.50")).toEqual({ value: "1.50" });
-    expect(() => payslipNumber("1e3")).toThrow();
-    expect(payslipNumber(1e-7)).toEqual({ value: "0.0000001" });
-    expect(payslipNumber(-1.25e-7)).toEqual({ value: "-0.000000125" });
-    expect(payslipNumber(1.2e21)).toEqual({ value: "1200000000000000000000" });
-    expect(payslipNumber(Number("1e-324"))).toEqual({ value: "0" });
-    expect(payslipNumber(Number.MIN_VALUE).value).toBe(`0.${"0".repeat(323)}5`);
+  const minimalAu = {
+    periodEnd: "2026-05-31",
+    paymentDate: "2026-06-04",
+    currency: "AUD",
+    gross: "1",
+    paygw: "2",
+    net: "3",
+  } as const;
+
+  it("sends decimal strings exactly as given", () => {
+    for (const value of [
+      "1234",
+      "1234.56",
+      "47.3684",
+      "-123.45",
+      "0.00",
+      "1.50",
+      "1.5",
+      "0.10000000000000000001",
+    ]) {
+      expect(australianPayslipV2Schema.parse({ ...minimalAu, gross: value }).gross).toBe(value);
+    }
+  });
+
+  it("rejects numbers outside the decimal grammar without echoing the value", () => {
+    for (const value of [
+      "",
+      "1e3",
+      "+1",
+      "1,234.56",
+      "$1234.56",
+      "(123.45)",
+      "1.",
+      ".5",
+      " 1",
+      "1\n",
+      "١٢",
+    ]) {
+      const result = australianPayslipV2Schema.safeParse({ ...minimalAu, gross: value });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.path).toEqual(["gross"]);
+    }
+    const leaked = australianPayslipV2Schema.safeParse({ ...minimalAu, gross: "SECRET-8125" });
+    expect(JSON.stringify(leaked.error?.issues)).not.toContain("SECRET");
+    for (const value of [1234.56, { value: "1234.56" }, null]) {
+      expect(australianPayslipV2Schema.safeParse({ ...minimalAu, gross: value }).success).toBe(
+        false,
+      );
+    }
+  });
+
+  it("requires a supported ISO 4217 currency", () => {
+    const { currency: _, ...withoutCurrency } = minimalAu;
+    expect(australianPayslipV2Schema.safeParse(withoutCurrency).success).toBe(false);
+    expect(
+      newZealandPayslipV2Schema.safeParse({
+        periodEnd: "2026-05-31",
+        paymentDate: "2026-06-04",
+        gross: "1",
+        paye: "2",
+        net: "3",
+      }).success,
+    ).toBe(false);
+    for (const currency of ["JPY", "BHD", "XAF", "XOF", "XCD", "XPF", "ZWG"]) {
+      expect(australianPayslipV2Schema.safeParse({ ...minimalAu, currency }).success).toBe(true);
+    }
+    for (const currency of ["aud", "AU", "ZWL", "XYZ", "XTS", "XXX", "XAU", "CLF"]) {
+      expect(australianPayslipV2Schema.safeParse({ ...minimalAu, currency }).success).toBe(false);
+    }
   });
 
   it("maps AU2 without a period start", () => {
@@ -172,9 +233,10 @@ describe("AU2 and NZ2 registration", () => {
           periodEnd: "2026-05-31",
           paymentDate: "2026-06-04",
           currency: "AUD",
-          gross: { value: 8125, display: "$8,125.00" },
-          paygw: { value: "2030.00" },
-          net: { value: "6095.00" },
+          gross: "8125",
+          paygw: "2030.00",
+          net: "6095.00",
+          hourly: { ordinaryRate: "47.3684", hours: "-76.00", amount: "3600.00" },
         },
         encryptionMetadata: metadata,
       }),
@@ -184,22 +246,17 @@ describe("AU2 and NZ2 registration", () => {
         period_end: "2026-05-31",
         payment_date: "2026-06-04",
         currency: "AUD",
-        gross: { value: "8125", display: "$8,125.00" },
-        paygw: { value: "2030.00" },
-        net: { value: "6095.00" },
+        gross: "8125",
+        paygw: "2030.00",
+        net: "6095.00",
+        hourly: { ordinary_rate: "47.3684", hours: "-76.00", amount: "3600.00" },
       },
     });
     expect(
       registrationToWire({
         schema: "au.payslip.v2",
         issuedAt: "2026-06-11T00:00:00Z",
-        payslipNonPii: {
-          periodEnd: "2026-05-31",
-          paymentDate: "2026-06-04",
-          gross: { value: "0" },
-          paygw: { value: "0" },
-          net: { value: "0" },
-        },
+        payslipNonPii: { ...minimalAu, gross: "0", paygw: "0", net: "0" },
         encryptionMetadata: metadata,
       }),
     ).not.toHaveProperty("payslip_non_pii.period_start");
@@ -213,18 +270,22 @@ describe("AU2 and NZ2 registration", () => {
         payslipNonPii: {
           periodEnd: "2026-05-31",
           paymentDate: "2026-06-04",
-          gross: { value: "6000.00" },
-          paye: { value: "1500.00" },
-          net: { value: "4500.00" },
+          currency: "NZD",
+          gross: "6000.00",
+          paye: "1500.00",
+          net: "4500.00",
           taxCode: "M SL",
-          studentLoan: { value: "-25.00" },
+          studentLoan: "-25.00",
+          leaveBalances: { annual: { amount: "76.5", unit: "hours" } },
         },
         encryptionMetadata: metadata,
       }),
     ).toMatchObject({
       payslip_non_pii: {
+        currency: "NZD",
         tax_code: "M SL",
-        student_loan: { value: "-25.00" },
+        student_loan: "-25.00",
+        leave_balances: { annual: { amount: "76.5", unit: "hours" } },
       },
     });
   });
@@ -233,13 +294,7 @@ describe("AU2 and NZ2 registration", () => {
     const request = {
       schema: "au.payslip.v2" as const,
       issuedAt: "2026-06-11T00:00:00Z",
-      payslipNonPii: {
-        periodEnd: "2026-05-31",
-        paymentDate: "2026-06-04",
-        gross: { value: "1" },
-        paygw: { value: "2" },
-        net: { value: "3" },
-      },
+      payslipNonPii: minimalAu,
       encryptionMetadata: metadata,
     };
     expect(registrationToWire(request)).toMatchObject({ schema: "au.payslip.v2" });
@@ -253,32 +308,20 @@ describe("AU2 and NZ2 registration", () => {
     ).toBe(false);
   });
 
-  it("publishes the ten supported optional currencies", () => {
-    expect(supportedV2Currencies).toEqual([
-      "AUD",
-      "NZD",
-      "USD",
-      "GBP",
-      "EUR",
-      "CAD",
-      "SGD",
-      "HKD",
-      "CHF",
-      "ZAR",
-    ]);
+  it("publishes the payable ISO 4217 currency list", () => {
+    expect(supportedV2Currencies).toHaveLength(155);
+    expect(new Set(supportedV2Currencies).size).toBe(155);
+    expect(supportedV2Currencies).toEqual([...supportedV2Currencies].sort());
+    expect(supportedV2Currencies).toEqual(expect.arrayContaining(["AUD", "NZD", "JPY"]));
   });
 
   it("validates the ABN embedded in a numeric USI", () => {
     const payslip = {
-      periodEnd: "2026-05-31",
-      paymentDate: "2026-06-04",
-      gross: { value: "1" },
-      paygw: { value: "2" },
-      net: { value: "3" },
+      ...minimalAu,
       superannuation: [
         {
           contributionType: "superannuation_guarantee" as const,
-          amount: { value: "0" },
+          amount: "0",
           usi: "60905115063001",
         },
       ],
@@ -299,13 +342,7 @@ describe("AU2 and NZ2 registration", () => {
         schema: "au.payslip.v2" as const,
         issuedAt: "2026-06-11T00:00:00Z",
         verifiablReference: "AbCdEfGhIjKlMnOpQrStUv",
-        payslipNonPii: {
-          periodEnd: "2026-05-31",
-          paymentDate: "2026-06-04",
-          gross: { value: "1" },
-          paygw: { value: "2" },
-          net: { value: "3" },
-        },
+        payslipNonPii: minimalAu,
         encryptionMetadata: metadata,
       },
       {
@@ -315,9 +352,10 @@ describe("AU2 and NZ2 registration", () => {
         payslipNonPii: {
           periodEnd: "2026-05-31",
           paymentDate: "2026-06-04",
-          gross: { value: "1" },
-          paye: { value: "2" },
-          net: { value: "3" },
+          currency: "NZD" as const,
+          gross: "1",
+          paye: "2",
+          net: "3",
         },
         encryptionMetadata: metadata,
       },
@@ -325,8 +363,8 @@ describe("AU2 and NZ2 registration", () => {
 
     expect(registerNonPiiBatchToWire({ records })).toMatchObject({
       records: [
-        { schema: "au.payslip.v2", payslip_non_pii: { gross: { value: "1" } } },
-        { schema: "nz.payslip.v2", payslip_non_pii: { paye: { value: "2" } } },
+        { schema: "au.payslip.v2", payslip_non_pii: { gross: "1" } },
+        { schema: "nz.payslip.v2", payslip_non_pii: { paye: "2" } },
       ],
     });
   });
