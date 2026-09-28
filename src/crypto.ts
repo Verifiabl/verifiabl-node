@@ -46,11 +46,17 @@ export interface EncryptedPii {
  * @param key Your 32-byte provider encryption key.
  */
 export function encryptPii(plaintext: string, key: Buffer): EncryptedPii {
-  if (key.length !== KEY_BYTES) {
-    throw new Error(`Encryption key must be exactly ${KEY_BYTES} bytes (AES-256)`);
+  validateKey(key);
+  return encryptPiiWithIv(plaintext, key, randomBytes(IV_BYTES));
+}
+
+/** Deterministic test seam for shared cryptographic conformance vectors. @internal */
+export function encryptPiiWithIv(plaintext: string, key: Uint8Array, iv: Uint8Array): EncryptedPii {
+  validateKey(key);
+  if (iv.length !== IV_BYTES) {
+    throw new Error(`Encryption IV must be exactly ${IV_BYTES} bytes`);
   }
 
-  const iv = randomBytes(IV_BYTES);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
   const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
@@ -62,4 +68,10 @@ export function encryptPii(plaintext: string, key: Buffer): EncryptedPii {
       tag: new Uint8Array(tag),
     },
   };
+}
+
+function validateKey(key: Uint8Array): void {
+  if (key.length !== KEY_BYTES) {
+    throw new Error(`Encryption key must be exactly ${KEY_BYTES} bytes (AES-256)`);
+  }
 }

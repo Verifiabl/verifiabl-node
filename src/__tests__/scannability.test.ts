@@ -375,43 +375,6 @@ describe("styled QR scannability", () => {
     expect(await decode(parts, { maxErrorCorrection: "Q" })).toBe(qResult.content);
   });
 
-  // The ladder degrades error correction (not the frame) for unusually long
-  // PII. The degraded code keeps the fixed frame size and stays scannable when
-  // rendered at a realistic resolution. (Decoding at exactly 1:1 is a pixel-grid
-  // aliasing artifact, not a real-world scan condition, so we rasterise at 2x to
-  // represent any normal-DPI render or camera capture.) Expectations follow the
-  // default "M" ceiling: the code stays at M (sub-ideal modules flag degraded)
-  // until even M won't fit, then drops to L.
-  const REALISTIC_SCAN_RASTER = MIN_TESTED_RASTER_WIDTH * 2;
-  it.each([
-    { label: "stays M, sub-ideal modules", plaintext: `P1|${"A".repeat(800)}`, ec: "M" },
-    { label: "stays M near the floor", plaintext: `P1|${"A".repeat(1200)}`, ec: "M" },
-    { label: "drops to L", plaintext: `P1|${"A".repeat(1400)}`, ec: "L" },
-  ])(
-    "decodes a $label record at the fixed frame and flags it degraded",
-    async ({ plaintext, ec }) => {
-      const parts: BarcodeParts = {
-        verifiablReference: VERIFIABL_REF,
-        encryptedPii: encryptFixture(plaintext),
-      };
-      const result = createBarcodeSvg(parts, { format: "v1" });
-      expect(result.errorCorrectionLevel).toBe(ec);
-      expect(result.degraded).toBe(true);
-      expect(result.width).toBe(480);
-      expect(await decode(parts, { format: "v1" }, REALISTIC_SCAN_RASTER)).toBe(result.content);
-    },
-  );
-
-  it("hard-errors when PII cannot fit the fixed frame even degraded to L", () => {
-    const parts: BarcodeParts = {
-      verifiablReference: VERIFIABL_REF,
-      encryptedPii: encryptFixture(`P1|${"A".repeat(1900)}`),
-    };
-    expect(() => createBarcodeSvg(parts, { format: "v1" })).toThrow(
-      /too long to render a scannable barcode in the branded frame/,
-    );
-  });
-
   it("decodes the framed badge across larger raster scales", async () => {
     const { parts } = partsFromPii(DOCS_EXAMPLE_FIELDS);
     const { content } = createBarcodeSvg(parts);

@@ -25,6 +25,7 @@ pnpm install --frozen-lockfile
 pnpm check:ci     # Biome lint + formatting + import order, exactly as CI runs it
 pnpm typecheck    # tsc --noEmit
 pnpm test         # Vitest
+node script/api-reference.mjs --check
 ```
 
 `pnpm lint` is lint-only and will pass on formatting or import-order drift that

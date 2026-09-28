@@ -27,6 +27,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:ci
       - run: pnpm typecheck
+      - name: Check generated API reference
+        run: node script/api-reference.mjs --check
       - run: pnpm test
       - run: pnpm build
       # The published tarball must type-resolve for both CommonJS and ESM

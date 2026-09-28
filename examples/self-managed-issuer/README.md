@@ -1,15 +1,21 @@
 # Self-managed issuer example (Node.js)
 
-This executable example prepares two fictional payslips, exercises single and batch registration in sandbox live mode, and generates matching self-managed SVG barcodes and PDF XMP payloads. It follows the same flow as the .NET example.
+This executable example prepares one fictional AU2 payslip and one fictional NZ2 payslip, exercises single (AU2) and mixed-schema batch registration in sandbox live mode, and generates matching self-managed SVG barcodes and PDF XMP payloads. Each record pairs its jurisdictional PII formatter with the corresponding typed v2 non-PII payload. The NZ example uses `paye`, not the AU `paygw` field.
 
 ## Setup
 
-Requires Node.js 20 or later. From this directory:
+Requires Node.js 20 or later. Until a package containing the AU2/NZ2 APIs is published, build and pack the SDK from `ecosystems/node` before installing the example against that package:
 
 ```sh
+pnpm build
+mkdir -p package
+pnpm pack --pack-destination package
+cd examples/self-managed-issuer
 pnpm install --ignore-workspace
-pnpm add --ignore-workspace @verifiabl/issuer
+pnpm add --ignore-workspace ../../package/verifiabl-issuer-*.tgz
 ```
+
+After the updated SDK is published, replace the local tarball installation with `pnpm add --ignore-workspace @verifiabl/issuer`.
 
 ## Run offline
 
@@ -30,7 +36,7 @@ export VERIFIABL_ENCRYPTION_KEY_BASE64='your-base64-encoded-provider-key'
 pnpm start -- live
 ```
 
-Each run uses a unique output directory. It writes SVG badges, matching v2 XMP payloads, registration manifests, and batch outcomes. Each manifest contains the fixed request fields needed to retry an ambiguous registration result with the same Verifiabl reference. The IV and authentication tag use Base64 in the manifest. Plaintext employee PII and the provider encryption key must remain inside the issuer's trusted infrastructure.
+Each run uses a unique output directory. It writes SVG badges, matching v2 XMP payloads, registration manifests, and batch outcomes. Each manifest contains the complete v2 non-PII SDK input and fixed request fields needed to retry an ambiguous registration result with the same Verifiabl reference. The IV and authentication tag use Base64 in the manifest. Plaintext employee PII and the provider encryption key must remain inside the issuer's trusted infrastructure.
 
 ## Documentation snippets
 

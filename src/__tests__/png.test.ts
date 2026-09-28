@@ -16,6 +16,12 @@ const EXPECTED_HEIGHTS: Record<number, number> = {
 };
 
 describe("createBarcodePng", () => {
+  it("rejects a removed format option before rendering", async () => {
+    await expect(createBarcodePng(PARTS, { format: "v1" } as never)).rejects.toThrow(
+      "only issues v2",
+    );
+  });
+
   it("renders a PNG at each supported pixel width", async () => {
     for (const pixelWidth of SUPPORTED_PNG_PIXEL_WIDTHS) {
       const { png, width, height } = await createBarcodePng(PARTS, {}, pixelWidth);

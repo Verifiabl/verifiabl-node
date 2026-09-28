@@ -6,6 +6,32 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-09-28
+
+### Added
+
+- Added closed AU2 and NZ2 non-PII schemas, registration support, numeric
+  `{ value, display? }` formatting, and the optional ten-currency allow-list.
+  Defined printed-string fields are allowed; integrations must not put employee PII in them.
+- Added fixed-arity `formatAustralianPii` and `formatNewZealandPii` writers with
+  structured address inputs and jurisdiction-specific profile identifiers.
+- `periodStart` is optional for `au.payslip.v2` and `nz.payslip.v2` while
+  remaining required for `au.payslip.v1`.
+
+### Removed
+
+- **Breaking:** removed legacy P1/v1 issuer output. `formatPiiV1`, barcode format
+  options, and legacy scan-host selection are no longer available; PII and
+  barcode writers now generate only P2/v2. `parsePii` still reads P1 plaintext
+  from existing documents.
+- **Breaking:** removed raw Base32 helpers, validation schemas, schema regexes,
+  and PII-profile metadata from the package entry point. The documented URL
+  constants and `parsePii` remain available for environment configuration,
+  migrations, and integration tests. Use `buildBarcodePayload`, `buildScanUrl`,
+  `createBarcodeSvg`, or `createBarcodePng` instead of assembling the wire
+  format with `encodeBase32`. The formatting and client APIs perform their own
+  validation, so integrations do not need the SDK's Zod schemas or regexes.
+
 ## [0.24.0]
 
 ### Added

@@ -1,4 +1,4 @@
-import type { BarcodeParts, ScanUrlOptions } from "../payload.js";
+import { type BarcodeParts, rejectRemovedBarcodeFormat, type ScanUrlOptions } from "../payload.js";
 import { blitQrOntoFrame } from "./blit.js";
 import { frameRaster, SUPPORTED_PNG_PIXEL_WIDTHS, type SupportedPngPixelWidth } from "./frame.js";
 import { encodePng, type PngEncodeOptions } from "./pngEncode.js";
@@ -71,14 +71,12 @@ export async function createBarcodePng(
   options: BarcodePngOptions = {},
   pixelWidth = 720,
 ): Promise<BarcodePngResult> {
+  rejectRemovedBarcodeFormat(options);
   if (!Number.isInteger(pixelWidth) || !isSupportedPixelWidth(pixelWidth)) {
     throw new Error(`pixelWidth must be one of ${SUPPORTED_PNG_PIXEL_WIDTHS.join(", ")}`);
   }
 
   const scanOptions: ScanUrlOptions = {};
-  if (options.format !== undefined) {
-    scanOptions.format = options.format;
-  }
   if (options.environment !== undefined) {
     scanOptions.environment = options.environment;
   }
