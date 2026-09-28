@@ -3,7 +3,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   formatPii,
-  formatPiiV1,
   PII_FIELD_ORDER,
   PII_PAYLOAD_MAX_BYTES,
   PII_TEXT_PROFILE_ID,
@@ -264,12 +263,6 @@ describe("P2 formatting", () => {
       expect(() => formatPii({ employeeName: value })).toThrow(PiiValidationError);
     },
   );
-
-  it("keeps a P1 writer only for rollback", () => {
-    expect(formatPiiV1(core)).toBe(
-      "P1|Zoë Nguyễn|Ingénieure|R&D|53004085616|062-000|12345678|Zoë Nguyễn",
-    );
-  });
 
   it("exports the permanent current field order", () => {
     expect(PII_FIELD_ORDER).toEqual([

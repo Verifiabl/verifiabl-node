@@ -15,8 +15,6 @@ import {
  */
 
 export interface BarcodeSvgOptions {
-  /** Printed format. Defaults to `v2`; select `v1` only for rollback. */
-  format?: ScanUrlOptions["format"];
   /** API environment for the public QR scan URL. Defaults to "production". */
   environment?: VerifiablEnvironment;
   /**
@@ -280,9 +278,6 @@ export function createBarcodeSvg(
   const badgeWidth = validateBadgeWidth(width, "width");
 
   const scanOptions: ScanUrlOptions = {};
-  if (options.format !== undefined) {
-    scanOptions.format = options.format;
-  }
   if (options.environment !== undefined) {
     scanOptions.environment = options.environment;
   }
@@ -410,12 +405,9 @@ export interface QrEncoding {
   readonly data: string | QRCodeSegment[];
 }
 
-/** Build explicit byte/alphanumeric segments for v2; v1 retains legacy encoding. */
+/** Build explicit byte/alphanumeric segments for the current V2 format. */
 export function buildQrEncoding(parts: BarcodeParts, options: ScanUrlOptions): QrEncoding {
   const built = buildScanUrlParts(parts, options);
-  if (built.alphanumericCiphertext === undefined) {
-    return { content: built.content, data: built.content };
-  }
   return {
     content: built.content,
     data: [

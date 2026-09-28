@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { cpSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import assert from "node:assert/strict";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -26,7 +27,7 @@ try {
     [
       "--input-type=module",
       "--eval",
-      'import { encodeBase32 } from "@verifiabl/issuer"; if (encodeBase32(Buffer.from("f")) !== "MY") process.exit(1)',
+      'import { generateVerifiablReference } from "@verifiabl/issuer"; if (generateVerifiablReference().length !== 22) process.exit(1)',
     ],
     consumer,
   );
@@ -34,7 +35,7 @@ try {
     process.execPath,
     [
       "--eval",
-      'const { encodeBase32 } = require("@verifiabl/issuer"); if (encodeBase32(Buffer.from("f")) !== "MY") process.exit(1)',
+      'const { generateVerifiablReference } = require("@verifiabl/issuer"); if (generateVerifiablReference().length !== 22) process.exit(1)',
     ],
     consumer,
   );
@@ -45,6 +46,28 @@ try {
   run("pnpm", ["add", "--ignore-workspace", join(artifactDirectory, tarballs[0])], example);
   run("pnpm", ["build"], example);
   run(process.execPath, ["dist/app.js", "offline"], example);
+  const [runDirectory] = readdirSync(join(example, "output"));
+  assert.ok(runDirectory, "Offline example must produce a run directory");
+  const manifest = (group, id) => JSON.parse(readFileSync(
+    join(example, "output", runDirectory, group, id, "manifest.json"), "utf8"));
+  for (const [id, schema, currency, gross, taxField, tax, net] of [
+    ["PAY-1001", "au.payslip.v2", "AUD", "9000.00", "paygw", "2250.00", "6750.00"],
+    ["PAY-1002", "nz.payslip.v2", "NZD", "7600.00", "paye", "1710.00", "5890.00"],
+  ]) {
+    const request = manifest("batch", id).registrationRequest;
+    assert.equal(request.schema, schema);
+    assert.deepEqual(request.payslipNonPii, {
+      periodEnd: "2026-08-31",
+      paymentDate: "2026-09-04",
+      currency,
+      gross: { value: gross },
+      [taxField]: { value: tax },
+      net: { value: net },
+    });
+  }
+  const single = manifest("single", "PAY-1001").registrationRequest;
+  assert.equal(single.schema, "au.payslip.v2");
+  assert.deepEqual(single.payslipNonPii, manifest("batch", "PAY-1001").registrationRequest.payslipNonPii);
 } finally {
   rmSync(consumer, { recursive: true, force: true });
 }

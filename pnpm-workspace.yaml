@@ -1,5 +1,6 @@
 packages:
   - "."
+  - "docs"
 
 allowBuilds:
   esbuild: true

@@ -2,27 +2,33 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
+  AUSTRALIAN_PAYSLIP_V2_SCHEMA,
+  type AustralianPayslipV2,
   buildBarcodePayload,
   buildScanUrl,
   createBarcodeSvg,
   encryptPii,
-  formatPii,
+  formatAustralianPii,
+  formatNewZealandPii,
   generateVerifiablReference,
-  type PayslipNonPii,
+  NEW_ZEALAND_PAYSLIP_V2_SCHEMA,
+  type NewZealandPayslipV2,
   PDF_PAYLOAD_XMP_NAMESPACE,
   PDF_PAYLOAD_XMP_PROPERTY,
-  type PiiFields,
+  payslipNumber,
   type RegisterNonPiiRequest,
   VerifiablClient,
 } from "@verifiabl/issuer";
 
 type Mode = "offline" | "live";
 
-interface ExamplePayslip {
+type ExamplePayslip = {
   externalId: string;
-  pii: PiiFields;
-  nonPii: PayslipNonPii;
-}
+  formatPii: () => string;
+  registration:
+    | { schema: typeof AUSTRALIAN_PAYSLIP_V2_SCHEMA; payslipNonPii: AustralianPayslipV2 }
+    | { schema: typeof NEW_ZEALAND_PAYSLIP_V2_SCHEMA; payslipNonPii: NewZealandPayslipV2 };
+};
 
 interface PreparedPayslip {
   payslip: ExamplePayslip;
@@ -35,50 +41,64 @@ interface PreparedPayslip {
 const PAYSLIPS: readonly ExamplePayslip[] = [
   {
     externalId: "PAY-1001",
-    pii: {
-      employeeName: "Jane A. Doe",
-      position: "Senior Developer",
-      department: "Engineering",
-      employerAbn: "12345678901",
-      bsb: "062-000",
-      accountNumber: "12345678",
-      accountName: "Jane A Doe",
-      address: "12 Example St, Sydney NSW 2000",
-    },
-    nonPii: {
-      periodStart: "2026-08-01",
-      periodEnd: "2026-08-31",
-      paymentDate: "2026-09-04",
-      currency: "AUD",
-      grossCents: 900_000,
-      paygwCents: 225_000,
-      netCents: 675_000,
-      ytdGrossCents: 5_400_000,
-      ytdPaygwCents: 1_350_000,
+    formatPii: () =>
+      formatAustralianPii({
+        employeeName: "Jane A. Doe",
+        position: "Senior Developer",
+        department: "Engineering",
+        employerName: "Example Payroll Pty Ltd",
+        employerAbn: "12 345 678 901",
+        bsb: "062-000",
+        accountNumber: "****5678",
+        accountName: "Jane A Doe",
+        address: {
+          lines: ["12 Example St"],
+          suburb: "Sydney",
+          stateOrTerritory: "NSW",
+          postcode: "2000",
+        },
+      }),
+    registration: {
+      schema: AUSTRALIAN_PAYSLIP_V2_SCHEMA,
+      payslipNonPii: {
+        // v2 permits a payslip with only the period end printed.
+        periodEnd: "2026-08-31",
+        paymentDate: "2026-09-04",
+        currency: "AUD",
+        gross: payslipNumber("9000.00"),
+        paygw: payslipNumber("2250.00"),
+        net: payslipNumber("6750.00"),
+      },
     },
   },
   {
     externalId: "PAY-1002",
-    pii: {
-      employeeName: "Zoë Nguyễn",
-      position: "Product Designer",
-      department: "Product",
-      employerAbn: "12345678901",
-      bsb: "062-000",
-      accountNumber: "87654321",
-      accountName: "Zoë Nguyễn",
-      address: "44 Harbour Rd, Melbourne VIC 3000",
-    },
-    nonPii: {
-      periodStart: "2026-08-01",
-      periodEnd: "2026-08-31",
-      paymentDate: "2026-09-04",
-      currency: "AUD",
-      grossCents: 760_000,
-      paygwCents: 171_000,
-      netCents: 589_000,
-      ytdGrossCents: 4_560_000,
-      ytdPaygwCents: 1_026_000,
+    formatPii: () =>
+      formatNewZealandPii({
+        employeeName: "Zoë Nguyễn",
+        irdNumber: "***-***-***",
+        position: "Product Designer",
+        department: "Product",
+        employerName: "Example Payroll NZ Ltd",
+        accountNumber: "**-****-*******-**",
+        accountName: "Zoë Nguyễn",
+        address: {
+          lines: ["44 Harbour Rd"],
+          suburb: "Parnell",
+          city: "Auckland",
+          postcode: "1052",
+        },
+      }),
+    registration: {
+      schema: NEW_ZEALAND_PAYSLIP_V2_SCHEMA,
+      payslipNonPii: {
+        periodEnd: "2026-08-31",
+        paymentDate: "2026-09-04",
+        currency: "NZD",
+        gross: payslipNumber("7600.00"),
+        paye: payslipNumber("1710.00"),
+        net: payslipNumber("5890.00"),
+      },
     },
   },
 ];
@@ -127,7 +147,7 @@ function readLiveKey(): Buffer {
 
 function prepare(payslip: ExamplePayslip, key: Buffer): PreparedPayslip {
   // snippet:start:node.self-managed.format-and-encrypt
-  const plaintext = formatPii(payslip.pii);
+  const plaintext = payslip.formatPii();
   const { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);
   // snippet:end:node.self-managed.format-and-encrypt
 
@@ -179,9 +199,8 @@ async function writeArtifacts(
             kind: group,
             externalId: group === "batch" ? prepared.payslip.externalId : undefined,
             verifiablReference: prepared.verifiablReference,
-            schema: "au.payslip.v1",
+            ...prepared.payslip.registration,
             issuedAt: prepared.issuedAt,
-            payslipNonPii: prepared.payslip.nonPii,
             encryptionMetadataEncoding: "base64",
             encryptionMetadata: {
               iv: Buffer.from(prepared.encryptionMetadata.iv).toString("base64"),
@@ -221,7 +240,7 @@ async function run(): Promise<void> {
   const { payslip, verifiablReference, issuedAt, encryptionMetadata } = single;
   // snippet:start:node.self-managed.prepare-batch
   const batch = payslips.map((payslip) => {
-    const plaintext = formatPii(payslip.pii);
+    const plaintext = payslip.formatPii();
     const { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);
 
     const verifiablReference = generateVerifiablReference();
@@ -249,9 +268,8 @@ async function run(): Promise<void> {
     // snippet:start:node.self-managed.register-single
     await client.registerNonPii({
       verifiablReference,
-      schema: "au.payslip.v1",
+      ...payslip.registration,
       issuedAt,
-      payslipNonPii: payslip.nonPii,
       encryptionMetadata,
     });
     // snippet:end:node.self-managed.register-single
@@ -261,9 +279,8 @@ async function run(): Promise<void> {
       records: batch.map((record) => ({
         verifiablReference: record.verifiablReference,
         externalId: record.payslip.externalId,
-        schema: "au.payslip.v1",
+        ...record.payslip.registration,
         issuedAt: record.issuedAt,
-        payslipNonPii: record.payslip.nonPii,
         encryptionMetadata: record.encryptionMetadata,
       })),
     });

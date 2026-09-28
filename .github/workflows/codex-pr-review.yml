@@ -60,6 +60,7 @@ jobs:
             - Preserve the public SDK API, ESM and CommonJS exports, generated types, and Node 20 compatibility.
             - Keep AES-256-GCM encryption, nonce, authentication-tag, key-version, and payload encoding behaviour correct.
             - Never send plaintext employee PII, encryption keys, OAuth secrets, or decrypted payloads to Verifiabl.
+            - V2 non-PII schemas intentionally accept printed strings; integrators must keep employee PII out of them. Do not require enums or PII content checks for those fields.
             - Validate public inputs and preserve stable error codes, request IDs, batch ordering, and partial-failure behaviour.
             - Keep QR payloads, environment URLs, SVG and PNG output, and scannability backward compatible.
 

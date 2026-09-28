@@ -17,7 +17,7 @@ const VERIFIABL_REF = "AbCdEfGhIjKlMnOpQrStUv";
 const CIPHERTEXT_BASE64URL = "Zm9v";
 const CIPHERTEXT = Uint8Array.from(Buffer.from(CIPHERTEXT_BASE64URL, "base64url"));
 
-const REQUEST: RegisterNonPiiRequest = {
+const REQUEST = {
   schema: "au.payslip.v1",
   issuedAt: "2026-06-11T00:00:00Z",
   // Balances: 900000 - 225000 (paygw) = 675000.
@@ -36,7 +36,7 @@ const REQUEST: RegisterNonPiiRequest = {
     iv: new Uint8Array(12),
     tag: new Uint8Array(16),
   },
-};
+} satisfies RegisterNonPiiRequest;
 
 const REGISTER_AND_BUILD_BARCODE_REQUEST: RegisterAndBuildBarcodeRequest = {
   ...REQUEST,
@@ -247,8 +247,9 @@ describe("VerifiablClient requests", () => {
         ...REQUEST,
         payslipNonPii: {
           ...REQUEST.payslipNonPii,
+          // @ts-expect-error employeeName is PII, not a payslipNonPii field.
           employeeName: "Alice Smith",
-        } as unknown as RegisterNonPiiRequest["payslipNonPii"],
+        },
       }),
     ).rejects.toThrow();
     expect(fetch).not.toHaveBeenCalled();
@@ -355,8 +356,9 @@ describe("VerifiablClient requests", () => {
         ...REQUEST,
         payslipNonPii: {
           ...REQUEST.payslipNonPii,
+          // @ts-expect-error JPY is outside the supported currency list.
           currency: "JPY",
-        } as unknown as RegisterNonPiiRequest["payslipNonPii"],
+        },
       }),
     ).rejects.toThrow();
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -1095,7 +1097,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
       records: [
         {
           ...REQUEST,
-          schema: "au.payslip.v2" as RegisterNonPiiBatchRequest["records"][number]["schema"],
+          schema: "au.payslip.v99",
           verifiablReference: VERIFIABL_REF_A,
         },
         { ...REQUEST, verifiablReference: VERIFIABL_REF_B },
@@ -1108,7 +1110,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     expect(result.results[0]).toMatchObject({
       status: "error",
       code: "VALIDATION_FAILED",
-      detail: "unsupported schema 'au.payslip.v2'",
+      detail: "unsupported schema 'au.payslip.v99'",
       verifiablReference: VERIFIABL_REF_A,
     });
     expect(result.results[1]).toMatchObject({ status: "created" });

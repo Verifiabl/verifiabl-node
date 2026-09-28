@@ -76,9 +76,6 @@ export async function createBarcodePng(
   }
 
   const scanOptions: ScanUrlOptions = {};
-  if (options.format !== undefined) {
-    scanOptions.format = options.format;
-  }
   if (options.environment !== undefined) {
     scanOptions.environment = options.environment;
   }

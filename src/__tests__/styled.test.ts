@@ -162,26 +162,25 @@ describe("createBarcodeSvg", () => {
 
   // From the default "M" ceiling, the ladder keeps M (flagging degraded once
   // modules fall below the ideal size) until even M won't fit, then drops to L,
-  // never varying the fixed frame. Lowercase base64url ("a") forces byte mode
-  // like real encrypted PII. Thresholds are at width 480.
+  // never varying the fixed frame. Thresholds are at width 480.
   it.each([
     {
       label: "stays M, sub-ideal modules",
-      ciphertext: Buffer.from("a".repeat(1000), "base64url"),
+      ciphertext: Buffer.from("a".repeat(1200), "base64url"),
       ec: "M",
     },
     {
       label: "stays M near the floor",
-      ciphertext: Buffer.from("a".repeat(1700), "base64url"),
+      ciphertext: Buffer.from("a".repeat(1900), "base64url"),
       ec: "M",
     },
     {
       label: "longest fittable: drops to L",
-      ciphertext: Buffer.from("a".repeat(1800), "base64url"),
+      ciphertext: Buffer.from("a".repeat(2500), "base64url"),
       ec: "L",
     },
   ])("degrades error correction in order for $label", ({ ciphertext, ec }) => {
-    const result = createBarcodeSvg({ ...PARTS, encryptedPii: ciphertext }, { format: "v1" });
+    const result = createBarcodeSvg({ ...PARTS, encryptedPii: ciphertext });
     expect(result.errorCorrectionLevel).toBe(ec);
     expect(result.degraded).toBe(true);
     expect(result.modulePx).toBeGreaterThanOrEqual(3);
@@ -194,17 +193,17 @@ describe("createBarcodeSvg", () => {
     // Too dense to clear the floor even at L, but still within QR capacity.
     const parts = {
       ...PARTS,
-      encryptedPii: Buffer.from("a".repeat(2500), "base64url"),
+      encryptedPii: Buffer.from("a".repeat(2900), "base64url"),
     };
-    expect(() => createBarcodeSvg(parts, { format: "v1" })).toThrow(
+    expect(() => createBarcodeSvg(parts)).toThrow(
       /too long to render a scannable barcode in the branded frame/,
     );
 
-    const error = capacityErrorFrom(() => createBarcodeSvg(parts, { format: "v1" }));
+    const error = capacityErrorFrom(() => createBarcodeSvg(parts));
     expect(error).toBeInstanceOf(Error);
     expect(error.name).toBe("QrCapacityError");
     expect(error.reason).toBe("frame-fit");
-    expect(error.contentLength).toBe(buildScanUrl(parts, { format: "v1" }).length);
+    expect(error.contentLength).toBe(buildScanUrl(parts).length);
     expect(error.badgeWidth).toBe(480);
   });
 

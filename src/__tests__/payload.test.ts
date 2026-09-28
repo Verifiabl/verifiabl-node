@@ -2,7 +2,6 @@ import {
   buildBarcodePayload,
   buildScanUrl,
   buildScanUrlParts,
-  DEFAULT_SCAN_BASE_URL,
   generateVerifiablReference,
   verifiablReferenceSchema,
 } from "../payload.js";
@@ -16,15 +15,6 @@ describe("buildBarcodePayload", () => {
     expect(
       buildBarcodePayload({ verifiablReference: VERIFIABL_REF, encryptedPii: CIPHERTEXT }),
     ).toBe(`2|${VERIFIABL_REF}|MZXW6YTBOJRGC6TROV4A`);
-  });
-
-  it("builds the v1 pipe format for rollback", () => {
-    expect(
-      buildBarcodePayload(
-        { verifiablReference: VERIFIABL_REF, encryptedPii: CIPHERTEXT },
-        { format: "v1" },
-      ),
-    ).toBe(`1|${VERIFIABL_REF}|${CIPHERTEXT_BASE64URL}`);
   });
 
   it("rejects Verifiabl references that are not 22 chars", () => {
@@ -122,14 +112,6 @@ describe("buildScanUrl", () => {
       { environment: "sandbox" },
     );
     expect(url.startsWith("https://v.sandbox.verifiabl.io/v/")).toBe(true);
-  });
-
-  it("builds the v1 long-host URL for rollback", () => {
-    const url = buildScanUrl(
-      { verifiablReference: VERIFIABL_REF, encryptedPii: CIPHERTEXT },
-      { format: "v1" },
-    );
-    expect(url).toBe(`${DEFAULT_SCAN_BASE_URL}/v/${VERIFIABL_REF}#1.${CIPHERTEXT_BASE64URL}`);
   });
 
   it("accepts a custom https scan URL origin", () => {
