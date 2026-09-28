@@ -187,6 +187,34 @@ describe("VerifiablClient construction", () => {
 });
 
 describe("VerifiablClient requests", () => {
+  it("identifies the issuer SDK on OAuth and registration requests", async () => {
+    const calls: Array<[string, RequestInit | undefined]> = [];
+    const client = new VerifiablClient({
+      auth: TEST_AUTH,
+      fetch: async (input, init) => {
+        calls.push([String(input), init]);
+        return String(input).includes("/oauth/token")
+          ? new Response(
+              JSON.stringify({
+                access_token: "test-token",
+                token_type: "Bearer",
+                expires_in: 3600,
+              }),
+            )
+          : registerResponse();
+      },
+    });
+
+    await client.registerNonPii(REQUEST);
+
+    expect(calls).toHaveLength(2);
+    for (const [, init] of calls) {
+      const userAgent = new Headers(init?.headers).get("user-agent");
+      expect(userAgent).toMatch(/^verifiabl-issuer-node\/\d+\.\d+\.\d+ \(node \d+\.\d+\.\d+\)$/);
+      expect(userAgent).toContain(`(node ${process.versions.node})`);
+    }
+  });
+
   it("sends a provider-generated reference for retry-safe registration", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
     const client = testClient({ fetch });
@@ -355,9 +383,9 @@ describe("VerifiablClient requests", () => {
     await expect(
       client.registerNonPii({
         ...REQUEST,
+        // @ts-expect-error JPY is outside the v1 currency list.
         payslipNonPii: {
           ...REQUEST.payslipNonPii,
-          // @ts-expect-error JPY is outside the supported currency list.
           currency: "JPY",
         },
       }),
@@ -434,6 +462,9 @@ describe("VerifiablClient requests", () => {
       "https://register.verifiabl.io/v1/registerAndBuildBarcode",
     );
     expect(requestBody(firstFetchCall(fetchMock))).toEqual(WIRE_REGISTER_AND_BUILD_BARCODE_REQUEST);
+    expect(new Headers(firstFetchCall(fetchMock)[1]?.headers).get("user-agent")).toMatch(
+      /^verifiabl-issuer-node\/\d+\.\d+\.\d+ \(node \d+\.\d+\.\d+\)$/,
+    );
   });
 
   it("throws VerifiablApiError with the stable code on API errors", async () => {

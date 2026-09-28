@@ -191,6 +191,9 @@ export interface VerifiablErrorEvent extends VerifiablRequestEvent {
   error: unknown;
 }
 
+// Replaced with the package version in both published bundles at build time.
+declare const __VERIFIABL_ISSUER_VERSION__: string;
+
 export interface VerifiablClientOptions {
   /** How to authenticate. See {@link VerifiablAuth}. */
   auth: VerifiablAuth;
@@ -234,6 +237,7 @@ export class VerifiablClient {
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
   private readonly fetchImpl: typeof globalThis.fetch;
+  private readonly userAgent: string;
   private readonly onRequest: ((event: VerifiablRequestEvent) => void) | undefined;
   private readonly onResponse: ((event: VerifiablResponseEvent) => void) | undefined;
   private readonly onError: ((event: VerifiablErrorEvent) => void) | undefined;
@@ -266,6 +270,7 @@ export class VerifiablClient {
     this.timeoutMs = timeoutMs;
     this.maxRetries = maxRetries;
     this.fetchImpl = options.fetch ?? globalThis.fetch;
+    this.userAgent = `verifiabl-issuer-node/${__VERIFIABL_ISSUER_VERSION__} (node ${process.versions.node})`;
     this.onRequest = options.onRequest;
     this.onResponse = options.onResponse;
     this.onError = options.onError;
@@ -498,6 +503,7 @@ export class VerifiablClient {
           authorization: `Bearer ${token}`,
           "content-type": "application/json",
           accept: "application/json",
+          "user-agent": this.userAgent,
         },
         body: JSON.stringify(body),
         signal: requestSignal.signal,
@@ -557,7 +563,7 @@ export class VerifiablClient {
     try {
       response = await this.fetchImpl(this.tokenUrl, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "user-agent": this.userAgent },
         body: JSON.stringify({
           grant_type: "client_credentials",
           client_id: this.auth.clientId,

@@ -6,6 +6,26 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-09-28
+
+### Changed
+
+- **Breaking:** AU2 and NZ2 amounts, rates and quantities are now plain decimal
+  strings, for example `gross: "1234.56"`, instead of `{ value, display? }`
+  objects. `display` is removed. The SDK checks the decimal format before it
+  sends a record and sends each string exactly as given, so `"1.50"` and `"1.5"`
+  stay distinct. JavaScript numbers are no longer accepted, because they cannot
+  keep a value's scale.
+- **Breaking:** `currency` is required on `au.payslip.v2` and `nz.payslip.v2`.
+  `supportedV2Currencies` now lists the 155 current ISO 4217 currency codes
+  instead of ten codes. Fund codes and codes with no minor unit (for example
+  `XAU`, `XTS`, `XXX`) are excluded, because wages are paid in legal tender.
+  `au.payslip.v1` is unchanged.
+
+### Removed
+
+- **Breaking:** removed `payslipNumber` and the `PayslipNumber` type.
+
 ## [0.25.0] - 2026-09-28
 
 ### Added

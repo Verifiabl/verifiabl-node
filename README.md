@@ -86,7 +86,6 @@ import {
   createBarcodeSvg,
   encryptPii,
   formatAustralianPii,
-  payslipNumber,
 } from "@verifiabl/issuer";
 
 const plaintext = formatAustralianPii({
@@ -112,9 +111,9 @@ const { verifiablReference } = await client.registerNonPii({
     periodEnd: "2026-05-31",
     paymentDate: "2026-06-04",
     currency: "AUD",
-    gross: payslipNumber("8125.00", "$8,125.00"),
-    paygw: payslipNumber(2030, "$2,030.00"),
-    net: payslipNumber("6095.00", "$6,095.00"),
+    gross: "8125.00",
+    paygw: "2030.00",
+    net: "6095.00",
   },
   encryptionMetadata: encrypted.encryptionMetadata,
 });
@@ -143,11 +142,15 @@ checks the PII marker against the record's jurisdiction, not the schema version;
 a jurisdiction mismatch fails verification. Legacy v1 verification returns this
 plaintext without parsing it.
 
-`payslipNumber` accepts a JavaScript number or an exact decimal string and
-produces the required `{ value, display? }` object. A JavaScript number has no
-scale, so `payslipNumber(6000.0)` sends `"6000"`. Use a string when scale must
-remain exact. Currency is optional and supports AUD, NZD, USD, GBP, EUR, CAD,
-SGD, HKD, CHF or ZAR.
+Every AU2 and NZ2 amount, rate and quantity is a plain decimal string, for
+example `"1234.56"`, `"-25.00"` or `"47.3684"`: an optional leading `-`, digits,
+and an optional `.` followed by digits. The SDK checks this format before it
+sends the record and sends the string exactly as given, so `"1.50"` and `"1.5"`
+stay distinct. It does not accept a JavaScript number, because a number cannot
+keep trailing zeros or more than about 17 significant digits. `currency` is
+required and accepts a current ISO 4217 currency code (`supportedV2Currencies`).
+Fund codes and codes with no minor unit, for example `XAU` or `XXX`, are not
+accepted, because wages are paid in legal tender.
 
 ### Legacy P2 compatibility writer
 
