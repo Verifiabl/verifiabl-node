@@ -1,6 +1,6 @@
 # Self-managed issuer example (Node.js)
 
-This executable example prepares one fictional AU2 payslip and one fictional NZ2 payslip, exercises single (AU2) and mixed-schema batch registration in sandbox live mode, and generates matching self-managed SVG barcodes and PDF XMP payloads. Each record pairs its jurisdictional PII formatter with the corresponding typed v2 non-PII payload. The NZ example uses `paye`, not the AU `paygw` field.
+This executable example prepares one fictional AU2 payslip and one fictional NZ2 payslip, exercises single (AU2) and mixed-schema batch registration in sandbox live mode, and generates matching self-managed SVG barcodes and PDF XMP payloads. Each record uses its jurisdiction's prepared-v2 helper to validate non-PII fields, format and encrypt PII locally, and keep its reference, registration request, and barcode parts together. The NZ example uses `paye`, not the AU `paygw` field.
 
 ## Setup
 
@@ -36,7 +36,7 @@ export VERIFIABL_ENCRYPTION_KEY_BASE64='your-base64-encoded-provider-key'
 pnpm start -- live
 ```
 
-Each run uses a unique output directory. It writes SVG badges, matching v2 XMP payloads, registration manifests, and batch outcomes. Each manifest contains the complete v2 non-PII SDK input and fixed request fields needed to retry an ambiguous registration result with the same Verifiabl reference. The IV and authentication tag use Base64 in the manifest. Plaintext employee PII and the provider encryption key must remain inside the issuer's trusted infrastructure.
+Each run uses a unique output directory. It writes SVG badges, matching v2 XMP payloads, registration manifests, and batch outcomes. Each manifest contains the prepared registration's fixed request fields needed to retry an ambiguous registration result with the same Verifiabl reference. Reuse the persisted request; do not prepare again. The IV and authentication tag use Base64 in the manifest. Plaintext employee PII and the provider encryption key must remain inside the issuer's trusted infrastructure.
 
 ## Documentation snippets
 

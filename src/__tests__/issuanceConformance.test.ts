@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { encryptPiiWithIv } from "../crypto.js";
+import { encryptPiiWithIv } from "../internal/crypto.js";
 import { buildBarcodePayload, buildScanUrl } from "../payload.js";
 import { formatPii, type PiiFields } from "../pii.js";
 

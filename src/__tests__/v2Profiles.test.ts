@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ZodError } from "zod";
 import {
   australianPayslipV2Schema,
   newZealandPayslipV2Schema,
@@ -17,6 +16,7 @@ import {
   NEW_ZEALAND_PII_TEXT_PROFILE_ID,
   type NewZealandPiiFields,
   PII_PAYLOAD_MAX_BYTES,
+  PiiValidationError,
 } from "../pii.js";
 import {
   registerNonPiiBatchToWire,
@@ -147,7 +147,7 @@ describe("AU2 and NZ2 conformance vectors", () => {
 
   it.each(jurisdictionVectors.invalid)("rejects $id", (vector) => {
     expect(() => formatProfile(vector)).toThrow(
-      vector.expectedError === "payload-too-large" ? RangeError : ZodError,
+      vector.expectedError === "payload-too-large" ? RangeError : PiiValidationError,
     );
   });
 });

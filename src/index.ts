@@ -13,6 +13,13 @@ export {
 } from "./client.js";
 export { type EncryptedPii, encryptPii } from "./crypto.js";
 export {
+  type AustralianV2IssuanceInput,
+  type NewZealandV2IssuanceInput,
+  type PreparedV2Payslip,
+  prepareAustralianV2Payslip,
+  prepareNewZealandV2Payslip,
+} from "./issuance.js";
+export {
   type BarcodeParts,
   buildBarcodePayload,
   buildScanUrl,

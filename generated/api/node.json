@@ -26,6 +26,26 @@
 					},
 					{
 						"kind": "text",
+						"text": ", "
+					},
+					{
+						"kind": "inline-tag",
+						"tag": "@link",
+						"text": "formatAustralianPii",
+						"target": 837
+					},
+					{
+						"kind": "text",
+						"text": " and\n"
+					},
+					{
+						"kind": "inline-tag",
+						"tag": "@link",
+						"text": "formatNewZealandPii",
+						"target": 846
+					},
+					{
+						"kind": "text",
 						"text": " when a field value cannot be encoded in the PII\nwire format. The pipe is the field delimiter and the format has no escape\nmechanism, so an offending value must be corrected at the source (strip the\ncharacter) rather than escaped. "
 					},
 					{
@@ -8580,7 +8600,7 @@
 						"elementType": {
 							"type": "reflection",
 							"declaration": {
-								"id": 1053,
+								"id": 1344,
 								"name": "__type",
 								"variant": "declaration",
 								"kind": 65536,
@@ -8684,7 +8704,7 @@
 								{
 									"type": "reflection",
 									"declaration": {
-										"id": 1049,
+										"id": 1340,
 										"name": "__type",
 										"variant": "declaration",
 										"kind": 65536,
@@ -8812,7 +8832,7 @@
 								{
 									"type": "reflection",
 									"declaration": {
-										"id": 1050,
+										"id": 1341,
 										"name": "__type",
 										"variant": "declaration",
 										"kind": 65536,
@@ -8992,7 +9012,7 @@
 								{
 									"type": "reflection",
 									"declaration": {
-										"id": 1051,
+										"id": 1342,
 										"name": "__type",
 										"variant": "declaration",
 										"kind": 65536,
@@ -9227,7 +9247,7 @@
 					"type": {
 						"type": "reflection",
 						"declaration": {
-							"id": 1048,
+							"id": 1339,
 							"name": "__type",
 							"variant": "declaration",
 							"kind": 65536,
@@ -9464,7 +9484,7 @@
 						"elementType": {
 							"type": "reflection",
 							"declaration": {
-								"id": 1052,
+								"id": 1343,
 								"name": "__type",
 								"variant": "declaration",
 								"kind": 65536,
@@ -9574,7 +9594,7 @@
 						"elementType": {
 							"type": "reflection",
 							"declaration": {
-								"id": 1054,
+								"id": 1345,
 								"name": "__type",
 								"variant": "declaration",
 								"kind": 65536,
@@ -9716,7 +9736,7 @@
 					"type": {
 						"type": "reflection",
 						"declaration": {
-							"id": 1055,
+							"id": 1346,
 							"name": "__type",
 							"variant": "declaration",
 							"kind": 65536,
@@ -9914,6 +9934,321 @@
 					],
 					"name": "input",
 					"package": "zod"
+				}
+			]
+		},
+		{
+			"id": 1158,
+			"name": "AustralianV2IssuanceInput",
+			"variant": "declaration",
+			"kind": 256,
+			"flags": {},
+			"children": [
+				{
+					"id": 1161,
+					"name": "issuedAt",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {},
+					"type": {
+						"type": "intrinsic",
+						"name": "string"
+					}
+				},
+				{
+					"id": 1162,
+					"name": "key",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {},
+					"type": {
+						"type": "reference",
+						"target": {
+							"packageName": "@types/node",
+							"packagePath": "buffer.buffer.d.ts",
+							"qualifiedName": "__global.Buffer"
+						},
+						"name": "Buffer",
+						"package": "@types/node",
+						"qualifiedName": "__global.Buffer"
+					}
+				},
+				{
+					"id": 1160,
+					"name": "payslipNonPii",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {},
+					"type": {
+						"type": "reference",
+						"target": 669,
+						"name": "AustralianPayslipV2",
+						"package": "@verifiabl/issuer"
+					}
+				},
+				{
+					"id": 1159,
+					"name": "pii",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {},
+					"type": {
+						"type": "reflection",
+						"declaration": {
+							"id": 1048,
+							"name": "__type",
+							"variant": "declaration",
+							"kind": 65536,
+							"flags": {},
+							"children": [
+								{
+									"id": 488,
+									"name": "accountName",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 487,
+									"name": "accountNumber",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 489,
+									"name": "address",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "reflection",
+										"declaration": {
+											"id": 1049,
+											"name": "__type",
+											"variant": "declaration",
+											"kind": 65536,
+											"flags": {},
+											"children": [
+												{
+													"id": 842,
+													"name": "lines",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {
+														"isOptional": true
+													},
+													"type": {
+														"type": "array",
+														"elementType": {
+															"type": "intrinsic",
+															"name": "string"
+														}
+													},
+													"defaultValue": "..."
+												},
+												{
+													"id": 845,
+													"name": "postcode",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {
+														"isOptional": true
+													},
+													"type": {
+														"type": "intrinsic",
+														"name": "string"
+													},
+													"defaultValue": "..."
+												},
+												{
+													"id": 844,
+													"name": "stateOrTerritory",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {
+														"isOptional": true
+													},
+													"type": {
+														"type": "intrinsic",
+														"name": "string"
+													},
+													"defaultValue": "..."
+												},
+												{
+													"id": 843,
+													"name": "suburb",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {
+														"isOptional": true
+													},
+													"type": {
+														"type": "intrinsic",
+														"name": "string"
+													},
+													"defaultValue": "..."
+												}
+											],
+											"groups": [
+												{
+													"title": "Properties",
+													"children": [
+														842,
+														845,
+														844,
+														843
+													]
+												}
+											]
+										}
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 486,
+									"name": "bsb",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 484,
+									"name": "department",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 482,
+									"name": "employeeName",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 485,
+									"name": "employerAbn",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 840,
+									"name": "employerName",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 483,
+									"name": "position",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								}
+							],
+							"groups": [
+								{
+									"title": "Properties",
+									"children": [
+										488,
+										487,
+										489,
+										486,
+										484,
+										482,
+										485,
+										840,
+										483
+									]
+								}
+							]
+						}
+					}
+				},
+				{
+					"id": 1163,
+					"name": "verifiablReference",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {
+						"isOptional": true
+					},
+					"type": {
+						"type": "intrinsic",
+						"name": "string"
+					}
+				}
+			],
+			"groups": [
+				{
+					"title": "Properties",
+					"children": [
+						1161,
+						1162,
+						1160,
+						1159,
+						1163
+					]
 				}
 			]
 		},
@@ -10838,14 +11173,14 @@
 			]
 		},
 		{
-			"id": 445,
+			"id": 1390,
 			"name": "EncryptedPii",
 			"variant": "declaration",
 			"kind": 256,
 			"flags": {},
 			"children": [
 				{
-					"id": 446,
+					"id": 1391,
 					"name": "encryptedPii",
 					"variant": "declaration",
 					"kind": 1024,
@@ -10870,7 +11205,7 @@
 					}
 				},
 				{
-					"id": 447,
+					"id": 1392,
 					"name": "encryptionMetadata",
 					"variant": "declaration",
 					"kind": 1024,
@@ -10986,8 +11321,8 @@
 				{
 					"title": "Properties",
 					"children": [
-						446,
-						447
+						1391,
+						1392
 					]
 				}
 			]
@@ -11695,7 +12030,7 @@
 						"elementType": {
 							"type": "reflection",
 							"declaration": {
-								"id": 1060,
+								"id": 1351,
 								"name": "__type",
 								"variant": "declaration",
 								"kind": 65536,
@@ -11799,7 +12134,7 @@
 								{
 									"type": "reflection",
 									"declaration": {
-										"id": 1057,
+										"id": 1348,
 										"name": "__type",
 										"variant": "declaration",
 										"kind": 65536,
@@ -11927,7 +12262,7 @@
 								{
 									"type": "reflection",
 									"declaration": {
-										"id": 1058,
+										"id": 1349,
 										"name": "__type",
 										"variant": "declaration",
 										"kind": 65536,
@@ -12083,7 +12418,7 @@
 								{
 									"type": "reflection",
 									"declaration": {
-										"id": 1059,
+										"id": 1350,
 										"name": "__type",
 										"variant": "declaration",
 										"kind": 65536,
@@ -12350,7 +12685,7 @@
 					"type": {
 						"type": "reflection",
 						"declaration": {
-							"id": 1056,
+							"id": 1347,
 							"name": "__type",
 							"variant": "declaration",
 							"kind": 65536,
@@ -12509,7 +12844,7 @@
 					"type": {
 						"type": "reflection",
 						"declaration": {
-							"id": 1061,
+							"id": 1352,
 							"name": "__type",
 							"variant": "declaration",
 							"kind": 65536,
@@ -12526,7 +12861,7 @@
 									"type": {
 										"type": "reflection",
 										"declaration": {
-											"id": 1066,
+											"id": 1357,
 											"name": "__type",
 											"variant": "declaration",
 											"kind": 65536,
@@ -12594,7 +12929,7 @@
 									"type": {
 										"type": "reflection",
 										"declaration": {
-											"id": 1062,
+											"id": 1353,
 											"name": "__type",
 											"variant": "declaration",
 											"kind": 65536,
@@ -12662,7 +12997,7 @@
 									"type": {
 										"type": "reflection",
 										"declaration": {
-											"id": 1063,
+											"id": 1354,
 											"name": "__type",
 											"variant": "declaration",
 											"kind": 65536,
@@ -12730,7 +13065,7 @@
 									"type": {
 										"type": "reflection",
 										"declaration": {
-											"id": 1064,
+											"id": 1355,
 											"name": "__type",
 											"variant": "declaration",
 											"kind": 65536,
@@ -12798,7 +13133,7 @@
 									"type": {
 										"type": "reflection",
 										"declaration": {
-											"id": 1065,
+											"id": 1356,
 											"name": "__type",
 											"variant": "declaration",
 											"kind": 65536,
@@ -13180,7 +13515,7 @@
 					"type": {
 						"type": "reflection",
 						"declaration": {
-							"id": 1067,
+							"id": 1358,
 							"name": "__type",
 							"variant": "declaration",
 							"kind": 65536,
@@ -13422,6 +13757,306 @@
 			]
 		},
 		{
+			"id": 1164,
+			"name": "NewZealandV2IssuanceInput",
+			"variant": "declaration",
+			"kind": 256,
+			"flags": {},
+			"children": [
+				{
+					"id": 1167,
+					"name": "issuedAt",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {},
+					"type": {
+						"type": "intrinsic",
+						"name": "string"
+					}
+				},
+				{
+					"id": 1168,
+					"name": "key",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {},
+					"type": {
+						"type": "reference",
+						"target": {
+							"packageName": "@types/node",
+							"packagePath": "buffer.buffer.d.ts",
+							"qualifiedName": "__global.Buffer"
+						},
+						"name": "Buffer",
+						"package": "@types/node",
+						"qualifiedName": "__global.Buffer"
+					}
+				},
+				{
+					"id": 1166,
+					"name": "payslipNonPii",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {},
+					"type": {
+						"type": "reference",
+						"target": 736,
+						"name": "NewZealandPayslipV2",
+						"package": "@verifiabl/issuer"
+					}
+				},
+				{
+					"id": 1165,
+					"name": "pii",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {},
+					"type": {
+						"type": "reflection",
+						"declaration": {
+							"id": 1050,
+							"name": "__type",
+							"variant": "declaration",
+							"kind": 65536,
+							"flags": {},
+							"children": [
+								{
+									"id": 528,
+									"name": "accountName",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 527,
+									"name": "accountNumber",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 529,
+									"name": "address",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "reflection",
+										"declaration": {
+											"id": 1051,
+											"name": "__type",
+											"variant": "declaration",
+											"kind": 65536,
+											"flags": {},
+											"children": [
+												{
+													"id": 855,
+													"name": "city",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {
+														"isOptional": true
+													},
+													"type": {
+														"type": "intrinsic",
+														"name": "string"
+													},
+													"defaultValue": "..."
+												},
+												{
+													"id": 853,
+													"name": "lines",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {
+														"isOptional": true
+													},
+													"type": {
+														"type": "array",
+														"elementType": {
+															"type": "intrinsic",
+															"name": "string"
+														}
+													},
+													"defaultValue": "..."
+												},
+												{
+													"id": 856,
+													"name": "postcode",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {
+														"isOptional": true
+													},
+													"type": {
+														"type": "intrinsic",
+														"name": "string"
+													},
+													"defaultValue": "..."
+												},
+												{
+													"id": 854,
+													"name": "suburb",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {
+														"isOptional": true
+													},
+													"type": {
+														"type": "intrinsic",
+														"name": "string"
+													},
+													"defaultValue": "..."
+												}
+											],
+											"groups": [
+												{
+													"title": "Properties",
+													"children": [
+														855,
+														853,
+														856,
+														854
+													]
+												}
+											]
+										}
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 524,
+									"name": "department",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 522,
+									"name": "employeeName",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 851,
+									"name": "employerName",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 850,
+									"name": "irdNumber",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 523,
+									"name": "position",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "..."
+								}
+							],
+							"groups": [
+								{
+									"title": "Properties",
+									"children": [
+										528,
+										527,
+										529,
+										524,
+										522,
+										851,
+										850,
+										523
+									]
+								}
+							]
+						}
+					}
+				},
+				{
+					"id": 1169,
+					"name": "verifiablReference",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {
+						"isOptional": true
+					},
+					"type": {
+						"type": "intrinsic",
+						"name": "string"
+					}
+				}
+			],
+			"groups": [
+				{
+					"title": "Properties",
+					"children": [
+						1167,
+						1168,
+						1166,
+						1165,
+						1169
+					]
+				}
+			]
+		},
+		{
 			"id": 496,
 			"name": "PiiFieldViolation",
 			"variant": "declaration",
@@ -13431,15 +14066,7 @@
 				"summary": [
 					{
 						"kind": "text",
-						"text": "A single field "
-					},
-					{
-						"kind": "code",
-						"text": "`formatPii`"
-					},
-					{
-						"kind": "text",
-						"text": " refused to encode, and why."
+						"text": "A supplied PII field a formatter refused to encode, and why."
 					}
 				]
 			},
@@ -13450,11 +14077,61 @@
 					"variant": "declaration",
 					"kind": 1024,
 					"flags": {},
+					"comment": {
+						"summary": [
+							{
+								"kind": "text",
+								"text": "Input field name, or a structured address path such as "
+							},
+							{
+								"kind": "code",
+								"text": "`address.lines[0]`"
+							},
+							{
+								"kind": "text",
+								"text": "."
+							}
+						]
+					},
 					"type": {
-						"type": "reference",
-						"target": 494,
-						"name": "PiiFieldName",
-						"package": "@verifiabl/issuer"
+						"type": "union",
+						"types": [
+							{
+								"type": "reference",
+								"target": 494,
+								"name": "PiiFieldName",
+								"package": "@verifiabl/issuer"
+							},
+							{
+								"type": "literal",
+								"value": "address.suburb"
+							},
+							{
+								"type": "literal",
+								"value": "address.stateOrTerritory"
+							},
+							{
+								"type": "literal",
+								"value": "address.postcode"
+							},
+							{
+								"type": "literal",
+								"value": "address.city"
+							},
+							{
+								"type": "templateLiteral",
+								"head": "address.lines[",
+								"tail": [
+									[
+										{
+											"type": "intrinsic",
+											"name": "number"
+										},
+										"]"
+									]
+								]
+							}
+						]
 					}
 				},
 				{
@@ -13477,6 +14154,3897 @@
 					"children": [
 						497,
 						498
+					]
+				}
+			]
+		},
+		{
+			"id": 1170,
+			"name": "PreparedV2Payslip",
+			"variant": "declaration",
+			"kind": 256,
+			"flags": {},
+			"children": [
+				{
+					"id": 1247,
+					"name": "apiManagedRegistration",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {
+						"isReadonly": true
+					},
+					"comment": {
+						"summary": [
+							{
+								"kind": "text",
+								"text": "API-managed issuance has no caller reference and cannot safely retry ambiguous failures."
+							}
+						]
+					},
+					"type": {
+						"type": "union",
+						"types": [
+							{
+								"type": "reflection",
+								"declaration": {
+									"id": 1067,
+									"name": "__type",
+									"variant": "declaration",
+									"kind": 65536,
+									"flags": {},
+									"children": [
+										{
+											"id": 1311,
+											"name": "encryptedPii",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "AES-256-GCM ciphertext bytes for the formatted PII plaintext."
+													}
+												]
+											},
+											"type": {
+												"type": "reference",
+												"target": {
+													"packageName": "typescript",
+													"packagePath": "lib/lib.es5.d.ts",
+													"qualifiedName": "Uint8Array"
+												},
+												"typeArguments": [
+													{
+														"type": "reference",
+														"target": {
+															"packageName": "typescript",
+															"packagePath": "lib/lib.es5.d.ts",
+															"qualifiedName": "ArrayBuffer"
+														},
+														"name": "ArrayBuffer",
+														"package": "typescript"
+													}
+												],
+												"name": "Uint8Array",
+												"package": "typescript"
+											},
+											"defaultValue": "ciphertextSchema"
+										},
+										{
+											"id": 1307,
+											"name": "encryptionMetadata",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "reflection",
+												"declaration": {
+													"id": 1308,
+													"name": "__type",
+													"variant": "declaration",
+													"kind": 65536,
+													"flags": {},
+													"children": [
+														{
+															"id": 1309,
+															"name": "iv",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "96-bit (12-byte) IV."
+																	}
+																]
+															},
+															"type": {
+																"type": "reference",
+																"target": {
+																	"packageName": "typescript",
+																	"packagePath": "lib/lib.es5.d.ts",
+																	"qualifiedName": "Uint8Array"
+																},
+																"typeArguments": [
+																	{
+																		"type": "reference",
+																		"target": {
+																			"packageName": "typescript",
+																			"packagePath": "lib/lib.es5.d.ts",
+																			"qualifiedName": "ArrayBuffer"
+																		},
+																		"name": "ArrayBuffer",
+																		"package": "typescript"
+																	}
+																],
+																"name": "Uint8Array",
+																"package": "typescript"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1310,
+															"name": "tag",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "128-bit (16-byte) GCM authentication tag."
+																	}
+																]
+															},
+															"type": {
+																"type": "reference",
+																"target": {
+																	"packageName": "typescript",
+																	"packagePath": "lib/lib.es5.d.ts",
+																	"qualifiedName": "Uint8Array"
+																},
+																"typeArguments": [
+																	{
+																		"type": "reference",
+																		"target": {
+																			"packageName": "typescript",
+																			"packagePath": "lib/lib.es5.d.ts",
+																			"qualifiedName": "ArrayBuffer"
+																		},
+																		"name": "ArrayBuffer",
+																		"package": "typescript"
+																	}
+																],
+																"name": "Uint8Array",
+																"package": "typescript"
+															},
+															"defaultValue": "..."
+														}
+													],
+													"groups": [
+														{
+															"title": "Properties",
+															"children": [
+																1309,
+																1310
+															]
+														}
+													]
+												}
+											},
+											"defaultValue": "registrationFields.encryptionMetadata"
+										},
+										{
+											"id": 1249,
+											"name": "issuedAt",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "ISO 8601 UTC datetime the payslip was issued. The API only accepts\nUTC (\"Z\") timestamps; convert local times first, e.g. with\n"
+													},
+													{
+														"kind": "code",
+														"text": "`new Date().toISOString()`"
+													},
+													{
+														"kind": "text",
+														"text": "."
+													}
+												]
+											},
+											"type": {
+												"type": "intrinsic",
+												"name": "string"
+											},
+											"defaultValue": "registrationFields.issuedAt"
+										},
+										{
+											"id": 1250,
+											"name": "payslipNonPii",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "reflection",
+												"declaration": {
+													"id": 1068,
+													"name": "__type",
+													"variant": "declaration",
+													"kind": 65536,
+													"flags": {},
+													"children": [
+														{
+															"id": 1267,
+															"name": "annualRateCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1254,
+															"name": "currency",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"type": {
+																"type": "union",
+																"types": [
+																	{
+																		"type": "literal",
+																		"value": "AUD"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "CAD"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "CHF"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "EUR"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "GBP"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "HKD"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "NZD"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "SGD"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "USD"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "ZAR"
+																	}
+																]
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1289,
+															"name": "deductions",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "Post-tax only."
+																	}
+																]
+															},
+															"type": {
+																"type": "array",
+																"elementType": {
+																	"type": "reflection",
+																	"declaration": {
+																		"id": 1290,
+																		"name": "__type",
+																		"variant": "declaration",
+																		"kind": 65536,
+																		"flags": {},
+																		"children": [
+																			{
+																				"id": 1292,
+																				"name": "amountCents",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {},
+																				"type": {
+																					"type": "intrinsic",
+																					"name": "number"
+																				},
+																				"defaultValue": "cents"
+																			},
+																			{
+																				"id": 1291,
+																				"name": "type",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {},
+																				"type": {
+																					"type": "union",
+																					"types": [
+																						{
+																							"type": "literal",
+																							"value": "union_professional_fees"
+																						},
+																						{
+																							"type": "literal",
+																							"value": "workplace_giving"
+																						},
+																						{
+																							"type": "literal",
+																							"value": "child_support_deduction"
+																						},
+																						{
+																							"type": "literal",
+																							"value": "child_support_garnishee"
+																						},
+																						{
+																							"type": "literal",
+																							"value": "other_post_tax"
+																						}
+																					]
+																				},
+																				"defaultValue": "..."
+																			}
+																		],
+																		"groups": [
+																			{
+																				"title": "Properties",
+																				"children": [
+																					1292,
+																					1291
+																				]
+																			}
+																		]
+																	}
+																}
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1270,
+															"name": "earnings",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "Itemisation of gross."
+																	}
+																]
+															},
+															"type": {
+																"type": "array",
+																"elementType": {
+																	"type": "union",
+																	"types": [
+																		{
+																			"type": "reflection",
+																			"declaration": {
+																				"id": 1070,
+																				"name": "__type",
+																				"variant": "declaration",
+																				"kind": 65536,
+																				"flags": {},
+																				"children": [
+																					{
+																						"id": 1273,
+																						"name": "amountCents",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "cents"
+																					},
+																					{
+																						"id": 1272,
+																						"name": "leaveType",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "union",
+																							"types": [
+																								{
+																									"type": "literal",
+																									"value": "cash_out_in_service"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "unused_on_termination"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "paid_parental"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "workers_compensation"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "ancillary_defence"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "other_paid_leave"
+																								}
+																							]
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1275,
+																						"name": "rateCents",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {
+																							"isOptional": true
+																						},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1271,
+																						"name": "type",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "literal",
+																							"value": "paid_leave"
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1274,
+																						"name": "units",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {
+																							"isOptional": true
+																						},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "..."
+																					}
+																				],
+																				"groups": [
+																					{
+																						"title": "Properties",
+																						"children": [
+																							1273,
+																							1272,
+																							1275,
+																							1271,
+																							1274
+																						]
+																					}
+																				]
+																			}
+																		},
+																		{
+																			"type": "reflection",
+																			"declaration": {
+																				"id": 1071,
+																				"name": "__type",
+																				"variant": "declaration",
+																				"kind": 65536,
+																				"flags": {},
+																				"children": [
+																					{
+																						"id": 1277,
+																						"name": "allowanceType",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "union",
+																							"types": [
+																								{
+																									"type": "literal",
+																									"value": "cents_per_km"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "award_transport"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "laundry"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "overtime_meal"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "travel"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "tools"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "tasks"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "qualifications"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "other"
+																								}
+																							]
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1278,
+																						"name": "amountCents",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "cents"
+																					},
+																					{
+																						"id": 1279,
+																						"name": "otherCategory",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {
+																							"isOptional": true
+																						},
+																						"comment": {
+																							"summary": [
+																								{
+																									"kind": "text",
+																									"text": "Required on an "
+																								},
+																								{
+																									"kind": "code",
+																									"text": "`other`"
+																								},
+																								{
+																									"kind": "text",
+																									"text": " allowance, forbidden on any other."
+																								}
+																							]
+																						},
+																						"type": {
+																							"type": "union",
+																							"types": [
+																								{
+																									"type": "literal",
+																									"value": "home_office"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "non_deductible"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "transport_fares"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "uniform"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "private_vehicle"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "general"
+																								}
+																							]
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1281,
+																						"name": "rateCents",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {
+																							"isOptional": true
+																						},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1276,
+																						"name": "type",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "literal",
+																							"value": "allowance"
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1280,
+																						"name": "units",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {
+																							"isOptional": true
+																						},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "..."
+																					}
+																				],
+																				"groups": [
+																					{
+																						"title": "Properties",
+																						"children": [
+																							1277,
+																							1278,
+																							1279,
+																							1281,
+																							1276,
+																							1280
+																						]
+																					}
+																				]
+																			}
+																		},
+																		{
+																			"type": "reflection",
+																			"declaration": {
+																				"id": 1072,
+																				"name": "__type",
+																				"variant": "declaration",
+																				"kind": 65536,
+																				"flags": {},
+																				"children": [
+																					{
+																						"id": 1283,
+																						"name": "amountCents",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "cents"
+																					},
+																					{
+																						"id": 1285,
+																						"name": "rateCents",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {
+																							"isOptional": true
+																						},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1282,
+																						"name": "type",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "union",
+																							"types": [
+																								{
+																									"type": "literal",
+																									"value": "ordinary"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "overtime"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "bonus_commission"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "directors_fees"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "lump_sum"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "return_to_work"
+																								}
+																							]
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1284,
+																						"name": "units",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {
+																							"isOptional": true
+																						},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "..."
+																					}
+																				],
+																				"groups": [
+																					{
+																						"title": "Properties",
+																						"children": [
+																							1283,
+																							1285,
+																							1282,
+																							1284
+																						]
+																					}
+																				]
+																			}
+																		}
+																	]
+																}
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1261,
+															"name": "employmentBasis",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"type": {
+																"type": "union",
+																"types": [
+																	{
+																		"type": "literal",
+																		"value": "full_time"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "part_time"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "casual"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "labour_hire"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "voluntary_agreement"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "death_beneficiary"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "non_employee"
+																	}
+																]
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1262,
+															"name": "engagementType",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"type": {
+																"type": "union",
+																"types": [
+																	{
+																		"type": "literal",
+																		"value": "permanent"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "fixed_term"
+																	}
+																]
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1255,
+															"name": "grossCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "Total gross, before salary sacrifice (per STP2)."
+																	}
+																]
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "cents"
+														},
+														{
+															"id": 1263,
+															"name": "hourly",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"type": {
+																"type": "reflection",
+																"declaration": {
+																	"id": 1069,
+																	"name": "__type",
+																	"variant": "declaration",
+																	"kind": 65536,
+																	"flags": {},
+																	"children": [
+																		{
+																			"id": 1266,
+																			"name": "amountCents",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "cents"
+																		},
+																		{
+																			"id": 1265,
+																			"name": "hours",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "quantity"
+																		},
+																		{
+																			"id": 1264,
+																			"name": "ordinaryRateCents",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "cents"
+																		}
+																	],
+																	"groups": [
+																		{
+																			"title": "Properties",
+																			"children": [
+																				1266,
+																				1265,
+																				1264
+																			]
+																		}
+																	]
+																}
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1257,
+															"name": "netCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "cents"
+														},
+														{
+															"id": 1260,
+															"name": "payFrequency",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"type": {
+																"type": "union",
+																"types": [
+																	{
+																		"type": "literal",
+																		"value": "weekly"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "fortnightly"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "monthly"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "quarterly"
+																	}
+																]
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1256,
+															"name": "paygwCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "PAYG withholding: its own component, never also a "
+																	},
+																	{
+																		"kind": "code",
+																		"text": "`deductions`"
+																	},
+																	{
+																		"kind": "text",
+																		"text": " line."
+																	}
+																]
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "cents"
+														},
+														{
+															"id": 1253,
+															"name": "paymentDate",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "Legally mandatory on a pay slip (Fair Work reg 3.46(1)(d))."
+																	}
+																]
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "string"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1252,
+															"name": "periodEnd",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"type": {
+																"type": "intrinsic",
+																"name": "string"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1251,
+															"name": "periodStart",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"type": {
+																"type": "intrinsic",
+																"name": "string"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1299,
+															"name": "reimbursementsCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "Non-taxable: not part of gross, but paid out in net."
+																	}
+																]
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1286,
+															"name": "salarySacrifice",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"type": {
+																"type": "array",
+																"elementType": {
+																	"type": "reflection",
+																	"declaration": {
+																		"id": 1073,
+																		"name": "__type",
+																		"variant": "declaration",
+																		"kind": 65536,
+																		"flags": {},
+																		"children": [
+																			{
+																				"id": 1288,
+																				"name": "amountCents",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {},
+																				"type": {
+																					"type": "intrinsic",
+																					"name": "number"
+																				},
+																				"defaultValue": "cents"
+																			},
+																			{
+																				"id": 1287,
+																				"name": "type",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {},
+																				"type": {
+																					"type": "union",
+																					"types": [
+																						{
+																							"type": "literal",
+																							"value": "other"
+																						},
+																						{
+																							"type": "literal",
+																							"value": "super"
+																						}
+																					]
+																				},
+																				"defaultValue": "..."
+																			}
+																		],
+																		"groups": [
+																			{
+																				"title": "Properties",
+																				"children": [
+																					1288,
+																					1287
+																				]
+																			}
+																		]
+																	}
+																}
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1269,
+															"name": "stslWithholdingCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "The printed HELP/STSL component: a non-additive part of "
+																	},
+																	{
+																		"kind": "code",
+																		"text": "`paygwCents`"
+																	},
+																	{
+																		"kind": "text",
+																		"text": "."
+																	}
+																]
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1293,
+															"name": "superannuation",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "Funds are identified structurally (USI/ABN) or not at all, never by name."
+																	}
+																]
+															},
+															"type": {
+																"type": "array",
+																"elementType": {
+																	"type": "reflection",
+																	"declaration": {
+																		"id": 1294,
+																		"name": "__type",
+																		"variant": "declaration",
+																		"kind": 65536,
+																		"flags": {},
+																		"children": [
+																			{
+																				"id": 1296,
+																				"name": "amountCents",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {},
+																				"type": {
+																					"type": "intrinsic",
+																					"name": "number"
+																				},
+																				"defaultValue": "cents"
+																			},
+																			{
+																				"id": 1295,
+																				"name": "contributionType",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {},
+																				"type": {
+																					"type": "union",
+																					"types": [
+																						{
+																							"type": "literal",
+																							"value": "superannuation_guarantee"
+																						},
+																						{
+																							"type": "literal",
+																							"value": "resc"
+																						},
+																						{
+																							"type": "literal",
+																							"value": "salary_sacrifice"
+																						}
+																					]
+																				},
+																				"defaultValue": "..."
+																			},
+																			{
+																				"id": 1298,
+																				"name": "fundAbn",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {
+																					"isOptional": true
+																				},
+																				"type": {
+																					"type": "intrinsic",
+																					"name": "string"
+																				},
+																				"defaultValue": "..."
+																			},
+																			{
+																				"id": 1297,
+																				"name": "usi",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {
+																					"isOptional": true
+																				},
+																				"type": {
+																					"type": "intrinsic",
+																					"name": "string"
+																				},
+																				"defaultValue": "..."
+																			}
+																		],
+																		"groups": [
+																			{
+																				"title": "Properties",
+																				"children": [
+																					1296,
+																					1295,
+																					1298,
+																					1297
+																				]
+																			}
+																		]
+																	}
+																}
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1268,
+															"name": "taxableGrossCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "The printed post-sacrifice/taxable gross, where the payslip shows one."
+																	}
+																]
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1300,
+															"name": "ytd",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"type": {
+																"type": "reflection",
+																"declaration": {
+																	"id": 1301,
+																	"name": "__type",
+																	"variant": "declaration",
+																	"kind": 65536,
+																	"flags": {},
+																	"children": [
+																		{
+																			"id": 1304,
+																			"name": "nonTaxableCents",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {
+																				"isOptional": true
+																			},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "..."
+																		},
+																		{
+																			"id": 1305,
+																			"name": "postTaxDeductionsCents",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {
+																				"isOptional": true
+																			},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "..."
+																		},
+																		{
+																			"id": 1306,
+																			"name": "reimbursementsCents",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {
+																				"isOptional": true
+																			},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "..."
+																		},
+																		{
+																			"id": 1303,
+																			"name": "superCents",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {
+																				"isOptional": true
+																			},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "..."
+																		},
+																		{
+																			"id": 1302,
+																			"name": "taxableCents",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {
+																				"isOptional": true
+																			},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "..."
+																		}
+																	],
+																	"groups": [
+																		{
+																			"title": "Properties",
+																			"children": [
+																				1304,
+																				1305,
+																				1306,
+																				1303,
+																				1302
+																			]
+																		}
+																	]
+																}
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1258,
+															"name": "ytdGrossCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "Year to date over the AU financial year, as at and including this payslip."
+																	}
+																]
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "cents"
+														},
+														{
+															"id": 1259,
+															"name": "ytdPaygwCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "cents"
+														}
+													],
+													"groups": [
+														{
+															"title": "Properties",
+															"children": [
+																1267,
+																1254,
+																1289,
+																1270,
+																1261,
+																1262,
+																1255,
+																1263,
+																1257,
+																1260,
+																1256,
+																1253,
+																1252,
+																1251,
+																1299,
+																1286,
+																1269,
+																1293,
+																1268,
+																1300,
+																1258,
+																1259
+															]
+														}
+													]
+												}
+											},
+											"defaultValue": "payslipNonPiiSchema"
+										},
+										{
+											"id": 1248,
+											"name": "schema",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "Payslip schema identifier. A literal, exactly as the API pins it on the\nsingle-registration endpoints: "
+													},
+													{
+														"kind": "code",
+														"text": "`payslipNonPii`"
+													},
+													{
+														"kind": "text",
+														"text": " below IS the au.payslip.v1\nshape, so accepting another identifier here would impose AU rules on a\npayload that does not claim to be AU. The public registration schema is\na discriminated union keyed on "
+													},
+													{
+														"kind": "code",
+														"text": "`schema`"
+													},
+													{
+														"kind": "text",
+														"text": ", with one member per version."
+													}
+												]
+											},
+											"type": {
+												"type": "literal",
+												"value": "au.payslip.v1"
+											},
+											"defaultValue": "..."
+										}
+									],
+									"groups": [
+										{
+											"title": "Properties",
+											"children": [
+												1311,
+												1307,
+												1249,
+												1250,
+												1248
+											]
+										}
+									]
+								}
+							},
+							{
+								"type": "reflection",
+								"declaration": {
+									"id": 1312,
+									"name": "__type",
+									"variant": "declaration",
+									"kind": 65536,
+									"flags": {},
+									"children": [
+										{
+											"id": 1320,
+											"name": "encryptedPii",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "reference",
+												"target": {
+													"packageName": "typescript",
+													"packagePath": "lib/lib.es5.d.ts",
+													"qualifiedName": "Uint8Array"
+												},
+												"typeArguments": [
+													{
+														"type": "reference",
+														"target": {
+															"packageName": "typescript",
+															"packagePath": "lib/lib.es5.d.ts",
+															"qualifiedName": "ArrayBuffer"
+														},
+														"name": "ArrayBuffer",
+														"package": "typescript"
+													}
+												],
+												"name": "Uint8Array",
+												"package": "typescript"
+											},
+											"defaultValue": "ciphertextSchema"
+										},
+										{
+											"id": 1316,
+											"name": "encryptionMetadata",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "reflection",
+												"declaration": {
+													"id": 1317,
+													"name": "__type",
+													"variant": "declaration",
+													"kind": 65536,
+													"flags": {},
+													"children": [
+														{
+															"id": 1318,
+															"name": "iv",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "96-bit (12-byte) IV."
+																	}
+																]
+															},
+															"type": {
+																"type": "reference",
+																"target": {
+																	"packageName": "typescript",
+																	"packagePath": "lib/lib.es5.d.ts",
+																	"qualifiedName": "Uint8Array"
+																},
+																"typeArguments": [
+																	{
+																		"type": "reference",
+																		"target": {
+																			"packageName": "typescript",
+																			"packagePath": "lib/lib.es5.d.ts",
+																			"qualifiedName": "ArrayBuffer"
+																		},
+																		"name": "ArrayBuffer",
+																		"package": "typescript"
+																	}
+																],
+																"name": "Uint8Array",
+																"package": "typescript"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1319,
+															"name": "tag",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "128-bit (16-byte) GCM authentication tag."
+																	}
+																]
+															},
+															"type": {
+																"type": "reference",
+																"target": {
+																	"packageName": "typescript",
+																	"packagePath": "lib/lib.es5.d.ts",
+																	"qualifiedName": "Uint8Array"
+																},
+																"typeArguments": [
+																	{
+																		"type": "reference",
+																		"target": {
+																			"packageName": "typescript",
+																			"packagePath": "lib/lib.es5.d.ts",
+																			"qualifiedName": "ArrayBuffer"
+																		},
+																		"name": "ArrayBuffer",
+																		"package": "typescript"
+																	}
+																],
+																"name": "Uint8Array",
+																"package": "typescript"
+															},
+															"defaultValue": "..."
+														}
+													],
+													"groups": [
+														{
+															"title": "Properties",
+															"children": [
+																1318,
+																1319
+															]
+														}
+													]
+												}
+											},
+											"defaultValue": "registrationFields.encryptionMetadata"
+										},
+										{
+											"id": 1314,
+											"name": "issuedAt",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "intrinsic",
+												"name": "string"
+											},
+											"defaultValue": "registrationFields.issuedAt"
+										},
+										{
+											"id": 1315,
+											"name": "payslipNonPii",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "reference",
+												"target": 669,
+												"name": "AustralianPayslipV2",
+												"package": "@verifiabl/issuer"
+											},
+											"defaultValue": "australianPayslipV2Schema"
+										},
+										{
+											"id": 1313,
+											"name": "schema",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "literal",
+												"value": "au.payslip.v2"
+											},
+											"defaultValue": "..."
+										}
+									],
+									"groups": [
+										{
+											"title": "Properties",
+											"children": [
+												1320,
+												1316,
+												1314,
+												1315,
+												1313
+											]
+										}
+									]
+								}
+							},
+							{
+								"type": "reflection",
+								"declaration": {
+									"id": 1321,
+									"name": "__type",
+									"variant": "declaration",
+									"kind": 65536,
+									"flags": {},
+									"children": [
+										{
+											"id": 1329,
+											"name": "encryptedPii",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "reference",
+												"target": {
+													"packageName": "typescript",
+													"packagePath": "lib/lib.es5.d.ts",
+													"qualifiedName": "Uint8Array"
+												},
+												"typeArguments": [
+													{
+														"type": "reference",
+														"target": {
+															"packageName": "typescript",
+															"packagePath": "lib/lib.es5.d.ts",
+															"qualifiedName": "ArrayBuffer"
+														},
+														"name": "ArrayBuffer",
+														"package": "typescript"
+													}
+												],
+												"name": "Uint8Array",
+												"package": "typescript"
+											},
+											"defaultValue": "ciphertextSchema"
+										},
+										{
+											"id": 1325,
+											"name": "encryptionMetadata",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "reflection",
+												"declaration": {
+													"id": 1326,
+													"name": "__type",
+													"variant": "declaration",
+													"kind": 65536,
+													"flags": {},
+													"children": [
+														{
+															"id": 1327,
+															"name": "iv",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "96-bit (12-byte) IV."
+																	}
+																]
+															},
+															"type": {
+																"type": "reference",
+																"target": {
+																	"packageName": "typescript",
+																	"packagePath": "lib/lib.es5.d.ts",
+																	"qualifiedName": "Uint8Array"
+																},
+																"typeArguments": [
+																	{
+																		"type": "reference",
+																		"target": {
+																			"packageName": "typescript",
+																			"packagePath": "lib/lib.es5.d.ts",
+																			"qualifiedName": "ArrayBuffer"
+																		},
+																		"name": "ArrayBuffer",
+																		"package": "typescript"
+																	}
+																],
+																"name": "Uint8Array",
+																"package": "typescript"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1328,
+															"name": "tag",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "128-bit (16-byte) GCM authentication tag."
+																	}
+																]
+															},
+															"type": {
+																"type": "reference",
+																"target": {
+																	"packageName": "typescript",
+																	"packagePath": "lib/lib.es5.d.ts",
+																	"qualifiedName": "Uint8Array"
+																},
+																"typeArguments": [
+																	{
+																		"type": "reference",
+																		"target": {
+																			"packageName": "typescript",
+																			"packagePath": "lib/lib.es5.d.ts",
+																			"qualifiedName": "ArrayBuffer"
+																		},
+																		"name": "ArrayBuffer",
+																		"package": "typescript"
+																	}
+																],
+																"name": "Uint8Array",
+																"package": "typescript"
+															},
+															"defaultValue": "..."
+														}
+													],
+													"groups": [
+														{
+															"title": "Properties",
+															"children": [
+																1327,
+																1328
+															]
+														}
+													]
+												}
+											},
+											"defaultValue": "registrationFields.encryptionMetadata"
+										},
+										{
+											"id": 1323,
+											"name": "issuedAt",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "intrinsic",
+												"name": "string"
+											},
+											"defaultValue": "registrationFields.issuedAt"
+										},
+										{
+											"id": 1324,
+											"name": "payslipNonPii",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "reference",
+												"target": 736,
+												"name": "NewZealandPayslipV2",
+												"package": "@verifiabl/issuer"
+											},
+											"defaultValue": "newZealandPayslipV2Schema"
+										},
+										{
+											"id": 1322,
+											"name": "schema",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "literal",
+												"value": "nz.payslip.v2"
+											},
+											"defaultValue": "..."
+										}
+									],
+									"groups": [
+										{
+											"title": "Properties",
+											"children": [
+												1329,
+												1325,
+												1323,
+												1324,
+												1322
+											]
+										}
+									]
+								}
+							}
+						]
+					}
+				},
+				{
+					"id": 1172,
+					"name": "registration",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {
+						"isReadonly": true
+					},
+					"type": {
+						"type": "union",
+						"types": [
+							{
+								"type": "reflection",
+								"declaration": {
+									"id": 1052,
+									"name": "__type",
+									"variant": "declaration",
+									"kind": 65536,
+									"flags": {},
+									"children": [
+										{
+											"id": 1229,
+											"name": "encryptionMetadata",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "reflection",
+												"declaration": {
+													"id": 1062,
+													"name": "__type",
+													"variant": "declaration",
+													"kind": 65536,
+													"flags": {},
+													"children": [
+														{
+															"id": 1230,
+															"name": "iv",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "96-bit (12-byte) IV."
+																	}
+																]
+															},
+															"type": {
+																"type": "reference",
+																"target": {
+																	"packageName": "typescript",
+																	"packagePath": "lib/lib.es5.d.ts",
+																	"qualifiedName": "Uint8Array"
+																},
+																"typeArguments": [
+																	{
+																		"type": "reference",
+																		"target": {
+																			"packageName": "typescript",
+																			"packagePath": "lib/lib.es5.d.ts",
+																			"qualifiedName": "ArrayBuffer"
+																		},
+																		"name": "ArrayBuffer",
+																		"package": "typescript"
+																	}
+																],
+																"name": "Uint8Array",
+																"package": "typescript"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1231,
+															"name": "tag",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "128-bit (16-byte) GCM authentication tag."
+																	}
+																]
+															},
+															"type": {
+																"type": "reference",
+																"target": {
+																	"packageName": "typescript",
+																	"packagePath": "lib/lib.es5.d.ts",
+																	"qualifiedName": "Uint8Array"
+																},
+																"typeArguments": [
+																	{
+																		"type": "reference",
+																		"target": {
+																			"packageName": "typescript",
+																			"packagePath": "lib/lib.es5.d.ts",
+																			"qualifiedName": "ArrayBuffer"
+																		},
+																		"name": "ArrayBuffer",
+																		"package": "typescript"
+																	}
+																],
+																"name": "Uint8Array",
+																"package": "typescript"
+															},
+															"defaultValue": "..."
+														}
+													],
+													"groups": [
+														{
+															"title": "Properties",
+															"children": [
+																1230,
+																1231
+															]
+														}
+													]
+												}
+											},
+											"defaultValue": "registrationFields.encryptionMetadata"
+										},
+										{
+											"id": 1174,
+											"name": "issuedAt",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "ISO 8601 UTC datetime the payslip was issued. The API only accepts\nUTC (\"Z\") timestamps; convert local times first, e.g. with\n"
+													},
+													{
+														"kind": "code",
+														"text": "`new Date().toISOString()`"
+													},
+													{
+														"kind": "text",
+														"text": "."
+													}
+												]
+											},
+											"type": {
+												"type": "intrinsic",
+												"name": "string"
+											},
+											"defaultValue": "registrationFields.issuedAt"
+										},
+										{
+											"id": 1175,
+											"name": "payslipNonPii",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "reflection",
+												"declaration": {
+													"id": 1053,
+													"name": "__type",
+													"variant": "declaration",
+													"kind": 65536,
+													"flags": {},
+													"children": [
+														{
+															"id": 1192,
+															"name": "annualRateCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1179,
+															"name": "currency",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"type": {
+																"type": "union",
+																"types": [
+																	{
+																		"type": "literal",
+																		"value": "AUD"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "CAD"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "CHF"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "EUR"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "GBP"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "HKD"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "NZD"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "SGD"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "USD"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "ZAR"
+																	}
+																]
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1214,
+															"name": "deductions",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "Post-tax only."
+																	}
+																]
+															},
+															"type": {
+																"type": "array",
+																"elementType": {
+																	"type": "reflection",
+																	"declaration": {
+																		"id": 1059,
+																		"name": "__type",
+																		"variant": "declaration",
+																		"kind": 65536,
+																		"flags": {},
+																		"children": [
+																			{
+																				"id": 1216,
+																				"name": "amountCents",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {},
+																				"type": {
+																					"type": "intrinsic",
+																					"name": "number"
+																				},
+																				"defaultValue": "cents"
+																			},
+																			{
+																				"id": 1215,
+																				"name": "type",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {},
+																				"type": {
+																					"type": "union",
+																					"types": [
+																						{
+																							"type": "literal",
+																							"value": "union_professional_fees"
+																						},
+																						{
+																							"type": "literal",
+																							"value": "workplace_giving"
+																						},
+																						{
+																							"type": "literal",
+																							"value": "child_support_deduction"
+																						},
+																						{
+																							"type": "literal",
+																							"value": "child_support_garnishee"
+																						},
+																						{
+																							"type": "literal",
+																							"value": "other_post_tax"
+																						}
+																					]
+																				},
+																				"defaultValue": "..."
+																			}
+																		],
+																		"groups": [
+																			{
+																				"title": "Properties",
+																				"children": [
+																					1216,
+																					1215
+																				]
+																			}
+																		]
+																	}
+																}
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1195,
+															"name": "earnings",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "Itemisation of gross."
+																	}
+																]
+															},
+															"type": {
+																"type": "array",
+																"elementType": {
+																	"type": "union",
+																	"types": [
+																		{
+																			"type": "reflection",
+																			"declaration": {
+																				"id": 1055,
+																				"name": "__type",
+																				"variant": "declaration",
+																				"kind": 65536,
+																				"flags": {},
+																				"children": [
+																					{
+																						"id": 1198,
+																						"name": "amountCents",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "cents"
+																					},
+																					{
+																						"id": 1197,
+																						"name": "leaveType",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "union",
+																							"types": [
+																								{
+																									"type": "literal",
+																									"value": "cash_out_in_service"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "unused_on_termination"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "paid_parental"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "workers_compensation"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "ancillary_defence"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "other_paid_leave"
+																								}
+																							]
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1200,
+																						"name": "rateCents",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {
+																							"isOptional": true
+																						},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1196,
+																						"name": "type",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "literal",
+																							"value": "paid_leave"
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1199,
+																						"name": "units",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {
+																							"isOptional": true
+																						},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "..."
+																					}
+																				],
+																				"groups": [
+																					{
+																						"title": "Properties",
+																						"children": [
+																							1198,
+																							1197,
+																							1200,
+																							1196,
+																							1199
+																						]
+																					}
+																				]
+																			}
+																		},
+																		{
+																			"type": "reflection",
+																			"declaration": {
+																				"id": 1056,
+																				"name": "__type",
+																				"variant": "declaration",
+																				"kind": 65536,
+																				"flags": {},
+																				"children": [
+																					{
+																						"id": 1202,
+																						"name": "allowanceType",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "union",
+																							"types": [
+																								{
+																									"type": "literal",
+																									"value": "cents_per_km"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "award_transport"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "laundry"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "overtime_meal"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "travel"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "tools"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "tasks"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "qualifications"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "other"
+																								}
+																							]
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1203,
+																						"name": "amountCents",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "cents"
+																					},
+																					{
+																						"id": 1204,
+																						"name": "otherCategory",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {
+																							"isOptional": true
+																						},
+																						"comment": {
+																							"summary": [
+																								{
+																									"kind": "text",
+																									"text": "Required on an "
+																								},
+																								{
+																									"kind": "code",
+																									"text": "`other`"
+																								},
+																								{
+																									"kind": "text",
+																									"text": " allowance, forbidden on any other."
+																								}
+																							]
+																						},
+																						"type": {
+																							"type": "union",
+																							"types": [
+																								{
+																									"type": "literal",
+																									"value": "home_office"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "non_deductible"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "transport_fares"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "uniform"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "private_vehicle"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "general"
+																								}
+																							]
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1206,
+																						"name": "rateCents",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {
+																							"isOptional": true
+																						},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1201,
+																						"name": "type",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "literal",
+																							"value": "allowance"
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1205,
+																						"name": "units",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {
+																							"isOptional": true
+																						},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "..."
+																					}
+																				],
+																				"groups": [
+																					{
+																						"title": "Properties",
+																						"children": [
+																							1202,
+																							1203,
+																							1204,
+																							1206,
+																							1201,
+																							1205
+																						]
+																					}
+																				]
+																			}
+																		},
+																		{
+																			"type": "reflection",
+																			"declaration": {
+																				"id": 1057,
+																				"name": "__type",
+																				"variant": "declaration",
+																				"kind": 65536,
+																				"flags": {},
+																				"children": [
+																					{
+																						"id": 1208,
+																						"name": "amountCents",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "cents"
+																					},
+																					{
+																						"id": 1210,
+																						"name": "rateCents",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {
+																							"isOptional": true
+																						},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1207,
+																						"name": "type",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {},
+																						"type": {
+																							"type": "union",
+																							"types": [
+																								{
+																									"type": "literal",
+																									"value": "ordinary"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "overtime"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "bonus_commission"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "directors_fees"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "lump_sum"
+																								},
+																								{
+																									"type": "literal",
+																									"value": "return_to_work"
+																								}
+																							]
+																						},
+																						"defaultValue": "..."
+																					},
+																					{
+																						"id": 1209,
+																						"name": "units",
+																						"variant": "declaration",
+																						"kind": 1024,
+																						"flags": {
+																							"isOptional": true
+																						},
+																						"type": {
+																							"type": "intrinsic",
+																							"name": "number"
+																						},
+																						"defaultValue": "..."
+																					}
+																				],
+																				"groups": [
+																					{
+																						"title": "Properties",
+																						"children": [
+																							1208,
+																							1210,
+																							1207,
+																							1209
+																						]
+																					}
+																				]
+																			}
+																		}
+																	]
+																}
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1186,
+															"name": "employmentBasis",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"type": {
+																"type": "union",
+																"types": [
+																	{
+																		"type": "literal",
+																		"value": "full_time"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "part_time"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "casual"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "labour_hire"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "voluntary_agreement"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "death_beneficiary"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "non_employee"
+																	}
+																]
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1187,
+															"name": "engagementType",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"type": {
+																"type": "union",
+																"types": [
+																	{
+																		"type": "literal",
+																		"value": "permanent"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "fixed_term"
+																	}
+																]
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1180,
+															"name": "grossCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "Total gross, before salary sacrifice (per STP2)."
+																	}
+																]
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "cents"
+														},
+														{
+															"id": 1188,
+															"name": "hourly",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"type": {
+																"type": "reflection",
+																"declaration": {
+																	"id": 1054,
+																	"name": "__type",
+																	"variant": "declaration",
+																	"kind": 65536,
+																	"flags": {},
+																	"children": [
+																		{
+																			"id": 1191,
+																			"name": "amountCents",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "cents"
+																		},
+																		{
+																			"id": 1190,
+																			"name": "hours",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "quantity"
+																		},
+																		{
+																			"id": 1189,
+																			"name": "ordinaryRateCents",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "cents"
+																		}
+																	],
+																	"groups": [
+																		{
+																			"title": "Properties",
+																			"children": [
+																				1191,
+																				1190,
+																				1189
+																			]
+																		}
+																	]
+																}
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1182,
+															"name": "netCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "cents"
+														},
+														{
+															"id": 1185,
+															"name": "payFrequency",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"type": {
+																"type": "union",
+																"types": [
+																	{
+																		"type": "literal",
+																		"value": "weekly"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "fortnightly"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "monthly"
+																	},
+																	{
+																		"type": "literal",
+																		"value": "quarterly"
+																	}
+																]
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1181,
+															"name": "paygwCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "PAYG withholding: its own component, never also a "
+																	},
+																	{
+																		"kind": "code",
+																		"text": "`deductions`"
+																	},
+																	{
+																		"kind": "text",
+																		"text": " line."
+																	}
+																]
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "cents"
+														},
+														{
+															"id": 1178,
+															"name": "paymentDate",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "Legally mandatory on a pay slip (Fair Work reg 3.46(1)(d))."
+																	}
+																]
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "string"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1177,
+															"name": "periodEnd",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"type": {
+																"type": "intrinsic",
+																"name": "string"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1176,
+															"name": "periodStart",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"type": {
+																"type": "intrinsic",
+																"name": "string"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1222,
+															"name": "reimbursementsCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "Non-taxable: not part of gross, but paid out in net."
+																	}
+																]
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1211,
+															"name": "salarySacrifice",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"type": {
+																"type": "array",
+																"elementType": {
+																	"type": "reflection",
+																	"declaration": {
+																		"id": 1058,
+																		"name": "__type",
+																		"variant": "declaration",
+																		"kind": 65536,
+																		"flags": {},
+																		"children": [
+																			{
+																				"id": 1213,
+																				"name": "amountCents",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {},
+																				"type": {
+																					"type": "intrinsic",
+																					"name": "number"
+																				},
+																				"defaultValue": "cents"
+																			},
+																			{
+																				"id": 1212,
+																				"name": "type",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {},
+																				"type": {
+																					"type": "union",
+																					"types": [
+																						{
+																							"type": "literal",
+																							"value": "other"
+																						},
+																						{
+																							"type": "literal",
+																							"value": "super"
+																						}
+																					]
+																				},
+																				"defaultValue": "..."
+																			}
+																		],
+																		"groups": [
+																			{
+																				"title": "Properties",
+																				"children": [
+																					1213,
+																					1212
+																				]
+																			}
+																		]
+																	}
+																}
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1194,
+															"name": "stslWithholdingCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "The printed HELP/STSL component: a non-additive part of "
+																	},
+																	{
+																		"kind": "code",
+																		"text": "`paygwCents`"
+																	},
+																	{
+																		"kind": "text",
+																		"text": "."
+																	}
+																]
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1217,
+															"name": "superannuation",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "Funds are identified structurally (USI/ABN) or not at all, never by name."
+																	}
+																]
+															},
+															"type": {
+																"type": "array",
+																"elementType": {
+																	"type": "reflection",
+																	"declaration": {
+																		"id": 1060,
+																		"name": "__type",
+																		"variant": "declaration",
+																		"kind": 65536,
+																		"flags": {},
+																		"children": [
+																			{
+																				"id": 1219,
+																				"name": "amountCents",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {},
+																				"type": {
+																					"type": "intrinsic",
+																					"name": "number"
+																				},
+																				"defaultValue": "cents"
+																			},
+																			{
+																				"id": 1218,
+																				"name": "contributionType",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {},
+																				"type": {
+																					"type": "union",
+																					"types": [
+																						{
+																							"type": "literal",
+																							"value": "superannuation_guarantee"
+																						},
+																						{
+																							"type": "literal",
+																							"value": "resc"
+																						},
+																						{
+																							"type": "literal",
+																							"value": "salary_sacrifice"
+																						}
+																					]
+																				},
+																				"defaultValue": "..."
+																			},
+																			{
+																				"id": 1221,
+																				"name": "fundAbn",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {
+																					"isOptional": true
+																				},
+																				"type": {
+																					"type": "intrinsic",
+																					"name": "string"
+																				},
+																				"defaultValue": "..."
+																			},
+																			{
+																				"id": 1220,
+																				"name": "usi",
+																				"variant": "declaration",
+																				"kind": 1024,
+																				"flags": {
+																					"isOptional": true
+																				},
+																				"type": {
+																					"type": "intrinsic",
+																					"name": "string"
+																				},
+																				"defaultValue": "..."
+																			}
+																		],
+																		"groups": [
+																			{
+																				"title": "Properties",
+																				"children": [
+																					1219,
+																					1218,
+																					1221,
+																					1220
+																				]
+																			}
+																		]
+																	}
+																}
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1193,
+															"name": "taxableGrossCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "The printed post-sacrifice/taxable gross, where the payslip shows one."
+																	}
+																]
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1223,
+															"name": "ytd",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {
+																"isOptional": true
+															},
+															"type": {
+																"type": "reflection",
+																"declaration": {
+																	"id": 1061,
+																	"name": "__type",
+																	"variant": "declaration",
+																	"kind": 65536,
+																	"flags": {},
+																	"children": [
+																		{
+																			"id": 1226,
+																			"name": "nonTaxableCents",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {
+																				"isOptional": true
+																			},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "..."
+																		},
+																		{
+																			"id": 1227,
+																			"name": "postTaxDeductionsCents",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {
+																				"isOptional": true
+																			},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "..."
+																		},
+																		{
+																			"id": 1228,
+																			"name": "reimbursementsCents",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {
+																				"isOptional": true
+																			},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "..."
+																		},
+																		{
+																			"id": 1225,
+																			"name": "superCents",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {
+																				"isOptional": true
+																			},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "..."
+																		},
+																		{
+																			"id": 1224,
+																			"name": "taxableCents",
+																			"variant": "declaration",
+																			"kind": 1024,
+																			"flags": {
+																				"isOptional": true
+																			},
+																			"type": {
+																				"type": "intrinsic",
+																				"name": "number"
+																			},
+																			"defaultValue": "..."
+																		}
+																	],
+																	"groups": [
+																		{
+																			"title": "Properties",
+																			"children": [
+																				1226,
+																				1227,
+																				1228,
+																				1225,
+																				1224
+																			]
+																		}
+																	]
+																}
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1183,
+															"name": "ytdGrossCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "Year to date over the AU financial year, as at and including this payslip."
+																	}
+																]
+															},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "cents"
+														},
+														{
+															"id": 1184,
+															"name": "ytdPaygwCents",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"type": {
+																"type": "intrinsic",
+																"name": "number"
+															},
+															"defaultValue": "cents"
+														}
+													],
+													"groups": [
+														{
+															"title": "Properties",
+															"children": [
+																1192,
+																1179,
+																1214,
+																1195,
+																1186,
+																1187,
+																1180,
+																1188,
+																1182,
+																1185,
+																1181,
+																1178,
+																1177,
+																1176,
+																1222,
+																1211,
+																1194,
+																1217,
+																1193,
+																1223,
+																1183,
+																1184
+															]
+														}
+													]
+												}
+											},
+											"defaultValue": "payslipNonPiiSchema"
+										},
+										{
+											"id": 1173,
+											"name": "schema",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "Payslip schema identifier. A literal, exactly as the API pins it on the\nsingle-registration endpoints: "
+													},
+													{
+														"kind": "code",
+														"text": "`payslipNonPii`"
+													},
+													{
+														"kind": "text",
+														"text": " below IS the au.payslip.v1\nshape, so accepting another identifier here would impose AU rules on a\npayload that does not claim to be AU. The public registration schema is\na discriminated union keyed on "
+													},
+													{
+														"kind": "code",
+														"text": "`schema`"
+													},
+													{
+														"kind": "text",
+														"text": ", with one member per version."
+													}
+												]
+											},
+											"type": {
+												"type": "literal",
+												"value": "au.payslip.v1"
+											},
+											"defaultValue": "..."
+										},
+										{
+											"id": 1232,
+											"name": "verifiablReference",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {
+												"isOptional": true
+											},
+											"comment": {
+												"summary": [
+													{
+														"kind": "text",
+														"text": "Optional provider-generated reference (from "
+													},
+													{
+														"kind": "code",
+														"text": "`generateVerifiablReference`"
+													},
+													{
+														"kind": "text",
+														"text": ").\nWhen omitted, the SDK generates one for this call. The reference makes\nautomatic retries idempotent: an identical replay succeeds without\ncreating another record, while reuse with different data returns a\nconflict. Supply and persist one when retries must survive a process\nrestart or occur in a separate call."
+													}
+												]
+											},
+											"type": {
+												"type": "intrinsic",
+												"name": "string"
+											},
+											"defaultValue": "..."
+										}
+									],
+									"groups": [
+										{
+											"title": "Properties",
+											"children": [
+												1229,
+												1174,
+												1175,
+												1173,
+												1232
+											]
+										}
+									]
+								}
+							},
+							{
+								"type": "reflection",
+								"declaration": {
+									"id": 1063,
+									"name": "__type",
+									"variant": "declaration",
+									"kind": 65536,
+									"flags": {},
+									"children": [
+										{
+											"id": 1236,
+											"name": "encryptionMetadata",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "reflection",
+												"declaration": {
+													"id": 1064,
+													"name": "__type",
+													"variant": "declaration",
+													"kind": 65536,
+													"flags": {},
+													"children": [
+														{
+															"id": 1237,
+															"name": "iv",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "96-bit (12-byte) IV."
+																	}
+																]
+															},
+															"type": {
+																"type": "reference",
+																"target": {
+																	"packageName": "typescript",
+																	"packagePath": "lib/lib.es5.d.ts",
+																	"qualifiedName": "Uint8Array"
+																},
+																"typeArguments": [
+																	{
+																		"type": "reference",
+																		"target": {
+																			"packageName": "typescript",
+																			"packagePath": "lib/lib.es5.d.ts",
+																			"qualifiedName": "ArrayBuffer"
+																		},
+																		"name": "ArrayBuffer",
+																		"package": "typescript"
+																	}
+																],
+																"name": "Uint8Array",
+																"package": "typescript"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1238,
+															"name": "tag",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "128-bit (16-byte) GCM authentication tag."
+																	}
+																]
+															},
+															"type": {
+																"type": "reference",
+																"target": {
+																	"packageName": "typescript",
+																	"packagePath": "lib/lib.es5.d.ts",
+																	"qualifiedName": "Uint8Array"
+																},
+																"typeArguments": [
+																	{
+																		"type": "reference",
+																		"target": {
+																			"packageName": "typescript",
+																			"packagePath": "lib/lib.es5.d.ts",
+																			"qualifiedName": "ArrayBuffer"
+																		},
+																		"name": "ArrayBuffer",
+																		"package": "typescript"
+																	}
+																],
+																"name": "Uint8Array",
+																"package": "typescript"
+															},
+															"defaultValue": "..."
+														}
+													],
+													"groups": [
+														{
+															"title": "Properties",
+															"children": [
+																1237,
+																1238
+															]
+														}
+													]
+												}
+											},
+											"defaultValue": "registrationFields.encryptionMetadata"
+										},
+										{
+											"id": 1234,
+											"name": "issuedAt",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "intrinsic",
+												"name": "string"
+											},
+											"defaultValue": "registrationFields.issuedAt"
+										},
+										{
+											"id": 1235,
+											"name": "payslipNonPii",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "reference",
+												"target": 669,
+												"name": "AustralianPayslipV2",
+												"package": "@verifiabl/issuer"
+											},
+											"defaultValue": "australianPayslipV2Schema"
+										},
+										{
+											"id": 1233,
+											"name": "schema",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "literal",
+												"value": "au.payslip.v2"
+											},
+											"defaultValue": "..."
+										},
+										{
+											"id": 1239,
+											"name": "verifiablReference",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {
+												"isOptional": true
+											},
+											"type": {
+												"type": "intrinsic",
+												"name": "string"
+											},
+											"defaultValue": "..."
+										}
+									],
+									"groups": [
+										{
+											"title": "Properties",
+											"children": [
+												1236,
+												1234,
+												1235,
+												1233,
+												1239
+											]
+										}
+									]
+								}
+							},
+							{
+								"type": "reflection",
+								"declaration": {
+									"id": 1065,
+									"name": "__type",
+									"variant": "declaration",
+									"kind": 65536,
+									"flags": {},
+									"children": [
+										{
+											"id": 1243,
+											"name": "encryptionMetadata",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "reflection",
+												"declaration": {
+													"id": 1066,
+													"name": "__type",
+													"variant": "declaration",
+													"kind": 65536,
+													"flags": {},
+													"children": [
+														{
+															"id": 1244,
+															"name": "iv",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "96-bit (12-byte) IV."
+																	}
+																]
+															},
+															"type": {
+																"type": "reference",
+																"target": {
+																	"packageName": "typescript",
+																	"packagePath": "lib/lib.es5.d.ts",
+																	"qualifiedName": "Uint8Array"
+																},
+																"typeArguments": [
+																	{
+																		"type": "reference",
+																		"target": {
+																			"packageName": "typescript",
+																			"packagePath": "lib/lib.es5.d.ts",
+																			"qualifiedName": "ArrayBuffer"
+																		},
+																		"name": "ArrayBuffer",
+																		"package": "typescript"
+																	}
+																],
+																"name": "Uint8Array",
+																"package": "typescript"
+															},
+															"defaultValue": "..."
+														},
+														{
+															"id": 1245,
+															"name": "tag",
+															"variant": "declaration",
+															"kind": 1024,
+															"flags": {},
+															"comment": {
+																"summary": [
+																	{
+																		"kind": "text",
+																		"text": "128-bit (16-byte) GCM authentication tag."
+																	}
+																]
+															},
+															"type": {
+																"type": "reference",
+																"target": {
+																	"packageName": "typescript",
+																	"packagePath": "lib/lib.es5.d.ts",
+																	"qualifiedName": "Uint8Array"
+																},
+																"typeArguments": [
+																	{
+																		"type": "reference",
+																		"target": {
+																			"packageName": "typescript",
+																			"packagePath": "lib/lib.es5.d.ts",
+																			"qualifiedName": "ArrayBuffer"
+																		},
+																		"name": "ArrayBuffer",
+																		"package": "typescript"
+																	}
+																],
+																"name": "Uint8Array",
+																"package": "typescript"
+															},
+															"defaultValue": "..."
+														}
+													],
+													"groups": [
+														{
+															"title": "Properties",
+															"children": [
+																1244,
+																1245
+															]
+														}
+													]
+												}
+											},
+											"defaultValue": "registrationFields.encryptionMetadata"
+										},
+										{
+											"id": 1241,
+											"name": "issuedAt",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "intrinsic",
+												"name": "string"
+											},
+											"defaultValue": "registrationFields.issuedAt"
+										},
+										{
+											"id": 1242,
+											"name": "payslipNonPii",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "reference",
+												"target": 736,
+												"name": "NewZealandPayslipV2",
+												"package": "@verifiabl/issuer"
+											},
+											"defaultValue": "newZealandPayslipV2Schema"
+										},
+										{
+											"id": 1240,
+											"name": "schema",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {},
+											"type": {
+												"type": "literal",
+												"value": "nz.payslip.v2"
+											},
+											"defaultValue": "..."
+										},
+										{
+											"id": 1246,
+											"name": "verifiablReference",
+											"variant": "declaration",
+											"kind": 1024,
+											"flags": {
+												"isOptional": true
+											},
+											"type": {
+												"type": "intrinsic",
+												"name": "string"
+											},
+											"defaultValue": "..."
+										}
+									],
+									"groups": [
+										{
+											"title": "Properties",
+											"children": [
+												1243,
+												1241,
+												1242,
+												1240,
+												1246
+											]
+										}
+									]
+								}
+							}
+						]
+					}
+				},
+				{
+					"id": 1171,
+					"name": "verifiablReference",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {
+						"isReadonly": true
+					},
+					"comment": {
+						"summary": [
+							{
+								"kind": "text",
+								"text": "Persist this reference with the registration for cross-process self-managed retries."
+							}
+						]
+					},
+					"type": {
+						"type": "intrinsic",
+						"name": "string"
+					}
+				},
+				{
+					"id": 1330,
+					"name": "barcodeParts",
+					"variant": "declaration",
+					"kind": 2048,
+					"flags": {},
+					"signatures": [
+						{
+							"id": 1331,
+							"name": "barcodeParts",
+							"variant": "signature",
+							"kind": 4096,
+							"flags": {},
+							"comment": {
+								"summary": [
+									{
+										"kind": "text",
+										"text": "Use the reference returned by registration (or the batch result)."
+									}
+								]
+							},
+							"parameters": [
+								{
+									"id": 1332,
+									"name": "reference",
+									"variant": "param",
+									"kind": 32768,
+									"flags": {},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									}
+								}
+							],
+							"type": {
+								"type": "reference",
+								"target": 455,
+								"name": "BarcodeParts",
+								"package": "@verifiabl/issuer"
+							}
+						}
+					]
+				}
+			],
+			"groups": [
+				{
+					"title": "Properties",
+					"children": [
+						1247,
+						1172,
+						1171
+					]
+				},
+				{
+					"title": "Methods",
+					"children": [
+						1330
 					]
 				}
 			]
@@ -17087,7 +21655,7 @@
 					],
 					"type": {
 						"type": "reference",
-						"target": 445,
+						"target": 1390,
 						"name": "EncryptedPii",
 						"package": "@verifiabl/issuer"
 					}
@@ -17111,7 +21679,33 @@
 						"summary": [
 							{
 								"kind": "text",
-								"text": "Format Australian employee PII as fixed-arity AU2 plaintext."
+								"text": "Format Australian employee PII as fixed-arity AU2 plaintext.\nThrows "
+							},
+							{
+								"kind": "inline-tag",
+								"tag": "@link",
+								"text": "PiiValidationError",
+								"target": 500
+							},
+							{
+								"kind": "text",
+								"text": " for forbidden text, including address parts,\n"
+							},
+							{
+								"kind": "code",
+								"text": "`ZodError`"
+							},
+							{
+								"kind": "text",
+								"text": " for structural problems, and "
+							},
+							{
+								"kind": "code",
+								"text": "`RangeError`"
+							},
+							{
+								"kind": "text",
+								"text": " for the UTF-8 size limit."
 							}
 						]
 					},
@@ -17125,14 +21719,14 @@
 							"type": {
 								"type": "reflection",
 								"declaration": {
-									"id": 1068,
+									"id": 1359,
 									"name": "__type",
 									"variant": "declaration",
 									"kind": 65536,
 									"flags": {},
 									"children": [
 										{
-											"id": 488,
+											"id": 863,
 											"name": "accountName",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17146,7 +21740,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 487,
+											"id": 862,
 											"name": "accountNumber",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17160,7 +21754,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 489,
+											"id": 864,
 											"name": "address",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17170,14 +21764,14 @@
 											"type": {
 												"type": "reflection",
 												"declaration": {
-													"id": 1069,
+													"id": 1361,
 													"name": "__type",
 													"variant": "declaration",
 													"kind": 65536,
 													"flags": {},
 													"children": [
 														{
-															"id": 842,
+															"id": 1362,
 															"name": "lines",
 															"variant": "declaration",
 															"kind": 1024,
@@ -17194,7 +21788,7 @@
 															"defaultValue": "..."
 														},
 														{
-															"id": 845,
+															"id": 1365,
 															"name": "postcode",
 															"variant": "declaration",
 															"kind": 1024,
@@ -17208,7 +21802,7 @@
 															"defaultValue": "..."
 														},
 														{
-															"id": 844,
+															"id": 1364,
 															"name": "stateOrTerritory",
 															"variant": "declaration",
 															"kind": 1024,
@@ -17222,7 +21816,7 @@
 															"defaultValue": "..."
 														},
 														{
-															"id": 843,
+															"id": 1363,
 															"name": "suburb",
 															"variant": "declaration",
 															"kind": 1024,
@@ -17240,10 +21834,10 @@
 														{
 															"title": "Properties",
 															"children": [
-																842,
-																845,
-																844,
-																843
+																1362,
+																1365,
+																1364,
+																1363
 															]
 														}
 													]
@@ -17252,7 +21846,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 486,
+											"id": 526,
 											"name": "bsb",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17266,7 +21860,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 484,
+											"id": 861,
 											"name": "department",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17280,7 +21874,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 482,
+											"id": 859,
 											"name": "employeeName",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17294,7 +21888,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 485,
+											"id": 525,
 											"name": "employerAbn",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17308,7 +21902,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 840,
+											"id": 1360,
 											"name": "employerName",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17322,7 +21916,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 483,
+											"id": 860,
 											"name": "position",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17340,15 +21934,15 @@
 										{
 											"title": "Properties",
 											"children": [
-												488,
-												487,
-												489,
-												486,
-												484,
-												482,
-												485,
-												840,
-												483
+												863,
+												862,
+												864,
+												526,
+												861,
+												859,
+												525,
+												1360,
+												860
 											]
 										}
 									]
@@ -17380,7 +21974,33 @@
 						"summary": [
 							{
 								"kind": "text",
-								"text": "Format New Zealand employee PII as fixed-arity NZ2 plaintext."
+								"text": "Format New Zealand employee PII as fixed-arity NZ2 plaintext.\nThrows "
+							},
+							{
+								"kind": "inline-tag",
+								"tag": "@link",
+								"text": "PiiValidationError",
+								"target": 500
+							},
+							{
+								"kind": "text",
+								"text": " for forbidden text, including address parts,\n"
+							},
+							{
+								"kind": "code",
+								"text": "`ZodError`"
+							},
+							{
+								"kind": "text",
+								"text": " for structural problems, and "
+							},
+							{
+								"kind": "code",
+								"text": "`RangeError`"
+							},
+							{
+								"kind": "text",
+								"text": " for the UTF-8 size limit."
 							}
 						]
 					},
@@ -17394,14 +22014,14 @@
 							"type": {
 								"type": "reflection",
 								"declaration": {
-									"id": 1070,
+									"id": 1366,
 									"name": "__type",
 									"variant": "declaration",
 									"kind": 65536,
 									"flags": {},
 									"children": [
 										{
-											"id": 528,
+											"id": 874,
 											"name": "accountName",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17415,7 +22035,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 527,
+											"id": 873,
 											"name": "accountNumber",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17429,7 +22049,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 529,
+											"id": 875,
 											"name": "address",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17439,14 +22059,14 @@
 											"type": {
 												"type": "reflection",
 												"declaration": {
-													"id": 1071,
+													"id": 1369,
 													"name": "__type",
 													"variant": "declaration",
 													"kind": 65536,
 													"flags": {},
 													"children": [
 														{
-															"id": 855,
+															"id": 1372,
 															"name": "city",
 															"variant": "declaration",
 															"kind": 1024,
@@ -17460,7 +22080,7 @@
 															"defaultValue": "..."
 														},
 														{
-															"id": 853,
+															"id": 1370,
 															"name": "lines",
 															"variant": "declaration",
 															"kind": 1024,
@@ -17477,7 +22097,7 @@
 															"defaultValue": "..."
 														},
 														{
-															"id": 856,
+															"id": 1373,
 															"name": "postcode",
 															"variant": "declaration",
 															"kind": 1024,
@@ -17491,7 +22111,7 @@
 															"defaultValue": "..."
 														},
 														{
-															"id": 854,
+															"id": 1371,
 															"name": "suburb",
 															"variant": "declaration",
 															"kind": 1024,
@@ -17509,10 +22129,10 @@
 														{
 															"title": "Properties",
 															"children": [
-																855,
-																853,
-																856,
-																854
+																1372,
+																1370,
+																1373,
+																1371
 															]
 														}
 													]
@@ -17521,7 +22141,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 524,
+											"id": 870,
 											"name": "department",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17535,7 +22155,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 522,
+											"id": 868,
 											"name": "employeeName",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17549,7 +22169,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 851,
+											"id": 1368,
 											"name": "employerName",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17563,7 +22183,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 850,
+											"id": 1367,
 											"name": "irdNumber",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17577,7 +22197,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 523,
+											"id": 869,
 											"name": "position",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17595,14 +22215,14 @@
 										{
 											"title": "Properties",
 											"children": [
-												528,
-												527,
-												529,
-												524,
-												522,
-												851,
-												850,
-												523
+												874,
+												873,
+												875,
+												870,
+												868,
+												1368,
+												1367,
+												869
 											]
 										}
 									]
@@ -17674,14 +22294,14 @@
 							"type": {
 								"type": "reflection",
 								"declaration": {
-									"id": 1072,
+									"id": 1374,
 									"name": "__type",
 									"variant": "declaration",
 									"kind": 65536,
 									"flags": {},
 									"children": [
 										{
-											"id": 863,
+											"id": 1379,
 											"name": "accountName",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17695,7 +22315,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 862,
+											"id": 1378,
 											"name": "accountNumber",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17709,7 +22329,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 864,
+											"id": 1380,
 											"name": "address",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17723,7 +22343,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 526,
+											"id": 872,
 											"name": "bsb",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17737,7 +22357,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 861,
+											"id": 1377,
 											"name": "department",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17751,7 +22371,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 859,
+											"id": 1375,
 											"name": "employeeName",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17765,7 +22385,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 525,
+											"id": 871,
 											"name": "employerAbn",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17779,7 +22399,7 @@
 											"defaultValue": "..."
 										},
 										{
-											"id": 860,
+											"id": 1376,
 											"name": "position",
 											"variant": "declaration",
 											"kind": 1024,
@@ -17797,14 +22417,14 @@
 										{
 											"title": "Properties",
 											"children": [
-												863,
-												862,
-												864,
-												526,
-												861,
-												859,
-												525,
-												860
+												1379,
+												1378,
+												1380,
+												872,
+												1377,
+												1375,
+												871,
+												1376
 											]
 										}
 									]
@@ -17967,14 +22587,14 @@
 					"type": {
 						"type": "reflection",
 						"declaration": {
-							"id": 1073,
+							"id": 1381,
 							"name": "__type",
 							"variant": "declaration",
 							"kind": 65536,
 							"flags": {},
 							"children": [
 								{
-									"id": 874,
+									"id": 1388,
 									"name": "accountName",
 									"variant": "declaration",
 									"kind": 1024,
@@ -17988,7 +22608,7 @@
 									"defaultValue": "..."
 								},
 								{
-									"id": 873,
+									"id": 1387,
 									"name": "accountNumber",
 									"variant": "declaration",
 									"kind": 1024,
@@ -18002,7 +22622,7 @@
 									"defaultValue": "..."
 								},
 								{
-									"id": 875,
+									"id": 1389,
 									"name": "address",
 									"variant": "declaration",
 									"kind": 1024,
@@ -18016,7 +22636,7 @@
 									"defaultValue": "..."
 								},
 								{
-									"id": 872,
+									"id": 1386,
 									"name": "bsb",
 									"variant": "declaration",
 									"kind": 1024,
@@ -18030,7 +22650,7 @@
 									"defaultValue": "..."
 								},
 								{
-									"id": 870,
+									"id": 1384,
 									"name": "department",
 									"variant": "declaration",
 									"kind": 1024,
@@ -18044,7 +22664,7 @@
 									"defaultValue": "..."
 								},
 								{
-									"id": 868,
+									"id": 1382,
 									"name": "employeeName",
 									"variant": "declaration",
 									"kind": 1024,
@@ -18058,7 +22678,7 @@
 									"defaultValue": "..."
 								},
 								{
-									"id": 871,
+									"id": 1385,
 									"name": "employerAbn",
 									"variant": "declaration",
 									"kind": 1024,
@@ -18072,7 +22692,7 @@
 									"defaultValue": "..."
 								},
 								{
-									"id": 869,
+									"id": 1383,
 									"name": "position",
 									"variant": "declaration",
 									"kind": 1024,
@@ -18090,18 +22710,92 @@
 								{
 									"title": "Properties",
 									"children": [
-										874,
-										873,
-										875,
-										872,
-										870,
-										868,
-										871,
-										869
+										1388,
+										1387,
+										1389,
+										1386,
+										1384,
+										1382,
+										1385,
+										1383
 									]
 								}
 							]
 						}
+					}
+				}
+			]
+		},
+		{
+			"id": 1333,
+			"name": "prepareAustralianV2Payslip",
+			"variant": "declaration",
+			"kind": 64,
+			"flags": {},
+			"signatures": [
+				{
+					"id": 1334,
+					"name": "prepareAustralianV2Payslip",
+					"variant": "signature",
+					"kind": 4096,
+					"flags": {},
+					"parameters": [
+						{
+							"id": 1335,
+							"name": "input",
+							"variant": "param",
+							"kind": 32768,
+							"flags": {},
+							"type": {
+								"type": "reference",
+								"target": 1158,
+								"name": "AustralianV2IssuanceInput",
+								"package": "@verifiabl/issuer"
+							}
+						}
+					],
+					"type": {
+						"type": "reference",
+						"target": 1170,
+						"name": "PreparedV2Payslip",
+						"package": "@verifiabl/issuer"
+					}
+				}
+			]
+		},
+		{
+			"id": 1336,
+			"name": "prepareNewZealandV2Payslip",
+			"variant": "declaration",
+			"kind": 64,
+			"flags": {},
+			"signatures": [
+				{
+					"id": 1337,
+					"name": "prepareNewZealandV2Payslip",
+					"variant": "signature",
+					"kind": 4096,
+					"flags": {},
+					"parameters": [
+						{
+							"id": 1338,
+							"name": "input",
+							"variant": "param",
+							"kind": 32768,
+							"flags": {},
+							"type": {
+								"type": "reference",
+								"target": 1164,
+								"name": "NewZealandV2IssuanceInput",
+								"package": "@verifiabl/issuer"
+							}
+						}
+					],
+					"type": {
+						"type": "reference",
+						"target": 1170,
+						"name": "PreparedV2Payslip",
+						"package": "@verifiabl/issuer"
 					}
 				}
 			]
@@ -18123,15 +22817,18 @@
 			"title": "Interfaces",
 			"children": [
 				669,
+				1158,
 				455,
 				542,
 				549,
 				564,
 				569,
 				608,
-				445,
+				1390,
 				736,
+				1164,
 				496,
+				1170,
 				602,
 				630,
 				474,
@@ -18207,7 +22904,9 @@
 				478,
 				468,
 				618,
-				518
+				518,
+				1333,
+				1336
 			]
 		}
 	],
@@ -19207,21 +23906,6 @@
 			"packageName": "@verifiabl/issuer",
 			"packagePath": "src/client.ts",
 			"qualifiedName": "VerifiablRequestEvent.path"
-		},
-		"445": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/crypto.ts",
-			"qualifiedName": "EncryptedPii"
-		},
-		"446": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/crypto.ts",
-			"qualifiedName": "EncryptedPii.encryptedPii"
-		},
-		"447": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/crypto.ts",
-			"qualifiedName": "EncryptedPii.encryptionMetadata"
 		},
 		"451": {
 			"packageName": "@verifiabl/issuer",
@@ -21922,6 +26606,1181 @@
 			"packageName": "@verifiabl/issuer",
 			"packagePath": "src/types.ts",
 			"qualifiedName": "KnownSchemaRegisterNonPiiBatchRequest"
+		},
+		"1158": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "AustralianV2IssuanceInput"
+		},
+		"1159": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "AustralianV2IssuanceInput.pii"
+		},
+		"1160": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "AustralianV2IssuanceInput.payslipNonPii"
+		},
+		"1161": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "AustralianV2IssuanceInput.issuedAt"
+		},
+		"1162": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "AustralianV2IssuanceInput.key"
+		},
+		"1163": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "AustralianV2IssuanceInput.verifiablReference"
+		},
+		"1164": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "NewZealandV2IssuanceInput"
+		},
+		"1165": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "NewZealandV2IssuanceInput.pii"
+		},
+		"1166": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "NewZealandV2IssuanceInput.payslipNonPii"
+		},
+		"1167": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "NewZealandV2IssuanceInput.issuedAt"
+		},
+		"1168": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "NewZealandV2IssuanceInput.key"
+		},
+		"1169": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "NewZealandV2IssuanceInput.verifiablReference"
+		},
+		"1170": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "PreparedV2Payslip"
+		},
+		"1171": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "PreparedV2Payslip.verifiablReference"
+		},
+		"1172": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "PreparedV2Payslip.registration"
+		},
+		"1173": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "schema"
+		},
+		"1174": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "issuedAt"
+		},
+		"1175": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "payslipNonPii"
+		},
+		"1176": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "periodStart"
+		},
+		"1177": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "periodEnd"
+		},
+		"1178": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "paymentDate"
+		},
+		"1179": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "currency"
+		},
+		"1180": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "grossCents"
+		},
+		"1181": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "paygwCents"
+		},
+		"1182": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "netCents"
+		},
+		"1183": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "ytdGrossCents"
+		},
+		"1184": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "ytdPaygwCents"
+		},
+		"1185": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "payFrequency"
+		},
+		"1186": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "employmentBasis"
+		},
+		"1187": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "engagementType"
+		},
+		"1188": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "hourly"
+		},
+		"1189": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "ordinaryRateCents"
+		},
+		"1190": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "hours"
+		},
+		"1191": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "amountCents"
+		},
+		"1192": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "annualRateCents"
+		},
+		"1193": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "taxableGrossCents"
+		},
+		"1194": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "stslWithholdingCents"
+		},
+		"1195": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "earnings"
+		},
+		"1196": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "type"
+		},
+		"1197": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "leaveType"
+		},
+		"1198": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "amountCents"
+		},
+		"1199": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "units"
+		},
+		"1200": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "rateCents"
+		},
+		"1201": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "type"
+		},
+		"1202": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "allowanceType"
+		},
+		"1203": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "amountCents"
+		},
+		"1204": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "otherCategory"
+		},
+		"1205": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "units"
+		},
+		"1206": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "rateCents"
+		},
+		"1207": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "type"
+		},
+		"1208": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "amountCents"
+		},
+		"1209": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "units"
+		},
+		"1210": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "rateCents"
+		},
+		"1211": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "salarySacrifice"
+		},
+		"1212": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "type"
+		},
+		"1213": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "amountCents"
+		},
+		"1214": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "deductions"
+		},
+		"1215": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "type"
+		},
+		"1216": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "amountCents"
+		},
+		"1217": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "superannuation"
+		},
+		"1218": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "contributionType"
+		},
+		"1219": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "amountCents"
+		},
+		"1220": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "usi"
+		},
+		"1221": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "fundAbn"
+		},
+		"1222": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "reimbursementsCents"
+		},
+		"1223": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "ytd"
+		},
+		"1224": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "taxableCents"
+		},
+		"1225": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "superCents"
+		},
+		"1226": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "nonTaxableCents"
+		},
+		"1227": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "postTaxDeductionsCents"
+		},
+		"1228": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "reimbursementsCents"
+		},
+		"1229": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "encryptionMetadata"
+		},
+		"1230": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "iv"
+		},
+		"1231": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "tag"
+		},
+		"1232": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "verifiablReference"
+		},
+		"1233": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "schema"
+		},
+		"1234": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "issuedAt"
+		},
+		"1235": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "payslipNonPii"
+		},
+		"1236": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "encryptionMetadata"
+		},
+		"1237": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "iv"
+		},
+		"1238": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "tag"
+		},
+		"1239": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "verifiablReference"
+		},
+		"1240": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "schema"
+		},
+		"1241": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "issuedAt"
+		},
+		"1242": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "payslipNonPii"
+		},
+		"1243": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "encryptionMetadata"
+		},
+		"1244": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "iv"
+		},
+		"1245": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "tag"
+		},
+		"1246": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "verifiablReference"
+		},
+		"1247": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "PreparedV2Payslip.apiManagedRegistration"
+		},
+		"1248": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "schema"
+		},
+		"1249": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "issuedAt"
+		},
+		"1250": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "payslipNonPii"
+		},
+		"1251": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "periodStart"
+		},
+		"1252": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "periodEnd"
+		},
+		"1253": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "paymentDate"
+		},
+		"1254": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "currency"
+		},
+		"1255": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "grossCents"
+		},
+		"1256": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "paygwCents"
+		},
+		"1257": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "netCents"
+		},
+		"1258": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "ytdGrossCents"
+		},
+		"1259": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "ytdPaygwCents"
+		},
+		"1260": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "payFrequency"
+		},
+		"1261": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "employmentBasis"
+		},
+		"1262": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "engagementType"
+		},
+		"1263": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "hourly"
+		},
+		"1264": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "ordinaryRateCents"
+		},
+		"1265": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "hours"
+		},
+		"1266": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "amountCents"
+		},
+		"1267": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "annualRateCents"
+		},
+		"1268": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "taxableGrossCents"
+		},
+		"1269": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "stslWithholdingCents"
+		},
+		"1270": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "earnings"
+		},
+		"1271": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "type"
+		},
+		"1272": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "leaveType"
+		},
+		"1273": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "amountCents"
+		},
+		"1274": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "units"
+		},
+		"1275": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "rateCents"
+		},
+		"1276": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "type"
+		},
+		"1277": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "allowanceType"
+		},
+		"1278": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "amountCents"
+		},
+		"1279": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "otherCategory"
+		},
+		"1280": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "units"
+		},
+		"1281": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "rateCents"
+		},
+		"1282": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "type"
+		},
+		"1283": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "amountCents"
+		},
+		"1284": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "units"
+		},
+		"1285": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "rateCents"
+		},
+		"1286": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "salarySacrifice"
+		},
+		"1287": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "type"
+		},
+		"1288": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "amountCents"
+		},
+		"1289": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "deductions"
+		},
+		"1290": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1291": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "type"
+		},
+		"1292": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "amountCents"
+		},
+		"1293": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "superannuation"
+		},
+		"1294": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1295": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "contributionType"
+		},
+		"1296": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "amountCents"
+		},
+		"1297": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "usi"
+		},
+		"1298": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "fundAbn"
+		},
+		"1299": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "reimbursementsCents"
+		},
+		"1300": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "ytd"
+		},
+		"1301": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1302": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "taxableCents"
+		},
+		"1303": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "superCents"
+		},
+		"1304": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "nonTaxableCents"
+		},
+		"1305": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "postTaxDeductionsCents"
+		},
+		"1306": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "reimbursementsCents"
+		},
+		"1307": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "encryptionMetadata"
+		},
+		"1308": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1309": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "iv"
+		},
+		"1310": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "tag"
+		},
+		"1311": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "encryptedPii"
+		},
+		"1312": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1313": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "schema"
+		},
+		"1314": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "issuedAt"
+		},
+		"1315": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "payslipNonPii"
+		},
+		"1316": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "encryptionMetadata"
+		},
+		"1317": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1318": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "iv"
+		},
+		"1319": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "tag"
+		},
+		"1320": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "encryptedPii"
+		},
+		"1321": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1322": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "schema"
+		},
+		"1323": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "issuedAt"
+		},
+		"1324": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "payslipNonPii"
+		},
+		"1325": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "encryptionMetadata"
+		},
+		"1326": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1327": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "iv"
+		},
+		"1328": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "tag"
+		},
+		"1329": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/types.ts",
+			"qualifiedName": "encryptedPii"
+		},
+		"1330": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "PreparedV2Payslip.barcodeParts"
+		},
+		"1331": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "PreparedV2Payslip.barcodeParts"
+		},
+		"1332": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "reference"
+		},
+		"1333": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "prepareAustralianV2Payslip"
+		},
+		"1334": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "prepareAustralianV2Payslip"
+		},
+		"1335": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "input"
+		},
+		"1336": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "prepareNewZealandV2Payslip"
+		},
+		"1337": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "prepareNewZealandV2Payslip"
+		},
+		"1338": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/issuance.ts",
+			"qualifiedName": "input"
+		},
+		"1339": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1340": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1341": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1342": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1343": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1344": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1345": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1346": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1347": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1348": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1349": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1350": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1351": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1352": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1353": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1354": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1355": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1356": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1357": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1358": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1359": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1360": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "employerName"
+		},
+		"1361": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1362": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "lines"
+		},
+		"1363": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "suburb"
+		},
+		"1364": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "stateOrTerritory"
+		},
+		"1365": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "postcode"
+		},
+		"1366": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1367": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "irdNumber"
+		},
+		"1368": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "employerName"
+		},
+		"1369": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1370": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "lines"
+		},
+		"1371": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "suburb"
+		},
+		"1372": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "city"
+		},
+		"1373": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "postcode"
+		},
+		"1374": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1375": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "employeeName"
+		},
+		"1376": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "position"
+		},
+		"1377": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "department"
+		},
+		"1378": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "accountNumber"
+		},
+		"1379": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "accountName"
+		},
+		"1380": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "address"
+		},
+		"1381": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1382": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "employeeName"
+		},
+		"1383": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "position"
+		},
+		"1384": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "department"
+		},
+		"1385": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "employerAbn"
+		},
+		"1386": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "bsb"
+		},
+		"1387": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "accountNumber"
+		},
+		"1388": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "accountName"
+		},
+		"1389": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/pii.ts",
+			"qualifiedName": "address"
+		},
+		"1390": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/internal/crypto.ts",
+			"qualifiedName": "EncryptedPii"
+		},
+		"1391": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/internal/crypto.ts",
+			"qualifiedName": "EncryptedPii.encryptedPii"
+		},
+		"1392": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/internal/crypto.ts",
+			"qualifiedName": "EncryptedPii.encryptionMetadata"
 		}
 	},
 	"files": {
