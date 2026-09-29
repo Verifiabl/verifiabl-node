@@ -54,7 +54,13 @@ try {
     ["PAY-1001", "au.payslip.v2", "AUD", "9000.00", "paygw", "2250.00", "6750.00"],
     ["PAY-1002", "nz.payslip.v2", "NZD", "7600.00", "paye", "1710.00", "5890.00"],
   ]) {
-    const request = manifest("batch", id).registrationRequest;
+    const record = manifest("batch", id);
+    const request = record.registrationRequest;
+    assert.equal(record.verifiablReference, request.verifiablReference);
+    assert.equal(readFileSync(
+      join(example, "output", runDirectory, "batch", id, "xmp-payload.txt"), "utf8",
+    ).startsWith(`2|${record.verifiablReference}|`), true);
+    assert.ok(!JSON.stringify(record).includes(id === "PAY-1001" ? "Jane A. Doe" : "Zoë Nguyễn"));
     assert.equal(request.schema, schema);
     assert.deepEqual(request.payslipNonPii, {
       periodEnd: "2026-08-31",
@@ -68,6 +74,7 @@ try {
   const single = manifest("single", "PAY-1001").registrationRequest;
   assert.equal(single.schema, "au.payslip.v2");
   assert.deepEqual(single.payslipNonPii, manifest("batch", "PAY-1001").registrationRequest.payslipNonPii);
+  assert.notEqual(single.encryptionMetadata.iv, manifest("batch", "PAY-1001").registrationRequest.encryptionMetadata.iv);
 } finally {
   rmSync(consumer, { recursive: true, force: true });
 }

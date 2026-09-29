@@ -11,43 +11,43 @@
       "ecosystem": "node",
       "language": "typescript",
       "source": "examples/self-managed-issuer/src/app.ts",
-      "code": "const plaintext = payslip.formatPii();\nconst { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);"
+      "code": "const issuedAt = new Date().toISOString();\nconst prepared =\n  payslip.country === \"AU\"\n    ? prepareAustralianV2Payslip({\n        pii: payslip.pii,\n        payslipNonPii: payslip.payslipNonPii,\n        issuedAt,\n        key,\n      })\n    : prepareNewZealandV2Payslip({\n        pii: payslip.pii,\n        payslipNonPii: payslip.payslipNonPii,\n        issuedAt,\n        key,\n      });"
     },
     "node.self-managed.prepare-registration": {
       "ecosystem": "node",
       "language": "typescript",
       "source": "examples/self-managed-issuer/src/app.ts",
-      "code": "const verifiablReference = generateVerifiablReference();\nconst issuedAt = new Date().toISOString();\n\n// Persist these values with the payslip before registration."
+      "code": "// Atomically persist prepared.registration and\n// prepared.barcodeParts(prepared.verifiablReference).encryptedPii before sending.\n// After a restart, resend the same registration and render with saved ciphertext."
     },
     "node.self-managed.register-single": {
       "ecosystem": "node",
       "language": "typescript",
       "source": "examples/self-managed-issuer/src/app.ts",
-      "code": "await client.registerNonPii({\n  verifiablReference,\n  ...payslip.registration,\n  issuedAt,\n  encryptionMetadata,\n});"
+      "code": "const singleResult = await client.registerNonPii(single.prepared.registration);\nsingleResultReference = singleResult.verifiablReference;"
     },
     "node.self-managed.build-qr": {
       "ecosystem": "node",
       "language": "typescript",
       "source": "examples/self-managed-issuer/src/app.ts",
-      "code": "const parts = { verifiablReference, encryptedPii };\nconst badge = createBarcodeSvg(parts, { environment: \"sandbox\" });\nconst svg = badge.svg;"
+      "code": "const parts = prepared.prepared.barcodeParts(resultReference);\nconst badge = createBarcodeSvg(parts, { environment: \"sandbox\" });\nconst svg = badge.svg;"
     },
     "node.self-managed.build-xmp": {
       "ecosystem": "node",
       "language": "typescript",
       "source": "examples/self-managed-issuer/src/app.ts",
-      "code": "const xmpPayload = buildBarcodePayload({ verifiablReference, encryptedPii });"
+      "code": "const xmpPayload = buildBarcodePayload(parts);"
     },
     "node.self-managed.prepare-batch": {
       "ecosystem": "node",
       "language": "typescript",
       "source": "examples/self-managed-issuer/src/app.ts",
-      "code": "const batch = payslips.map((payslip) => {\n  const plaintext = payslip.formatPii();\n  const { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);\n\n  const verifiablReference = generateVerifiablReference();\n  const issuedAt = new Date().toISOString();\n\n  // Persist these values with the payslip before registration.\n  return { payslip, verifiablReference, issuedAt, encryptedPii, encryptionMetadata };\n});"
+      "code": "const batch = payslips.map((payslip) => prepare(payslip, key));\n// Persist each prepared registration and matching ciphertext before sending."
     },
     "node.self-managed.register-batch": {
       "ecosystem": "node",
       "language": "typescript",
       "source": "examples/self-managed-issuer/src/app.ts",
-      "code": "const response = await client.registerNonPiiBatch({\n  records: batch.map((record) => ({\n    verifiablReference: record.verifiablReference,\n    externalId: record.payslip.externalId,\n    ...record.payslip.registration,\n    issuedAt: record.issuedAt,\n    encryptionMetadata: record.encryptionMetadata,\n  })),\n});\n\nconst registeredOutcomes = response.results.map((result) => ({\n  externalId: result.externalId ?? \"unknown\",\n  verifiablReference: result.verifiablReference,\n  status: result.status,\n  ...(result.code === undefined ? {} : { code: result.code }),\n  ...(result.detail === undefined ? {} : { detail: result.detail }),\n}));"
+      "code": "const response = await client.registerNonPiiBatch({\n  records: batch.map((record) => ({\n    ...record.prepared.registration,\n    verifiablReference: record.prepared.verifiablReference,\n    externalId: record.payslip.externalId,\n  })),\n});\n\nconst registeredOutcomes = response.results.map((result) => ({\n  externalId: result.externalId ?? \"unknown\",\n  verifiablReference: result.verifiablReference,\n  status: result.status,\n  ...(result.code === undefined ? {} : { code: result.code }),\n  ...(result.detail === undefined ? {} : { detail: result.detail }),\n}));"
     }
   }
 }

@@ -6,6 +6,28 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-09-29
+
+### Added
+
+- Add `prepareAustralianV2Payslip` and `prepareNewZealandV2Payslip` to pair
+  each jurisdiction's PII profile with its v2 registration schema. Prepared
+  self-managed registrations carry a stable reference and independent copies
+  of their request and ciphertext for safe retries and barcode rendering;
+  API-managed requests omit the caller-generated reference.
+
+### Fixed
+
+- `formatAustralianPii` and `formatNewZealandPii` now throw `PiiValidationError`
+  for forbidden text, matching `formatPii`. Violations name the input fields or
+  address paths (for example `address.lines[0]`) without echoing PII values.
+  Structural errors remain `ZodError`; oversized plaintext remains `RangeError`.
+
+### Changed
+
+- Keep the deterministic encryption helper for conformance tests internal;
+  the supported `encryptPii` public API is unchanged.
+
 ## [0.26.0] - 2026-09-28
 
 ### Changed

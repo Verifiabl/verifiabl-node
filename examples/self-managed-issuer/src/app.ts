@@ -2,102 +2,97 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
-  AUSTRALIAN_PAYSLIP_V2_SCHEMA,
   type AustralianPayslipV2,
+  type AustralianPiiFields,
   buildBarcodePayload,
   buildScanUrl,
   createBarcodeSvg,
-  encryptPii,
-  formatAustralianPii,
-  formatNewZealandPii,
-  generateVerifiablReference,
-  NEW_ZEALAND_PAYSLIP_V2_SCHEMA,
   type NewZealandPayslipV2,
+  type NewZealandPiiFields,
   PDF_PAYLOAD_XMP_NAMESPACE,
   PDF_PAYLOAD_XMP_PROPERTY,
-  type RegisterNonPiiRequest,
+  type PreparedV2Payslip,
+  prepareAustralianV2Payslip,
+  prepareNewZealandV2Payslip,
   VerifiablClient,
 } from "@verifiabl/issuer";
 
 type Mode = "offline" | "live";
 
-type ExamplePayslip = {
-  externalId: string;
-  formatPii: () => string;
-  registration:
-    | { schema: typeof AUSTRALIAN_PAYSLIP_V2_SCHEMA; payslipNonPii: AustralianPayslipV2 }
-    | { schema: typeof NEW_ZEALAND_PAYSLIP_V2_SCHEMA; payslipNonPii: NewZealandPayslipV2 };
-};
+type ExamplePayslip =
+  | {
+      externalId: string;
+      country: "AU";
+      pii: AustralianPiiFields;
+      payslipNonPii: AustralianPayslipV2;
+    }
+  | {
+      externalId: string;
+      country: "NZ";
+      pii: NewZealandPiiFields;
+      payslipNonPii: NewZealandPayslipV2;
+    };
 
 interface PreparedPayslip {
   payslip: ExamplePayslip;
-  verifiablReference: string;
-  issuedAt: string;
-  encryptedPii: Uint8Array;
-  encryptionMetadata: RegisterNonPiiRequest["encryptionMetadata"];
+  prepared: PreparedV2Payslip;
 }
 
 const PAYSLIPS: readonly ExamplePayslip[] = [
   {
     externalId: "PAY-1001",
-    formatPii: () =>
-      formatAustralianPii({
-        employeeName: "Jane A. Doe",
-        position: "Senior Developer",
-        department: "Engineering",
-        employerName: "Example Payroll Pty Ltd",
-        employerAbn: "12 345 678 901",
-        bsb: "062-000",
-        accountNumber: "****5678",
-        accountName: "Jane A Doe",
-        address: {
-          lines: ["12 Example St"],
-          suburb: "Sydney",
-          stateOrTerritory: "NSW",
-          postcode: "2000",
-        },
-      }),
-    registration: {
-      schema: AUSTRALIAN_PAYSLIP_V2_SCHEMA,
-      payslipNonPii: {
-        // v2 permits a payslip with only the period end printed.
-        periodEnd: "2026-08-31",
-        paymentDate: "2026-09-04",
-        currency: "AUD",
-        gross: "9000.00",
-        paygw: "2250.00",
-        net: "6750.00",
+    country: "AU",
+    pii: {
+      employeeName: "Jane A. Doe",
+      position: "Senior Developer",
+      department: "Engineering",
+      employerName: "Example Payroll Pty Ltd",
+      employerAbn: "12 345 678 901",
+      bsb: "062-000",
+      accountNumber: "****5678",
+      accountName: "Jane A Doe",
+      address: {
+        lines: ["12 Example St"],
+        suburb: "Sydney",
+        stateOrTerritory: "NSW",
+        postcode: "2000",
       },
+    },
+    payslipNonPii: {
+      // v2 permits a payslip with only the period end printed.
+      periodEnd: "2026-08-31",
+      paymentDate: "2026-09-04",
+      currency: "AUD",
+      gross: "9000.00",
+      paygw: "2250.00",
+      net: "6750.00",
     },
   },
   {
     externalId: "PAY-1002",
-    formatPii: () =>
-      formatNewZealandPii({
-        employeeName: "Zoë Nguyễn",
-        irdNumber: "***-***-***",
-        position: "Product Designer",
-        department: "Product",
-        employerName: "Example Payroll NZ Ltd",
-        accountNumber: "**-****-*******-**",
-        accountName: "Zoë Nguyễn",
-        address: {
-          lines: ["44 Harbour Rd"],
-          suburb: "Parnell",
-          city: "Auckland",
-          postcode: "1052",
-        },
-      }),
-    registration: {
-      schema: NEW_ZEALAND_PAYSLIP_V2_SCHEMA,
-      payslipNonPii: {
-        periodEnd: "2026-08-31",
-        paymentDate: "2026-09-04",
-        currency: "NZD",
-        gross: "7600.00",
-        paye: "1710.00",
-        net: "5890.00",
+    country: "NZ",
+    pii: {
+      employeeName: "Zoë Nguyễn",
+      irdNumber: "***-***-***",
+      position: "Product Designer",
+      department: "Product",
+      employerName: "Example Payroll NZ Ltd",
+      accountNumber: "**-****-*******-**",
+      accountName: "Zoë Nguyễn",
+      address: {
+        lines: ["44 Harbour Rd"],
+        suburb: "Parnell",
+        city: "Auckland",
+        postcode: "1052",
       },
+    },
+    payslipNonPii: {
+      periodEnd: "2026-08-31",
+      paymentDate: "2026-09-04",
+      currency: "NZD",
+      gross: "7600.00",
+      paye: "1710.00",
+      net: "5890.00",
     },
   },
 ];
@@ -146,17 +141,29 @@ function readLiveKey(): Buffer {
 
 function prepare(payslip: ExamplePayslip, key: Buffer): PreparedPayslip {
   // snippet:start:node.self-managed.format-and-encrypt
-  const plaintext = payslip.formatPii();
-  const { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);
+  const issuedAt = new Date().toISOString();
+  const prepared =
+    payslip.country === "AU"
+      ? prepareAustralianV2Payslip({
+          pii: payslip.pii,
+          payslipNonPii: payslip.payslipNonPii,
+          issuedAt,
+          key,
+        })
+      : prepareNewZealandV2Payslip({
+          pii: payslip.pii,
+          payslipNonPii: payslip.payslipNonPii,
+          issuedAt,
+          key,
+        });
   // snippet:end:node.self-managed.format-and-encrypt
 
   // snippet:start:node.self-managed.prepare-registration
-  const verifiablReference = generateVerifiablReference();
-  const issuedAt = new Date().toISOString();
-
-  // Persist these values with the payslip before registration.
+  // Atomically persist prepared.registration and
+  // prepared.barcodeParts(prepared.verifiablReference).encryptedPii before sending.
+  // After a restart, resend the same registration and render with saved ciphertext.
   // snippet:end:node.self-managed.prepare-registration
-  return { payslip, verifiablReference, issuedAt, encryptedPii, encryptionMetadata };
+  return { payslip, prepared };
 }
 
 async function writeArtifacts(
@@ -164,10 +171,11 @@ async function writeArtifacts(
   group: "single" | "batch",
   prepared: PreparedPayslip,
   registration: "offline-only-unregistered" | "sandbox-registration-pending" | "sandbox-registered",
+  resultReference = prepared.prepared.verifiablReference,
 ): Promise<void> {
-  const { verifiablReference, encryptedPii } = prepared;
+  const request = prepared.prepared.registration;
   // snippet:start:node.self-managed.build-qr
-  const parts = { verifiablReference, encryptedPii };
+  const parts = prepared.prepared.barcodeParts(resultReference);
   const badge = createBarcodeSvg(parts, { environment: "sandbox" });
   const svg = badge.svg;
   // snippet:end:node.self-managed.build-qr
@@ -175,7 +183,7 @@ async function writeArtifacts(
   const scanUrl = buildScanUrl(parts, { environment: "sandbox" });
 
   // snippet:start:node.self-managed.build-xmp
-  const xmpPayload = buildBarcodePayload({ verifiablReference, encryptedPii });
+  const xmpPayload = buildBarcodePayload(parts);
   // snippet:end:node.self-managed.build-xmp
   if (badge.content !== scanUrl || !scanUrl.includes("#2.") || !xmpPayload.startsWith("2|")) {
     throw new Error("Generated QR and XMP artifacts do not use the matching v2 contract");
@@ -191,19 +199,17 @@ async function writeArtifacts(
       `${JSON.stringify(
         {
           externalId: prepared.payslip.externalId,
-          verifiablReference: prepared.verifiablReference,
+          verifiablReference: resultReference,
           environment: "sandbox",
           registration,
           registrationRequest: {
             kind: group,
             externalId: group === "batch" ? prepared.payslip.externalId : undefined,
-            verifiablReference: prepared.verifiablReference,
-            ...prepared.payslip.registration,
-            issuedAt: prepared.issuedAt,
+            ...request,
             encryptionMetadataEncoding: "base64",
             encryptionMetadata: {
-              iv: Buffer.from(prepared.encryptionMetadata.iv).toString("base64"),
-              tag: Buffer.from(prepared.encryptionMetadata.tag).toString("base64"),
+              iv: Buffer.from(request.encryptionMetadata.iv).toString("base64"),
+              tag: Buffer.from(request.encryptionMetadata.tag).toString("base64"),
             },
           },
           barcodeFormat: "v2",
@@ -236,21 +242,14 @@ async function run(): Promise<void> {
   const firstPayslip = payslips[0];
   if (firstPayslip === undefined) throw new Error("The example fixture is missing");
   const single = prepare(firstPayslip, key);
-  const { payslip, verifiablReference, issuedAt, encryptionMetadata } = single;
   // snippet:start:node.self-managed.prepare-batch
-  const batch = payslips.map((payslip) => {
-    const plaintext = payslip.formatPii();
-    const { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);
-
-    const verifiablReference = generateVerifiablReference();
-    const issuedAt = new Date().toISOString();
-
-    // Persist these values with the payslip before registration.
-    return { payslip, verifiablReference, issuedAt, encryptedPii, encryptionMetadata };
-  });
+  const batch = payslips.map((payslip) => prepare(payslip, key));
+  // Persist each prepared registration and matching ciphertext before sending.
   // snippet:end:node.self-managed.prepare-batch
   let batchOutcomes: Array<Record<string, string>>;
   let batchToWrite = batch;
+  let singleResultReference = single.prepared.verifiablReference;
+  const batchResultReferences = new Map<string, string>();
 
   // Persist encrypted barcode payloads before network access so an artifact-write
   // failure cannot occur only after successful registration.
@@ -265,22 +264,16 @@ async function run(): Promise<void> {
     if (client === undefined) throw new Error("Live client was not initialized");
 
     // snippet:start:node.self-managed.register-single
-    await client.registerNonPii({
-      verifiablReference,
-      ...payslip.registration,
-      issuedAt,
-      encryptionMetadata,
-    });
+    const singleResult = await client.registerNonPii(single.prepared.registration);
+    singleResultReference = singleResult.verifiablReference;
     // snippet:end:node.self-managed.register-single
 
     // snippet:start:node.self-managed.register-batch
     const response = await client.registerNonPiiBatch({
       records: batch.map((record) => ({
-        verifiablReference: record.verifiablReference,
+        ...record.prepared.registration,
+        verifiablReference: record.prepared.verifiablReference,
         externalId: record.payslip.externalId,
-        ...record.payslip.registration,
-        issuedAt: record.issuedAt,
-        encryptionMetadata: record.encryptionMetadata,
       })),
     });
 
@@ -293,24 +286,28 @@ async function run(): Promise<void> {
     }));
     // snippet:end:node.self-managed.register-batch
     batchOutcomes = registeredOutcomes;
-    batchToWrite = batch.filter((_, index) => {
-      const status = response.results[index]?.status;
-      return status === "created" || status === "duplicate";
+    batchToWrite = batch.filter((record, index) => {
+      const result = response.results[index];
+      if (result?.status !== "created" && result?.status !== "duplicate") return false;
+      batchResultReferences.set(record.prepared.verifiablReference, result.verifiablReference);
+      return true;
     });
   } else {
     batchOutcomes = batch.map((record) => ({
       externalId: record.payslip.externalId,
-      verifiablReference: record.verifiablReference,
+      verifiablReference: record.prepared.verifiablReference,
       status: "registration-skipped-offline",
     }));
   }
 
   if (mode === "live") {
-    await writeArtifacts(outputRoot, "single", single, "sandbox-registered");
+    await writeArtifacts(outputRoot, "single", single, "sandbox-registered", singleResultReference);
     await Promise.all(
-      batchToWrite.map((record) =>
-        writeArtifacts(outputRoot, "batch", record, "sandbox-registered"),
-      ),
+      batchToWrite.map((record) => {
+        const reference = batchResultReferences.get(record.prepared.verifiablReference);
+        if (!reference) throw new Error("Missing batch registration result");
+        return writeArtifacts(outputRoot, "batch", record, "sandbox-registered", reference);
+      }),
     );
   }
   await writeFile(

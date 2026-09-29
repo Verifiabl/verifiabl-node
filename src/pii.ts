@@ -225,9 +225,13 @@ export type PiiFieldViolationReason =
   | "format-character"
   | "invalid-unicode";
 
-/** A single field `formatPii` refused to encode, and why. */
+/** A supplied PII field a formatter refused to encode, and why. */
 export interface PiiFieldViolation {
-  field: PiiFieldName;
+  /** Input field name, or a structured address path such as `address.lines[0]`. */
+  field:
+    | PiiFieldName
+    | `address.${Exclude<keyof AustralianAddress | keyof NewZealandAddress, "lines">}`
+    | `address.lines[${number}]`;
   reason: PiiFieldViolationReason;
 }
 
@@ -239,7 +243,8 @@ const VIOLATION_DESCRIPTIONS: Record<PiiFieldViolationReason, string> = {
 };
 
 /**
- * Thrown by {@link formatPii} when a field value cannot be encoded in the PII
+ * Thrown by {@link formatPii}, {@link formatAustralianPii} and
+ * {@link formatNewZealandPii} when a field value cannot be encoded in the PII
  * wire format. The pipe is the field delimiter and the format has no escape
  * mechanism, so an offending value must be corrected at the source (strip the
  * character) rather than escaped. `violations` names each field and reason so
@@ -259,7 +264,10 @@ export class PiiValidationError extends Error {
   }
 }
 
-function fieldViolation(field: PiiFieldName, value: string): PiiFieldViolation | null {
+function fieldViolation(
+  field: PiiFieldViolation["field"],
+  value: string,
+): PiiFieldViolation | null {
   if (hasUnpairedSurrogate(value)) {
     return { field, reason: "invalid-unicode" };
   }
@@ -281,12 +289,15 @@ function fieldViolation(field: PiiFieldName, value: string): PiiFieldViolation |
  * {@link piiFieldsSchema} to reject with its own (structural) ZodError, so
  * `formatPii`'s documented error contract holds for nullish callers too.
  */
-function findPiiViolations(fields: PiiFields): PiiFieldViolation[] {
+function findPiiViolations(
+  fields: unknown,
+  fieldNames: readonly PiiFieldName[] = PII_FIELD_ORDER,
+): PiiFieldViolation[] {
   const violations: PiiFieldViolation[] = [];
-  if (typeof fields !== "object" || fields === null) {
+  if (!isFieldObject(fields)) {
     return violations;
   }
-  for (const field of PII_FIELD_ORDER) {
+  for (const field of fieldNames) {
     const value = fields[field];
     if (typeof value !== "string") continue;
     const violation = fieldViolation(field, value);
@@ -318,6 +329,40 @@ export function formatPii(fields: PiiFields): string {
   return plaintext;
 }
 
+function isFieldObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Inspect only allowed input fields; leave malformed structures to Zod. */
+function validateJurisdictionPiiText(
+  fields: unknown,
+  fieldNames: readonly PiiFieldName[],
+  addressNames: readonly (keyof AustralianAddress | keyof NewZealandAddress)[],
+): void {
+  const violations = findPiiViolations(
+    fields,
+    fieldNames.filter((name) => name !== "address"),
+  );
+  const address = isFieldObject(fields) ? fields.address : undefined;
+  if (isFieldObject(address)) {
+    for (const name of addressNames) {
+      const value = address[name];
+      if (name === "lines") {
+        if (!Array.isArray(value)) continue;
+        for (const [index, line] of value.entries()) {
+          if (typeof line !== "string") continue;
+          const violation = fieldViolation(`address.lines[${index}]`, line);
+          if (violation !== null) violations.push(violation);
+        }
+      } else if (typeof value === "string") {
+        const violation = fieldViolation(`address.${name}`, value);
+        if (violation !== null) violations.push(violation);
+      }
+    }
+  }
+  if (violations.length > 0) throw new PiiValidationError(violations);
+}
+
 function nonEmpty(values: readonly (string | undefined)[]): string[] {
   return values.filter((value): value is string => value !== undefined && value.length > 0);
 }
@@ -342,8 +387,17 @@ function formatCurrentProfile(version: string, segments: readonly string[]): str
   return plaintext;
 }
 
-/** Format Australian employee PII as fixed-arity AU2 plaintext. */
+/**
+ * Format Australian employee PII as fixed-arity AU2 plaintext.
+ * Throws {@link PiiValidationError} for forbidden text, including address parts,
+ * `ZodError` for structural problems, and `RangeError` for the UTF-8 size limit.
+ */
 export function formatAustralianPii(fields: AustralianPiiFields): string {
+  validateJurisdictionPiiText(
+    fields,
+    australianPiiFieldsSchema.keyof().options,
+    australianAddressSchema.keyof().options,
+  );
   const validated = australianPiiFieldsSchema.parse(fields);
   const employerIdentity =
     validated.employerAbn === undefined || validated.employerAbn.length === 0
@@ -365,8 +419,17 @@ export function formatAustralianPii(fields: AustralianPiiFields): string {
   );
 }
 
-/** Format New Zealand employee PII as fixed-arity NZ2 plaintext. */
+/**
+ * Format New Zealand employee PII as fixed-arity NZ2 plaintext.
+ * Throws {@link PiiValidationError} for forbidden text, including address parts,
+ * `ZodError` for structural problems, and `RangeError` for the UTF-8 size limit.
+ */
 export function formatNewZealandPii(fields: NewZealandPiiFields): string {
+  validateJurisdictionPiiText(
+    fields,
+    newZealandPiiFieldsSchema.keyof().options,
+    newZealandAddressSchema.keyof().options,
+  );
   const validated = newZealandPiiFieldsSchema.parse(fields);
   const values: Record<(typeof NZ2_FIELD_ORDER)[number], string> = {
     employeeName: validated.employeeName ?? "",

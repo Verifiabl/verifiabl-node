@@ -16,10 +16,10 @@ Requires Node.js 20+. No native dependencies: both the SVG and PNG renderers are
 
 ## Getting started
 
-This is the self-managed flow: register the payslip, encrypt the personal details locally, and generate the QR code yourself. You need three values from onboarding: your OAuth client ID and secret, and your encryption key.
+For new AU/NZ v2 integrations, prepare the payslip once, register its non-PII fields, then build the barcode locally. You need your OAuth client ID, client secret, and encryption key from onboarding. Use the same prepared result for the request and barcode.
 
 ```ts
-import { VerifiablClient, createBarcodeSvg, encryptPii, formatPii } from "@verifiabl/issuer";
+import { VerifiablClient, createBarcodeSvg, prepareAustralianV2Payslip } from "@verifiabl/issuer";
 
 const client = new VerifiablClient({
   environment: "sandbox",
@@ -32,98 +32,70 @@ const client = new VerifiablClient({
 // Your 32-byte key, from onboarding. Load it from a secrets manager.
 const key = Buffer.from(process.env.VERIFIABL_ENCRYPTION_KEY_BASE64!, "base64");
 
-// 1. Format and encrypt the employee's details locally.
-const pii = formatPii({
-  employeeName: "Jane A. Doe",
-  position: "Senior Developer",
-  department: "Engineering",
-  employerAbn: "12345678901",
-  bsb: "062-000",
-  accountNumber: "12345678",
-  accountName: "Jane A Doe",
-  address: "12 Example St, Sydney NSW 2000",
-});
-const { encryptedPii, encryptionMetadata } = encryptPii(pii, key);
-
-// 2. Register the non-PII data. The SDK generates and sends a Verifiabl
-// reference, making its automatic retries idempotent.
-const { verifiablReference } = await client.registerNonPii({
-  schema: "au.payslip.v1",
-  issuedAt: new Date().toISOString(),
-  // Canonical au.payslip.v1: all amounts are integer cents.
-  // `currency` is one of AUD, NZD, USD, GBP, EUR, CAD, SGD, HKD, CHF or ZAR: the
-  // ISO 4217 codes with a minor-unit exponent of 2, so cents are really cents.
+// 1. Select AU2 and au.payslip.v2, validate non-PII fields, and encrypt locally.
+const prepared = prepareAustralianV2Payslip({
+  pii: {
+    employeeName: "Jane A. Doe",
+    employerName: "Example Payroll Pty Ltd",
+    employerAbn: "12 345 678 901",
+    address: { lines: ["12 Example St"], suburb: "Sydney", stateOrTerritory: "NSW", postcode: "2000" },
+  },
   payslipNonPii: {
-    periodStart: "2026-05-01",
     periodEnd: "2026-05-31",
     paymentDate: "2026-06-04",
     currency: "AUD",
-    grossCents: 900_000,
-    paygwCents: 225_000,
-    netCents: 675_000,
-    ytdGrossCents: 5_400_000,
-    ytdPaygwCents: 1_350_000,
+    gross: "9000.00",
+    paygw: "2250.00",
+    net: "6750.00",
   },
-  encryptionMetadata,
+  issuedAt: new Date().toISOString(),
+  key,
 });
 
-// 3. Render the QR code and embed the SVG in your payslip PDF.
+// 2. Persist the reference, registration, and barcode ciphertext together before sending.
+// Store the ciphertext as binary; the registration contains only the IV and tag.
+const savedRegistration = prepared.registration;
+const savedCiphertext = prepared.barcodeParts(prepared.verifiablReference).encryptedPii;
+// Persist { registration: savedRegistration, encryptedPii: savedCiphertext } atomically.
+// After a restart, resend savedRegistration unchanged and render from savedCiphertext.
+const result = await client.registerNonPii(savedRegistration);
+
+// 3. Render from the saved ciphertext and the reference returned by the API.
 const { svg } = createBarcodeSvg(
-  { verifiablReference, encryptedPii },
+  { verifiablReference: result.verifiablReference, encryptedPii: savedCiphertext },
   { environment: "sandbox" },
 );
 ```
 
 ### AU2 and NZ2 payslip profiles
 
-Use `formatAustralianPii` with `au.payslip.v2`. The formatter accepts employer
-name and ABN separately, then writes the ABN when present or falls back to the
-name. Structured address components collapse into the profile's single address
-display field.
+Use `prepareAustralianV2Payslip` as shown above or `prepareNewZealandV2Payslip`
+for NZ. Each selects the matching schema and PII formatter internally. The AU2
+formatter accepts employer name and ABN separately, then writes the ABN when
+present or falls back to the name. Structured address components collapse into
+the profile's single address display field. For an API-rendered PNG, pass
+`prepared.apiManagedRegistration` to `client.registerAndBuildBarcode` instead
+of calling `registerNonPii`. Choose one flow per payslip. The API-managed
+request omits the prepared self-managed reference; it cannot safely replay an
+ambiguous failure.
 
 ```ts
-import {
-  createBarcodeSvg,
-  encryptPii,
-  formatAustralianPii,
-} from "@verifiabl/issuer";
+import { prepareNewZealandV2Payslip } from "@verifiabl/issuer";
 
-const plaintext = formatAustralianPii({
-  employeeName: "Jane A. Doe",
-  employerName: "Example Payroll Pty Ltd",
-  employerAbn: "12 345 678 901",
-  bsb: "062-000",
-  accountNumber: "****5678",
-  accountName: "Jane A Doe",
-  address: {
-    lines: ["A204/11-17 Eve Street"],
-    suburb: "Erskineville",
-    stateOrTerritory: "NSW",
-    postcode: "2043",
-  },
-});
-const encrypted = encryptPii(plaintext, key);
-const { verifiablReference } = await client.registerNonPii({
-  schema: "au.payslip.v2",
-  issuedAt: new Date().toISOString(),
+const nzPrepared = prepareNewZealandV2Payslip({
+  pii: { employeeName: "Zoë Nguyễn", irdNumber: "***-***-***", employerName: "Example NZ Ltd" },
   payslipNonPii: {
-    // periodStart is optional on AU2 and NZ2.
-    periodEnd: "2026-05-31",
-    paymentDate: "2026-06-04",
-    currency: "AUD",
-    gross: "8125.00",
-    paygw: "2030.00",
-    net: "6095.00",
+    periodEnd: "2026-05-31", paymentDate: "2026-06-04", currency: "NZD",
+    gross: "7600.00", paye: "1710.00", net: "5890.00",
   },
-  encryptionMetadata: encrypted.encryptionMetadata,
+  issuedAt: new Date().toISOString(),
+  key,
 });
-const { svg } = createBarcodeSvg(
-  { verifiablReference, encryptedPii: encrypted.encryptedPii },
-  { environment: "sandbox" },
-);
+// Alternative API-managed flow. It returns a PNG and a server-generated reference.
+const nzResult = await client.registerAndBuildBarcode(nzPrepared.apiManagedRegistration);
 ```
 
-For `nz.payslip.v2`, use `formatNewZealandPii`. NZ2 carries the printed
+NZ2 carries the printed
 employee IRD number, employer name, account number and account name. It has no
 BSB or NZBN field.
 
@@ -132,15 +104,13 @@ AU addresses render as address lines followed by `suburb state postcode`; NZ
 addresses render as address lines, optional suburb, then `city postcode`.
 Country is implicit. The complete UTF-8 plaintext is limited to 1024 bytes.
 
-The registration `schema` selects only the non-PII payload contract. Choose the
-PII formatter separately: AU2 for Australian records or NZ2 for New Zealand
-records. Today the examples use AU2 with `au.payslip.v2` and NZ2 with
-`nz.payslip.v2`, but those matching `2` suffixes are not a version-coupling
-rule. A future non-PII schema can still use the same jurisdictional PII format,
-or the PII format can evolve without renaming the non-PII schema. The verifier
-checks the PII marker against the record's jurisdiction, not the schema version;
-a jurisdiction mismatch fails verification. Legacy v1 verification returns this
-plaintext without parsing it.
+The preparation helpers pair the AU2/NZ2 PII format with the matching v2
+non-PII schema. Their input does not accept a schema, formatted plaintext, or
+ciphertext. They do not check whether input values describe a real payslip or
+whether printed non-PII strings contain personal information. Keep employee
+PII out of non-PII fields. Advanced integrations can still select the schema
+and formatter separately with the low-level APIs. The PII format and non-PII
+schema versions are independent; legacy v1 verification remains supported.
 
 Every AU2 and NZ2 amount, rate and quantity is a plain decimal string, for
 example `"1234.56"`, `"-25.00"` or `"47.3684"`: an optional leading `-`, digits,
@@ -154,7 +124,7 @@ accepted, because wages are paid in legal tender.
 
 ### Legacy P2 compatibility writer
 
-The SDK writes the current P2 plaintext and v2 barcode payload by default:
+The low-level `formatPii` helper remains available for legacy P2 integrations. New AU/NZ v2 integrations should use the preparation helpers instead:
 
 ```ts
 import { buildBarcodePayload, createBarcodeSvg, encryptPii, formatPii } from "@verifiabl/issuer";
@@ -197,8 +167,8 @@ The badge is the navy header and the QR code on a white ground, and the QR code 
 Generate codes in a loop. Each call is independent, so a single payslip and a large pay run are both fast:
 
 ```ts
-for (const { verifiablReference, encryptedPii } of records) {
-  const { png } = await createBarcodePng({ verifiablReference, encryptedPii }, {}, 720);
+for (const { prepared, result } of records) {
+  const { png } = await createBarcodePng(prepared.barcodeParts(result.verifiablReference), {}, 720);
   // embed png in this record's PDF
 }
 ```
@@ -217,17 +187,15 @@ its records also carry provider-generated references. `registerAndBuildBarcode`
 lets the API assign the reference and therefore retries only `429`, which is
 enforced before processing.
 
-To correlate retries made in a separate call or after a process restart,
-generate and persist a reference before registration, then pass the same value
-to each call:
-
-```ts
-import { generateVerifiablReference } from "@verifiabl/issuer";
-
-const verifiablReference = generateVerifiablReference();
-// Persist `verifiablReference` with the issuance record before registering.
-await client.registerNonPii({ ...request, verifiablReference });
-```
+For self-managed v2 issuance, `prepareAustralianV2Payslip` or
+`prepareNewZealandV2Payslip` creates the reference once. Persist
+`prepared.registration` and `prepared.barcodeParts(prepared.verifiablReference).encryptedPii`
+together before the first call (the registration includes the reference, IV and
+tag, but **not** the ciphertext). Send the *same* registration after a process
+restart, then render using the saved ciphertext and the returned reference. You can also
+pass a previously allocated `verifiablReference` to the helper when you prepare
+an issuance. Do not prepare and encrypt the record again for an idempotent
+replay. An API-managed registration does not carry this reference.
 
 The API returns `201` for the first registration and `200` for an identical
 replay. Reusing a reference with different content returns a
@@ -235,39 +203,39 @@ replay. Reusing a reference with different content returns a
 
 ## Batch registration
 
-For pay runs, register up to 1000 records in one request with `registerNonPiiBatch`. The provider generates each Verifiabl reference up-front with `generateVerifiablReference` and includes it on each record, so the whole batch can go in one round trip. Results come back in the same order as the input records (`results[i]` is the outcome of `records[i]`); one bad record never fails the whole batch. `RegisterNonPiiBatchRequest` accepts future schema IDs and per-record invalid payslips; use `KnownSchemaRegisterNonPiiBatchRequest` when you want TypeScript to check the payslip shapes of currently supported schemas before submission.
+For pay runs, register up to 1000 records in one request with `registerNonPiiBatch`. Prepare each AU/NZ v2 record with its jurisdiction's helper first. The preparation creates its reference and encryption metadata together. Results match the order of the request (`results[i]` is the outcome of `records[i]`). One invalid record does not fail the batch. `RegisterNonPiiBatchRequest` also accepts future schemas; for those, use the low-level APIs.
 
 ```ts
-import { encryptPii, formatPii, generateVerifiablReference } from "@verifiabl/issuer";
+import { prepareAustralianV2Payslip, prepareNewZealandV2Payslip } from "@verifiabl/issuer";
 
 const issuedAt = new Date().toISOString();
-const prepared = payslips.map((payslip) => {
-  const verifiablReference = generateVerifiablReference();
-  const { encryptedPii, encryptionMetadata } = encryptPii(formatPii(payslip.pii), key);
-  // Keep `encryptedPii` alongside the reference locally: you need both to render the barcode.
-  return { verifiablReference, encryptedPii, encryptionMetadata, payslip };
-});
-
+const prepared = payslips.map((payslip) =>
+  payslip.country === "AU"
+    ? prepareAustralianV2Payslip({ pii: payslip.auPii, payslipNonPii: payslip.auNonPii, issuedAt, key })
+    : prepareNewZealandV2Payslip({ pii: payslip.nzPii, payslipNonPii: payslip.nzNonPii, issuedAt, key }),
+);
+// Persist each prepared reference, registration, and ciphertext before sending.
 const { results } = await client.registerNonPiiBatch({
-  records: prepared.map(({ verifiablReference, encryptionMetadata, payslip }) => ({
-    verifiablReference,
-    schema: "au.payslip.v1",
-    issuedAt,
-    payslipNonPii: payslip.nonPii,
-    encryptionMetadata,
+  records: prepared.map((item, i) => ({
+    ...item.registration,
+    verifiablReference: item.verifiablReference,
+    externalId: payslips[i].externalId,
   })),
 });
 
-for (const result of results) {
-  if (result.status === "error") {
-    console.error(result.verifiablReference, result.code, result.detail);
+results.forEach((result, i) => {
+  if (result.status === "created" || result.status === "duplicate") {
+    const parts = prepared[i].barcodeParts(result.verifiablReference);
+    // Render this record's barcode from parts.
+  } else {
+    // Handle result.code; do not parse result.detail.
   }
-}
+});
 ```
 
 ## Executable example
 
-[`examples/self-managed-issuer`](./examples/self-managed-issuer/) is a small executable version of the self-managed flow above. It registers one fictional payslip against the sandbox and writes its SVG barcode and matching PDF XMP payload. Repository CI installs the packed npm tarball into a copy of the example and compiles it as a package-consumer release test without making a sandbox request.
+[`examples/self-managed-issuer/src/prepared-v2.ts`](./examples/self-managed-issuer/src/prepared-v2.ts) shows both prepared v2 flows. The [full executable example](./examples/self-managed-issuer/) also shows advanced manual formatting and encryption. It registers one fictional payslip against the sandbox and writes its SVG barcode and matching PDF XMP payload. Repository CI installs the packed npm tarball into a copy of the example and compiles it as a package-consumer release test without making a sandbox request.
 
 ## Environments
 
