@@ -1,0 +1,41 @@
+{
+  "format": "verifiabl-v2-wire-vectors-v1",
+  "cases": [
+    {
+      "id": "au-codes-and-earnings",
+      "schema": "au.payslip.v2",
+      "payslip_non_pii": {
+        "period_start": "2026-08-01",
+        "period_end": "2026-08-31",
+        "payment_date": "2026-09-04",
+        "currency": "AUD",
+        "gross": "9000.00",
+        "paygw": "2250.00",
+        "net": "6750.00",
+        "pay_frequency": "monthly",
+        "employment_basis": "full_time",
+        "earnings": [
+          { "type": "ordinary", "amount": "8987.50" },
+          { "type": "allowance", "amount": "12.50", "allowance_type": "other", "other_category": "home_office" }
+        ]
+      }
+    },
+    {
+      "id": "nz-leave-and-dates",
+      "schema": "nz.payslip.v2",
+      "payslip_non_pii": {
+        "period_end": "2026-08-31",
+        "payment_date": "2026-09-04",
+        "currency": "NZD",
+        "gross": "7600.00",
+        "paye": "1710.00",
+        "net": "5890.00",
+        "earnings": [
+          { "type": "paid_leave", "leave_type": "annual_holiday", "amount": "7000.00" },
+          { "type": "overtime", "amount": "600.00", "units": "10.0", "rate": "60.00" }
+        ],
+        "leave_balances": { "annual": { "amount": "76.50", "unit": "hours" } }
+      }
+    }
+  ]
+}

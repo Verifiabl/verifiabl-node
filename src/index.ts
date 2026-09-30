@@ -35,8 +35,23 @@ export {
 export {
   AUSTRALIAN_PAYSLIP_V2_SCHEMA,
   type AustralianPayslipV2,
+  australianAllowanceTypes,
+  australianDeductionTypes,
+  australianEarningsTypes,
+  australianEmploymentBases,
+  australianEngagementTypes,
+  australianOtherAllowanceCategories,
+  australianPaidLeaveTypes,
+  australianPayFrequencies,
+  australianSalarySacrificeTypes,
+  australianSuperContributionTypes,
   NEW_ZEALAND_PAYSLIP_V2_SCHEMA,
   type NewZealandPayslipV2,
+  newZealandAllowanceTypes,
+  newZealandDeductionTypes,
+  newZealandEarningsTypes,
+  newZealandLeaveBalanceUnits,
+  newZealandPaidLeaveTypes,
   supportedV2Currencies,
 } from "./payslipV2.js";
 export {

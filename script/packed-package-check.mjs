@@ -27,7 +27,7 @@ try {
     [
       "--input-type=module",
       "--eval",
-      'import { generateVerifiablReference } from "@verifiabl/issuer"; if (generateVerifiablReference().length !== 22) process.exit(1)',
+      'import { generateVerifiablReference, australianPayFrequencies, australianEarningsTypes, newZealandLeaveBalanceUnits } from "@verifiabl/issuer"; if (generateVerifiablReference().length !== 22 || !australianPayFrequencies.includes("monthly") || !australianEarningsTypes.includes("paid_leave") || !newZealandLeaveBalanceUnits.includes("hours")) process.exit(1)',
     ],
     consumer,
   );
@@ -35,7 +35,7 @@ try {
     process.execPath,
     [
       "--eval",
-      'const { generateVerifiablReference } = require("@verifiabl/issuer"); if (generateVerifiablReference().length !== 22) process.exit(1)',
+      'const { generateVerifiablReference, australianPayFrequencies, australianEarningsTypes, newZealandLeaveBalanceUnits } = require("@verifiabl/issuer"); if (generateVerifiablReference().length !== 22 || !australianPayFrequencies.includes("monthly") || !australianEarningsTypes.includes("paid_leave") || !newZealandLeaveBalanceUnits.includes("hours")) process.exit(1)',
     ],
     consumer,
   );
