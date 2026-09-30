@@ -235,6 +235,12 @@ const australianPlainEarningsTypes = tuple([
   "lump_sum",
   "return_to_work",
 ]);
+/** Known AU2 earnings discriminators, including paid leave and allowances. The API may add codes later. */
+export const australianEarningsTypes = tuple([
+  "paid_leave",
+  "allowance",
+  ...australianPlainEarningsTypes,
+]);
 
 const ABN_WEIGHTS = [10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
 
@@ -440,6 +446,12 @@ const newZealandPlainEarningsTypes = tuple([
   "annual_holiday_cash_out",
   "alternative_holiday_cash_out",
   "holiday_pay_on_termination",
+]);
+/** Known NZ2 earnings discriminators, including paid leave and allowances. The API may add codes later. */
+export const newZealandEarningsTypes = tuple([
+  "paid_leave",
+  "allowance",
+  ...newZealandPlainEarningsTypes,
 ]);
 
 const newZealandEarningsFields = {

@@ -6,6 +6,15 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-09-30
+
+### Changed
+
+- Clarify that the verifier currently interprets AU2 and NZ2 as structured PII
+  only for the exact `au.payslip.v2` and `nz.payslip.v2` record schemas. Future
+  schema versions require a verifier reader update before issuance; the
+  preparation helpers and wire format are unchanged.
+
 ## [0.27.0] - 2026-09-29
 
 ### Added

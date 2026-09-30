@@ -111,6 +111,10 @@ whether printed non-PII strings contain personal information. Keep employee
 PII out of non-PII fields. Advanced integrations can still select the schema
 and formatter separately with the low-level APIs. The PII format and non-PII
 schema versions are independent; legacy v1 verification remains supported.
+The verifier currently interprets AU2 only for `au.payslip.v2` and NZ2 only
+for `nz.payslip.v2`. Future non-PII schemas need an explicit verifier reader
+mapping before reusing either PII format; an unknown schema falls back to raw
+PII text rather than structured fields.
 
 Every AU2 and NZ2 amount, rate and quantity is a plain decimal string, for
 example `"1234.56"`, `"-25.00"` or `"47.3684"`: an optional leading `-`, digits,
@@ -121,6 +125,15 @@ keep trailing zeros or more than about 17 significant digits. `currency` is
 required and accepts a current ISO 4217 currency code (`supportedV2Currencies`).
 Fund codes and codes with no minor unit, for example `XAU` or `XXX`, are not
 accepted, because wages are paid in legal tender.
+
+Fixed AU/NZ v2 code sets are available as named runtime lists from the package
+entry point. For example, `australianPayFrequencies` contains `"monthly"`,
+`australianEarningsTypes` includes `"paid_leave"` and `"allowance"`, and
+`newZealandLeaveBalanceUnits` contains `"hours"`, `"days"` and `"weeks"`.
+Other exported lists cover paid leave, allowances, deductions and employment
+codes. TypeScript input types already guide those fields; the lists also let
+JavaScript consumers discover current values without copying literals. The
+API remains the authority, and the SDK does not add a new local validator.
 
 ### Legacy P2 compatibility writer
 

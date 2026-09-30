@@ -20149,6 +20149,412 @@
 			"defaultValue": "\"au.payslip.v2\""
 		},
 		{
+			"id": 1393,
+			"name": "australianAllowanceTypes",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "cents_per_km"
+						},
+						{
+							"type": "literal",
+							"value": "award_transport"
+						},
+						{
+							"type": "literal",
+							"value": "laundry"
+						},
+						{
+							"type": "literal",
+							"value": "overtime_meal"
+						},
+						{
+							"type": "literal",
+							"value": "travel"
+						},
+						{
+							"type": "literal",
+							"value": "tools"
+						},
+						{
+							"type": "literal",
+							"value": "tasks"
+						},
+						{
+							"type": "literal",
+							"value": "qualifications"
+						},
+						{
+							"type": "literal",
+							"value": "other"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
+			"id": 1394,
+			"name": "australianDeductionTypes",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "union_professional_fees"
+						},
+						{
+							"type": "literal",
+							"value": "workplace_giving"
+						},
+						{
+							"type": "literal",
+							"value": "child_support_deduction"
+						},
+						{
+							"type": "literal",
+							"value": "child_support_garnishee"
+						},
+						{
+							"type": "literal",
+							"value": "other_post_tax"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
+			"id": 1395,
+			"name": "australianEarningsTypes",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"comment": {
+				"summary": [
+					{
+						"kind": "text",
+						"text": "Known AU2 earnings discriminators, including paid leave and allowances. The API may add codes later."
+					}
+				]
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "paid_leave"
+						},
+						{
+							"type": "literal",
+							"value": "allowance"
+						},
+						{
+							"type": "literal",
+							"value": "ordinary"
+						},
+						{
+							"type": "literal",
+							"value": "overtime"
+						},
+						{
+							"type": "literal",
+							"value": "bonus_commission"
+						},
+						{
+							"type": "literal",
+							"value": "directors_fees"
+						},
+						{
+							"type": "literal",
+							"value": "lump_sum"
+						},
+						{
+							"type": "literal",
+							"value": "return_to_work"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
+			"id": 1396,
+			"name": "australianEmploymentBases",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "full_time"
+						},
+						{
+							"type": "literal",
+							"value": "part_time"
+						},
+						{
+							"type": "literal",
+							"value": "casual"
+						},
+						{
+							"type": "literal",
+							"value": "labour_hire"
+						},
+						{
+							"type": "literal",
+							"value": "voluntary_agreement"
+						},
+						{
+							"type": "literal",
+							"value": "death_beneficiary"
+						},
+						{
+							"type": "literal",
+							"value": "non_employee"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
+			"id": 1397,
+			"name": "australianEngagementTypes",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "permanent"
+						},
+						{
+							"type": "literal",
+							"value": "fixed_term"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
+			"id": 1398,
+			"name": "australianOtherAllowanceCategories",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "home_office"
+						},
+						{
+							"type": "literal",
+							"value": "non_deductible"
+						},
+						{
+							"type": "literal",
+							"value": "transport_fares"
+						},
+						{
+							"type": "literal",
+							"value": "uniform"
+						},
+						{
+							"type": "literal",
+							"value": "private_vehicle"
+						},
+						{
+							"type": "literal",
+							"value": "general"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
+			"id": 1399,
+			"name": "australianPaidLeaveTypes",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "cash_out_in_service"
+						},
+						{
+							"type": "literal",
+							"value": "unused_on_termination"
+						},
+						{
+							"type": "literal",
+							"value": "paid_parental"
+						},
+						{
+							"type": "literal",
+							"value": "workers_compensation"
+						},
+						{
+							"type": "literal",
+							"value": "ancillary_defence"
+						},
+						{
+							"type": "literal",
+							"value": "other_paid_leave"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
+			"id": 1400,
+			"name": "australianPayFrequencies",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "weekly"
+						},
+						{
+							"type": "literal",
+							"value": "fortnightly"
+						},
+						{
+							"type": "literal",
+							"value": "monthly"
+						},
+						{
+							"type": "literal",
+							"value": "quarterly"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
+			"id": 1401,
+			"name": "australianSalarySacrificeTypes",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "super"
+						},
+						{
+							"type": "literal",
+							"value": "other"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
+			"id": 1402,
+			"name": "australianSuperContributionTypes",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "superannuation_guarantee"
+						},
+						{
+							"type": "literal",
+							"value": "resc"
+						},
+						{
+							"type": "literal",
+							"value": "salary_sacrifice"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
 			"id": 466,
 			"name": "DEFAULT_ISSUER_BASE_URL",
 			"variant": "declaration",
@@ -20357,6 +20763,277 @@
 				"value": "nz.payslip.v2"
 			},
 			"defaultValue": "\"nz.payslip.v2\""
+		},
+		{
+			"id": 1403,
+			"name": "newZealandAllowanceTypes",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "meal"
+						},
+						{
+							"type": "literal",
+							"value": "travel"
+						},
+						{
+							"type": "literal",
+							"value": "accommodation"
+						},
+						{
+							"type": "literal",
+							"value": "vehicle"
+						},
+						{
+							"type": "literal",
+							"value": "phone"
+						},
+						{
+							"type": "literal",
+							"value": "tools"
+						},
+						{
+							"type": "literal",
+							"value": "uniform"
+						},
+						{
+							"type": "literal",
+							"value": "on_call"
+						},
+						{
+							"type": "literal",
+							"value": "shift"
+						},
+						{
+							"type": "literal",
+							"value": "first_aid"
+						},
+						{
+							"type": "literal",
+							"value": "higher_duties"
+						},
+						{
+							"type": "literal",
+							"value": "qualification"
+						},
+						{
+							"type": "literal",
+							"value": "other"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
+			"id": 1404,
+			"name": "newZealandDeductionTypes",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "union_fees"
+						},
+						{
+							"type": "literal",
+							"value": "payroll_donation"
+						},
+						{
+							"type": "literal",
+							"value": "attachment_order"
+						},
+						{
+							"type": "literal",
+							"value": "ir_arrears"
+						},
+						{
+							"type": "literal",
+							"value": "other_post_tax"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
+			"id": 1405,
+			"name": "newZealandEarningsTypes",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"comment": {
+				"summary": [
+					{
+						"kind": "text",
+						"text": "Known NZ2 earnings discriminators, including paid leave and allowances. The API may add codes later."
+					}
+				]
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "paid_leave"
+						},
+						{
+							"type": "literal",
+							"value": "allowance"
+						},
+						{
+							"type": "literal",
+							"value": "ordinary"
+						},
+						{
+							"type": "literal",
+							"value": "overtime"
+						},
+						{
+							"type": "literal",
+							"value": "penal_rate"
+						},
+						{
+							"type": "literal",
+							"value": "piece_work"
+						},
+						{
+							"type": "literal",
+							"value": "bonus_commission"
+						},
+						{
+							"type": "literal",
+							"value": "extra_pay"
+						},
+						{
+							"type": "literal",
+							"value": "schedular_payment"
+						},
+						{
+							"type": "literal",
+							"value": "directors_fees"
+						},
+						{
+							"type": "literal",
+							"value": "pay_as_you_go_holiday_pay"
+						},
+						{
+							"type": "literal",
+							"value": "leave_compensation_payment"
+						},
+						{
+							"type": "literal",
+							"value": "annual_holiday_cash_out"
+						},
+						{
+							"type": "literal",
+							"value": "alternative_holiday_cash_out"
+						},
+						{
+							"type": "literal",
+							"value": "holiday_pay_on_termination"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
+			"id": 1406,
+			"name": "newZealandLeaveBalanceUnits",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "hours"
+						},
+						{
+							"type": "literal",
+							"value": "days"
+						},
+						{
+							"type": "literal",
+							"value": "weeks"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
+			"id": 1407,
+			"name": "newZealandPaidLeaveTypes",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "annual_holiday"
+						},
+						{
+							"type": "literal",
+							"value": "public_holiday"
+						},
+						{
+							"type": "literal",
+							"value": "alternative_holiday"
+						},
+						{
+							"type": "literal",
+							"value": "sick_leave"
+						},
+						{
+							"type": "literal",
+							"value": "bereavement_leave"
+						},
+						{
+							"type": "literal",
+							"value": "other_paid_leave"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
 		},
 		{
 			"id": 470,
@@ -22875,6 +23552,16 @@
 			"title": "Variables",
 			"children": [
 				668,
+				1393,
+				1394,
+				1395,
+				1396,
+				1397,
+				1398,
+				1399,
+				1400,
+				1401,
+				1402,
 				466,
 				467,
 				617,
@@ -22882,6 +23569,11 @@
 				622,
 				625,
 				735,
+				1403,
+				1404,
+				1405,
+				1406,
+				1407,
 				470,
 				471,
 				472,
@@ -27781,6 +28473,81 @@
 			"packageName": "@verifiabl/issuer",
 			"packagePath": "src/internal/crypto.ts",
 			"qualifiedName": "EncryptedPii.encryptionMetadata"
+		},
+		"1393": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "australianAllowanceTypes"
+		},
+		"1394": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "australianDeductionTypes"
+		},
+		"1395": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "australianEarningsTypes"
+		},
+		"1396": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "australianEmploymentBases"
+		},
+		"1397": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "australianEngagementTypes"
+		},
+		"1398": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "australianOtherAllowanceCategories"
+		},
+		"1399": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "australianPaidLeaveTypes"
+		},
+		"1400": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "australianPayFrequencies"
+		},
+		"1401": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "australianSalarySacrificeTypes"
+		},
+		"1402": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "australianSuperContributionTypes"
+		},
+		"1403": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "newZealandAllowanceTypes"
+		},
+		"1404": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "newZealandDeductionTypes"
+		},
+		"1405": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "newZealandEarningsTypes"
+		},
+		"1406": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "newZealandLeaveBalanceUnits"
+		},
+		"1407": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "newZealandPaidLeaveTypes"
 		}
 	},
 	"files": {

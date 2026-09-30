@@ -1,34 +1,38 @@
-# AGENTS.md — Verifiabl Node SDK
+# Verifiabl Node SDK
 
-Published issuer/provider-side SDK for Verifiabl (barcode build + wire contracts). Strictly
-provider-side: no verifier client and no reader-side/internal helpers. Wire contracts must remain
-compatible with the other official SDKs. Keep this repository self-contained: files must not
-reference paths or development tools outside the repository root.
+## Rules
 
-## Environment
+- Keep this issuer SDK provider-side. Do not add verifier clients or reader-side/internal helpers.
+- Keep wire contracts compatible with the other SDKs.
+- Keep this exported repository self-contained. Do not reference external development paths or tools.
+- Use synthetic data. Do not log payslip values, keys or credentials.
+- Regenerate profiles, fixtures, snippets and API references from source. Do not edit generated output.
 
-- Published SDK runtime: **Node.js 20+** (`engines: node >=20`), tested from the packed output
-  on Node.js 20, 22, and 26.
-- Development and release toolchain: **Node.js 26**. The build requires Node.js 22.18+ because
-  tsdown does not run on Node.js 20.
-- Package manager: **pnpm 12.3.4** with a committed `pnpm-lock.yaml`.
+## Checks
 
-Use Node.js 26 and install dependencies in the Codex **setup script**:
+Use Node.js 26 and pnpm 12.3.4 for development. The published package supports Node.js 20+.
+Test packed output on Node.js 20, 22 and 26. The build tool does not run on Node.js 20.
+Run commands from this ecosystem root:
 
-```bash
+```sh
 pnpm install --frozen-lockfile
-```
-
-## Review gates (run these; no network required)
-
-```bash
-pnpm check:ci     # Biome lint + formatting + import order, exactly as CI runs it
-pnpm typecheck    # tsc --noEmit
-pnpm test         # Vitest
+pnpm check:ci
+pnpm typecheck
+pnpm test
 node script/api-reference.mjs --check
 ```
 
-`pnpm lint` is lint-only and will pass on formatting or import-order drift that
-`check:ci` fails on; `pnpm check` fixes both in place.
+Use `check:ci`, not lint alone, to check format and import order. `pnpm check` changes files.
+For code or package changes, also run `pnpm build` and `pnpm check:exports`.
+Report checks not run.
 
-Optionally `pnpm build` (tsdown) to confirm the published ESM and CommonJS bundles compile.
+## Required reading
+
+Read the relevant documents before edits.
+
+| Task | Read |
+| --- | --- |
+| API, validation or wire contracts | [README](README.md) |
+| Development or API reference | [Development](README.md#development), `package.json` |
+| Examples | [Example guide](examples/self-managed-issuer/README.md) |
+| Packages or releases | Local `.github/workflows/` files and export checks |
