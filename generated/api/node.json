@@ -9055,6 +9055,10 @@
 													"types": [
 														{
 															"type": "literal",
+															"value": "other"
+														},
+														{
+															"type": "literal",
 															"value": "ordinary"
 														},
 														{
@@ -12521,6 +12525,10 @@
 												"type": {
 													"type": "union",
 													"types": [
+														{
+															"type": "literal",
+															"value": "other"
+														},
 														{
 															"type": "literal",
 															"value": "ordinary"
@@ -20408,6 +20416,10 @@
 						{
 							"type": "literal",
 							"value": "return_to_work"
+						},
+						{
+							"type": "literal",
+							"value": "other"
 						}
 					]
 				}
@@ -21076,6 +21088,10 @@
 						{
 							"type": "literal",
 							"value": "holiday_pay_on_termination"
+						},
+						{
+							"type": "literal",
+							"value": "other"
 						}
 					]
 				}

@@ -6,6 +6,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-10-04
+
+### Added
+
+- Accept an `other` earnings line in AU2 and NZ2 payslips, for a pay code that
+  fits no other earnings type. It takes the plain line fields and no label.
+
 ## [0.29.0] - 2026-10-04
 
 ### Added
