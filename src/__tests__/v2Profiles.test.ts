@@ -224,6 +224,17 @@ describe("AU2 and NZ2 registration", () => {
     }
   });
 
+  it("accepts four-weekly and semi-monthly AU2 pay frequencies", () => {
+    for (const payFrequency of ["four_weekly", "semi_monthly"] as const) {
+      expect(australianPayslipV2Schema.safeParse({ ...minimalAu, payFrequency }).success).toBe(
+        true,
+      );
+    }
+    expect(
+      australianPayslipV2Schema.safeParse({ ...minimalAu, payFrequency: "half_monthly" }).success,
+    ).toBe(false);
+  });
+
   it("maps AU2 without a period start", () => {
     expect(
       registrationToWire({

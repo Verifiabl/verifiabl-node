@@ -71,7 +71,9 @@ export {
 } from "./pii.js";
 
 export {
+  SUPPORTED_HORIZONTAL_PNG_PIXEL_WIDTHS,
   SUPPORTED_PNG_PIXEL_WIDTHS,
+  type SupportedHorizontalPngPixelWidth,
   type SupportedPngPixelWidth,
 } from "./qr/frame.js";
 export {
@@ -81,6 +83,7 @@ export {
 } from "./qr/png.js";
 export {
   type BarcodeErrorCorrectionLevel,
+  type BarcodeLayout,
   type BarcodeSvgOptions,
   type BarcodeSvgResult,
   createBarcodeSvg,

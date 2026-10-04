@@ -1,10 +1,11 @@
 import { type BarcodeParts, rejectRemovedBarcodeFormat, type ScanUrlOptions } from "../payload.js";
 import { blitQrOntoFrame } from "./blit.js";
-import { frameRaster, SUPPORTED_PNG_PIXEL_WIDTHS, type SupportedPngPixelWidth } from "./frame.js";
+import { frameRaster, supportedPngPixelWidths } from "./frame.js";
 import { encodePng, type PngEncodeOptions } from "./pngEncode.js";
 import {
   type BarcodeErrorCorrectionLevel,
   type BarcodeSvgOptions,
+  badgeGeometry,
   buildQrEncoding,
   DEFAULT_MAX_ERROR_CORRECTION,
   errorCorrectionLadder,
@@ -45,10 +46,6 @@ export interface BarcodePngOptions extends BarcodeSvgOptions {
   compressionLevel?: number;
 }
 
-function isSupportedPixelWidth(value: number): value is SupportedPngPixelWidth {
-  return SUPPORTED_PNG_PIXEL_WIDTHS.some((width) => width === value);
-}
-
 /**
  * Render the branded Verifiabl QR code as a PNG.
  *
@@ -58,22 +55,31 @@ function isSupportedPixelWidth(value: number): value is SupportedPngPixelWidth {
  * raster in every Verifiabl SDK.
  *
  * Because the frame is pre-rasterised, PNG output exists only at the widths in
- * {@link SUPPORTED_PNG_PIXEL_WIDTHS}. If you need a different size, prefer
+ * `SUPPORTED_PNG_PIXEL_WIDTHS` for the vertical layout and
+ * `SUPPORTED_HORIZONTAL_PNG_PIXEL_WIDTHS` for the horizontal layout. Both width
+ * sets render the QR code at the same sizes. If you need a different size, prefer
  * `createBarcodeSvg` (continuously scalable), or scale at placement time: PDF
  * toolchains set the physical size independently of the pixel size.
  *
  * Rejects with `QrCapacityError` when the encrypted PII is too long to encode.
  *
- * @param pixelWidth Output bitmap width in pixels (default: 720).
+ * @param pixelWidth Output bitmap width in pixels (default: 720 for the
+ *   vertical layout, 1410 for the horizontal layout).
  */
 export async function createBarcodePng(
   parts: BarcodeParts,
   options: BarcodePngOptions = {},
-  pixelWidth = 720,
+  pixelWidth?: number,
 ): Promise<BarcodePngResult> {
   rejectRemovedBarcodeFormat(options);
-  if (!Number.isInteger(pixelWidth) || !isSupportedPixelWidth(pixelWidth)) {
-    throw new Error(`pixelWidth must be one of ${SUPPORTED_PNG_PIXEL_WIDTHS.join(", ")}`);
+  const layout = options.layout ?? "vertical";
+  const geometry = badgeGeometry(layout);
+  const supportedWidths = supportedPngPixelWidths(layout);
+  const width = pixelWidth ?? (layout === "horizontal" ? 1410 : 720);
+  if (!Number.isInteger(width) || !supportedWidths.includes(width)) {
+    throw new Error(
+      `pixelWidth must be one of ${supportedWidths.join(", ")} for the ${layout} layout`,
+    );
   }
 
   const scanOptions: ScanUrlOptions = {};
@@ -87,18 +93,19 @@ export async function createBarcodePng(
   const content = encoding.content;
 
   const ladder = errorCorrectionLadder(options.maxErrorCorrection ?? DEFAULT_MAX_ERROR_CORRECTION);
-  const selected = selectQrRendering(encoding.data, pixelWidth, ladder, content.length);
+  const selected = selectQrRendering(encoding.data, width, ladder, content.length, geometry);
   const degraded =
     selected.errorCorrectionLevel !== ladder[0] || selected.modulePx < IDEAL_MODULE_PX;
 
-  const raster = frameRaster(pixelWidth);
+  const raster = frameRaster(width, layout);
   blitQrOntoFrame(
     raster,
     {
       matrixData: selected.qr.modules.data,
       size: selected.size,
     },
-    pixelWidth,
+    width,
+    geometry,
   );
 
   const encodeOptions: PngEncodeOptions = {};

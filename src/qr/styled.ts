@@ -23,7 +23,18 @@ export interface BarcodeSvgOptions {
    * selected environment's scan URL origin. Must use https.
    */
   scanBaseUrl?: string;
-  /** Total badge width in SVG user units / px (default: 480, the minimum). */
+  /**
+   * Badge arrangement (default "vertical"). "vertical" puts the navy "Secured
+   * by Verifiabl" header above the QR code. "horizontal" puts a light-tinted
+   * "Secured by Verifiabl" frame to the right of the QR code, for short, wide
+   * spaces.
+   */
+  layout?: BarcodeLayout;
+  /**
+   * Total badge width in SVG user units / px. The default is the minimum: 480
+   * for the vertical layout and 940 for the horizontal layout. Both minimums
+   * render the QR code at the same size.
+   */
   width?: number;
   /**
    * Highest QR error-correction level to use. The renderer still steps below
@@ -35,6 +46,9 @@ export interface BarcodeSvgOptions {
    */
   maxErrorCorrection?: "Q" | "M";
 }
+
+/** Badge arrangement: the header above the QR code, or the frame to its right. */
+export type BarcodeLayout = "vertical" | "horizontal";
 
 /** QR error-correction level chosen by the damage-first degradation ladder. */
 export type BarcodeErrorCorrectionLevel = "Q" | "M" | "L";
@@ -89,6 +103,64 @@ const FRAME_VIEWBOX_HEIGHT = FRAME_QR_BOX_Y + FRAME_QR_BOX_SIZE;
 // At this width, a realistic fully-populated PII record renders QR modules at
 // or above IDEAL_MODULE_PX at the default "M" ceiling (the pristine tier).
 const MIN_BADGE_WIDTH = 480;
+
+// Horizontal layout: the QR box on the left at the full badge height, the same
+// white gap as the vertical layout, then the light-tinted brand frame (70x80
+// design units, scaled to the QR box's height). The gap is the quiet zone on the
+// QR's right, as the vertical gap is below the header, and the tint before the
+// frame's text adds to it. The host document supplies the other three sides.
+// The panel is one unit wider than the scaled design (85, not 84), with the text
+// centred in it, so the viewBox width is even and every supported PNG width is
+// an integer. The minimum width renders the QR box at 480 px, matching the
+// vertical layout's minimum.
+const HORIZONTAL_QR_BOX_SIZE = FRAME_QR_BOX_SIZE;
+const HORIZONTAL_FRAME_X = HORIZONTAL_QR_BOX_SIZE + FRAME_QR_GAP;
+const HORIZONTAL_FRAME_WIDTH = 85;
+const HORIZONTAL_FRAME_SCALE = 1.2;
+// Centres the 84-unit scaled design in the 85-unit panel.
+const HORIZONTAL_FRAME_TEXT_X = 0.5;
+const HORIZONTAL_VIEWBOX_WIDTH = HORIZONTAL_FRAME_X + HORIZONTAL_FRAME_WIDTH;
+const HORIZONTAL_MIN_BADGE_WIDTH = 940;
+
+/** Fixed frame geometry for one layout, in viewBox units. */
+export interface BadgeGeometry {
+  readonly viewboxWidth: number;
+  readonly viewboxHeight: number;
+  readonly qrBoxX: number;
+  readonly qrBoxY: number;
+  readonly qrBoxSize: number;
+  /** Default and minimum badge width. */
+  readonly minWidth: number;
+}
+
+export const VERTICAL_GEOMETRY: BadgeGeometry = {
+  viewboxWidth: FRAME_VIEWBOX_WIDTH,
+  viewboxHeight: FRAME_VIEWBOX_HEIGHT,
+  qrBoxX: FRAME_QR_BOX_X,
+  qrBoxY: FRAME_QR_BOX_Y,
+  qrBoxSize: FRAME_QR_BOX_SIZE,
+  minWidth: MIN_BADGE_WIDTH,
+};
+
+export const HORIZONTAL_GEOMETRY: BadgeGeometry = {
+  viewboxWidth: HORIZONTAL_VIEWBOX_WIDTH,
+  viewboxHeight: HORIZONTAL_QR_BOX_SIZE,
+  qrBoxX: 0,
+  qrBoxY: 0,
+  qrBoxSize: HORIZONTAL_QR_BOX_SIZE,
+  minWidth: HORIZONTAL_MIN_BADGE_WIDTH,
+};
+
+/**
+ * The geometry for `layout`. Guards the value at runtime: `layout` is a public
+ * option, so an untyped (JS) caller could pass anything.
+ */
+export function badgeGeometry(layout: BarcodeLayout = "vertical"): BadgeGeometry {
+  if (layout === "vertical") return VERTICAL_GEOMETRY;
+  if (layout === "horizontal") return HORIZONTAL_GEOMETRY;
+  throw new Error(`layout must be "vertical" or "horizontal" (received ${JSON.stringify(layout)})`);
+}
+
 export const FINDER_SIZE = 7;
 // Degradation ladder, highest-ECC-first (Q -> M -> L; Q is the densest, most
 // damage-tolerant level). The branded frame's outer size is fixed, so the only
@@ -256,6 +328,61 @@ function renderDefaultHeader(textColor: string): string {
   );
 }
 
+/** White ground plus the navy header, above the QR box. */
+function renderVerticalFrame(): string {
+  return (
+    // Starts under the opaque header so no anti-aliased seam shows at its edge.
+    `<rect x="0" y="${FRAME_HEADER_HEIGHT - 8}" width="${FRAME_VIEWBOX_WIDTH}" ` +
+    `height="${FRAME_VIEWBOX_HEIGHT - FRAME_HEADER_HEIGHT + 8}" fill="${FRAME_BACKGROUND}"/>` +
+    `<path d="M0 8C0 3.58172 3.58172 0 8 0H88C92.4183 0 96 3.58172 96 8V${FRAME_HEADER_HEIGHT}H0V8Z" ` +
+    `fill="${DEFAULT_NAVY}"/>` +
+    renderDefaultHeader(DEFAULT_TEXT)
+  );
+}
+
+/** White ground under the QR box and the gap, then the tinted brand frame. */
+function renderHorizontalFrame(): string {
+  return (
+    `<rect x="0" y="0" width="${HORIZONTAL_FRAME_X}" height="${HORIZONTAL_QR_BOX_SIZE}" ` +
+    `fill="${FRAME_BACKGROUND}"/>` +
+    `<g transform="translate(${HORIZONTAL_FRAME_X} 0)">` +
+    `<path d="${HORIZONTAL_FRAME_TINT_PATH}" fill="${HORIZONTAL_FRAME_TINT}"/>` +
+    `<g transform="translate(${HORIZONTAL_FRAME_TEXT_X} 0) scale(${HORIZONTAL_FRAME_SCALE})" ` +
+    `fill="${DEFAULT_NAVY}">${HORIZONTAL_FRAME_TEXT_PATHS}</g></g>`
+  );
+}
+
+/**
+ * Horizontal brand frame (official asset, 70x80 design units): a tinted panel
+ * with a square left edge that faces the QR box, and navy "Secured by" text and
+ * Verifiabl wordmark as vector paths. Fills are applied by the containing
+ * group. The source clipPath is dropped for the same reason as the wordmark's.
+ * The panel is drawn in badge units: the design's panel scaled by 1.2 (corner
+ * radius 9.6) and one unit wider.
+ *
+ * The design's tint is #4A5EFD at 10% opacity. It is flattened onto white here
+ * because the tint extends the QR's right quiet zone: a translucent tint reads
+ * as solid blue to a reader that ignores alpha, and as dark on a dark page. The
+ * colour matches on a white page.
+ */
+const HORIZONTAL_FRAME_TINT = "#EDEFFF";
+const HORIZONTAL_FRAME_TINT_PATH =
+  "M0 0H75.4C80.70196 0 85 4.29806 85 9.6V86.4C85 91.70194 80.70196 96 75.4 96H0V0Z";
+const HORIZONTAL_FRAME_TEXT_PATHS =
+  '<path d="M9.76 32.63C9.76 32.87 9.80333 33.0733 9.89 33.24C9.97667 33.4067 10.09 33.5433 10.23 33.65C10.3767 33.75 10.5467 33.8267 10.74 33.88C10.9333 33.9267 11.1333 33.95 11.34 33.95C11.48 33.95 11.63 33.94 11.79 33.92C11.95 33.8933 12.1 33.8467 12.24 33.78C12.38 33.7133 12.4967 33.6233 12.59 33.51C12.6833 33.39 12.73 33.24 12.73 33.06C12.73 32.8667 12.6667 32.71 12.54 32.59C12.42 32.47 12.26 32.37 12.06 32.29C11.86 32.21 11.6333 32.14 11.38 32.08C11.1267 32.02 10.87 31.9533 10.61 31.88C10.3433 31.8133 10.0833 31.7333 9.83 31.64C9.57667 31.54 9.35 31.4133 9.15 31.26C8.95 31.1067 8.78667 30.9167 8.66 30.69C8.54 30.4567 8.48 30.1767 8.48 29.85C8.48 29.4833 8.55667 29.1667 8.71 28.9C8.87 28.6267 9.07667 28.4 9.33 28.22C9.58333 28.04 9.87 27.9067 10.19 27.82C10.51 27.7333 10.83 27.69 11.15 27.69C11.5233 27.69 11.88 27.7333 12.22 27.82C12.5667 27.9 12.8733 28.0333 13.14 28.22C13.4067 28.4067 13.6167 28.6467 13.77 28.94C13.93 29.2267 14.01 29.5767 14.01 29.99H12.49C12.4767 29.7767 12.43 29.6 12.35 29.46C12.2767 29.32 12.1767 29.21 12.05 29.13C11.9233 29.05 11.7767 28.9933 11.61 28.96C11.45 28.9267 11.2733 28.91 11.08 28.91C10.9533 28.91 10.8267 28.9233 10.7 28.95C10.5733 28.9767 10.4567 29.0233 10.35 29.09C10.25 29.1567 10.1667 29.24 10.1 29.34C10.0333 29.44 10 29.5667 10 29.72C10 29.86 10.0267 29.9733 10.08 30.06C10.1333 30.1467 10.2367 30.2267 10.39 30.3C10.55 30.3733 10.7667 30.4467 11.04 30.52C11.32 30.5933 11.6833 30.6867 12.13 30.8C12.2633 30.8267 12.4467 30.8767 12.68 30.95C12.92 31.0167 13.1567 31.1267 13.39 31.28C13.6233 31.4333 13.8233 31.64 13.99 31.9C14.1633 32.1533 14.25 32.48 14.25 32.88C14.25 33.2067 14.1867 33.51 14.06 33.79C13.9333 34.07 13.7433 34.3133 13.49 34.52C13.2433 34.72 12.9333 34.8767 12.56 34.99C12.1933 35.1033 11.7667 35.16 11.28 35.16C10.8867 35.16 10.5033 35.11 10.13 35.01C9.76333 34.9167 9.43667 34.7667 9.15 34.56C8.87 34.3533 8.64667 34.09 8.48 33.77C8.31333 33.45 8.23333 33.07 8.24 32.63H9.76ZM18.5141 31.86C18.4475 31.5 18.3275 31.2267 18.1541 31.04C17.9875 30.8533 17.7308 30.76 17.3841 30.76C17.1575 30.76 16.9675 30.8 16.8141 30.88C16.6675 30.9533 16.5475 31.0467 16.4541 31.16C16.3675 31.2733 16.3041 31.3933 16.2641 31.52C16.2308 31.6467 16.2108 31.76 16.2041 31.86H18.5141ZM16.2041 32.76C16.2241 33.22 16.3408 33.5533 16.5541 33.76C16.7675 33.9667 17.0741 34.07 17.4741 34.07C17.7608 34.07 18.0075 34 18.2141 33.86C18.4208 33.7133 18.5475 33.56 18.5941 33.4H19.8441C19.6441 34.02 19.3375 34.4633 18.9241 34.73C18.5108 34.9967 18.0108 35.13 17.4241 35.13C17.0175 35.13 16.6508 35.0667 16.3241 34.94C15.9975 34.8067 15.7208 34.62 15.4941 34.38C15.2675 34.14 15.0908 33.8533 14.9641 33.52C14.8441 33.1867 14.7841 32.82 14.7841 32.42C14.7841 32.0333 14.8475 31.6733 14.9741 31.34C15.1008 31.0067 15.2808 30.72 15.5141 30.48C15.7475 30.2333 16.0241 30.04 16.3441 29.9C16.6708 29.76 17.0308 29.69 17.4241 29.69C17.8641 29.69 18.2475 29.7767 18.5741 29.95C18.9008 30.1167 19.1675 30.3433 19.3741 30.63C19.5875 30.9167 19.7408 31.2433 19.8341 31.61C19.9275 31.9767 19.9608 32.36 19.9341 32.76H16.2041ZM24.2963 31.65C24.203 31.0567 23.853 30.76 23.2463 30.76C23.0197 30.76 22.8297 30.8133 22.6763 30.92C22.523 31.02 22.3963 31.1533 22.2963 31.32C22.203 31.48 22.1363 31.66 22.0963 31.86C22.0563 32.0533 22.0363 32.2467 22.0363 32.44C22.0363 32.6267 22.0563 32.8167 22.0963 33.01C22.1363 33.2033 22.1997 33.38 22.2863 33.54C22.3797 33.6933 22.503 33.82 22.6563 33.92C22.8097 34.02 22.9963 34.07 23.2163 34.07C23.5563 34.07 23.8163 33.9767 23.9963 33.79C24.183 33.5967 24.2997 33.34 24.3463 33.02H25.7163C25.623 33.7067 25.3563 34.23 24.9163 34.59C24.4763 34.95 23.913 35.13 23.2263 35.13C22.8397 35.13 22.483 35.0667 22.1563 34.94C21.8363 34.8067 21.563 34.6233 21.3363 34.39C21.1097 34.1567 20.933 33.88 20.8063 33.56C20.6797 33.2333 20.6163 32.8767 20.6163 32.49C20.6163 32.09 20.673 31.72 20.7863 31.38C20.9063 31.0333 21.0797 30.7367 21.3063 30.49C21.533 30.2367 21.8097 30.04 22.1363 29.9C22.463 29.76 22.8363 29.69 23.2563 29.69C23.563 29.69 23.8563 29.73 24.1363 29.81C24.423 29.89 24.6763 30.0133 24.8963 30.18C25.123 30.34 25.3063 30.5433 25.4463 30.79C25.5863 31.03 25.6663 31.3167 25.6863 31.65H24.2963ZM31.3685 35H30.0185V34.28H29.9885C29.8085 34.58 29.5752 34.7967 29.2885 34.93C29.0018 35.0633 28.7085 35.13 28.4085 35.13C28.0285 35.13 27.7152 35.08 27.4685 34.98C27.2285 34.88 27.0385 34.74 26.8985 34.56C26.7585 34.3733 26.6585 34.15 26.5985 33.89C26.5452 33.6233 26.5185 33.33 26.5185 33.01V29.83H27.9385V32.75C27.9385 33.1767 28.0052 33.4967 28.1385 33.71C28.2718 33.9167 28.5085 34.02 28.8485 34.02C29.2352 34.02 29.5152 33.9067 29.6885 33.68C29.8618 33.4467 29.9485 33.0667 29.9485 32.54V29.83H31.3685V35ZM32.4463 29.83H33.7963V30.79H33.8163C33.8829 30.63 33.9729 30.4833 34.0863 30.35C34.1996 30.21 34.3296 30.0933 34.4762 30C34.6229 29.9 34.7796 29.8233 34.9463 29.77C35.1129 29.7167 35.2863 29.69 35.4663 29.69C35.5596 29.69 35.6629 29.7067 35.7763 29.74V31.06C35.7096 31.0467 35.6296 31.0367 35.5363 31.03C35.4429 31.0167 35.3529 31.01 35.2663 31.01C35.0063 31.01 34.7863 31.0533 34.6063 31.14C34.4263 31.2267 34.2796 31.3467 34.1663 31.5C34.0596 31.6467 33.9829 31.82 33.9363 32.02C33.8896 32.22 33.8663 32.4367 33.8663 32.67V35H32.4463V29.83ZM39.6372 31.86C39.5705 31.5 39.4505 31.2267 39.2772 31.04C39.1105 30.8533 38.8539 30.76 38.5072 30.76C38.2805 30.76 38.0905 30.8 37.9372 30.88C37.7905 30.9533 37.6705 31.0467 37.5772 31.16C37.4905 31.2733 37.4272 31.3933 37.3872 31.52C37.3539 31.6467 37.3339 31.76 37.3272 31.86H39.6372ZM37.3272 32.76C37.3472 33.22 37.4639 33.5533 37.6772 33.76C37.8905 33.9667 38.1972 34.07 38.5972 34.07C38.8839 34.07 39.1305 34 39.3372 33.86C39.5439 33.7133 39.6705 33.56 39.7172 33.4H40.9672C40.7672 34.02 40.4605 34.4633 40.0472 34.73C39.6339 34.9967 39.1339 35.13 38.5472 35.13C38.1405 35.13 37.7739 35.0667 37.4472 34.94C37.1205 34.8067 36.8439 34.62 36.6172 34.38C36.3905 34.14 36.2139 33.8533 36.0872 33.52C35.9672 33.1867 35.9072 32.82 35.9072 32.42C35.9072 32.0333 35.9705 31.6733 36.0972 31.34C36.2239 31.0067 36.4039 30.72 36.6372 30.48C36.8705 30.2333 37.1472 30.04 37.4672 29.9C37.7939 29.76 38.1539 29.69 38.5472 29.69C38.9872 29.69 39.3705 29.7767 39.6972 29.95C40.0239 30.1167 40.2905 30.3433 40.4972 30.63C40.7105 30.9167 40.8639 31.2433 40.9572 31.61C41.0505 31.9767 41.0839 32.36 41.0572 32.76H37.3272ZM45.5694 32.4C45.5694 32.1867 45.5494 31.9833 45.5094 31.79C45.4694 31.59 45.3994 31.4167 45.2994 31.27C45.206 31.1167 45.0827 30.9933 44.9294 30.9C44.776 30.8067 44.5827 30.76 44.3494 30.76C44.116 30.76 43.9194 30.8067 43.7594 30.9C43.5994 30.9933 43.4694 31.1167 43.3694 31.27C43.276 31.4233 43.206 31.6 43.1594 31.8C43.1194 31.9933 43.0994 32.1967 43.0994 32.41C43.0994 32.61 43.1227 32.81 43.1694 33.01C43.216 33.21 43.2894 33.39 43.3894 33.55C43.496 33.7033 43.626 33.83 43.7794 33.93C43.9394 34.0233 44.1294 34.07 44.3494 34.07C44.5827 34.07 44.776 34.0233 44.9294 33.93C45.0894 33.8367 45.216 33.7133 45.3094 33.56C45.4027 33.4 45.4694 33.22 45.5094 33.02C45.5494 32.82 45.5694 32.6133 45.5694 32.4ZM45.5894 34.34H45.5694C45.4027 34.62 45.1827 34.8233 44.9094 34.95C44.6427 35.07 44.3394 35.13 43.9994 35.13C43.6127 35.13 43.2727 35.0567 42.9794 34.91C42.686 34.7567 42.4427 34.5533 42.2494 34.3C42.0627 34.04 41.9194 33.7433 41.8194 33.41C41.726 33.0767 41.6794 32.73 41.6794 32.37C41.6794 32.0233 41.726 31.69 41.8194 31.37C41.9194 31.0433 42.0627 30.7567 42.2494 30.51C42.4427 30.2633 42.6827 30.0667 42.9694 29.92C43.256 29.7667 43.5894 29.69 43.9694 29.69C44.276 29.69 44.566 29.7567 44.8394 29.89C45.1194 30.0167 45.3394 30.2067 45.4994 30.46H45.5194V27.86H46.9394V35H45.5894V34.34ZM54.5859 32.42C54.5859 32.2 54.5625 31.99 54.5159 31.79C54.4692 31.59 54.3959 31.4133 54.2959 31.26C54.1959 31.1067 54.0692 30.9867 53.9159 30.9C53.7692 30.8067 53.5892 30.76 53.3759 30.76C53.1692 30.76 52.9892 30.8067 52.8359 30.9C52.6825 30.9867 52.5559 31.1067 52.4559 31.26C52.3559 31.4133 52.2825 31.59 52.2359 31.79C52.1892 31.99 52.1659 32.2 52.1659 32.42C52.1659 32.6333 52.1892 32.84 52.2359 33.04C52.2825 33.24 52.3559 33.4167 52.4559 33.57C52.5559 33.7233 52.6825 33.8467 52.8359 33.94C52.9892 34.0267 53.1692 34.07 53.3759 34.07C53.5892 34.07 53.7692 34.0267 53.9159 33.94C54.0692 33.8467 54.1959 33.7233 54.2959 33.57C54.3959 33.4167 54.4692 33.24 54.5159 33.04C54.5625 32.84 54.5859 32.6333 54.5859 32.42ZM50.7959 27.86H52.2159V30.46H52.2359C52.4092 30.1933 52.6425 30 52.9359 29.88C53.2359 29.7533 53.5459 29.69 53.8659 29.69C54.1259 29.69 54.3825 29.7433 54.6359 29.85C54.8892 29.9567 55.1159 30.12 55.3159 30.34C55.5225 30.56 55.6892 30.8433 55.8159 31.19C55.9425 31.53 56.0059 31.9367 56.0059 32.41C56.0059 32.8833 55.9425 33.2933 55.8159 33.64C55.6892 33.98 55.5225 34.26 55.3159 34.48C55.1159 34.7 54.8892 34.8633 54.6359 34.97C54.3825 35.0767 54.1259 35.13 53.8659 35.13C53.4859 35.13 53.1459 35.07 52.8459 34.95C52.5459 34.83 52.3192 34.6267 52.1659 34.34H52.1459V35H50.7959V27.86ZM59.4591 35.64C59.3058 36.06 59.0925 36.36 58.8191 36.54C58.5458 36.72 58.1658 36.81 57.6791 36.81C57.5325 36.81 57.3858 36.8033 57.2391 36.79C57.0991 36.7833 56.9558 36.7733 56.8091 36.76V35.59C56.9425 35.6033 57.0791 35.6167 57.2191 35.63C57.3591 35.6433 57.4991 35.6467 57.6391 35.64C57.8258 35.62 57.9625 35.5467 58.0491 35.42C58.1425 35.2933 58.1891 35.1533 58.1891 35C58.1891 34.8867 58.1691 34.78 58.1291 34.68L56.3191 29.83H57.8291L58.9991 33.37H59.0191L60.1491 29.83H61.6191L59.4591 35.64Z"/>' +
+  '<path d="M18.5312 47.6154C18.5312 45.6882 20.0523 44.2301 22.0626 44.2301C24.073 44.2301 25.5905 45.6882 25.5905 47.6401C25.593 47.8232 25.5757 48.006 25.5388 48.1855H20.3224C20.5416 49.0227 21.225 49.5673 22.1268 49.5673C22.8095 49.5673 23.3763 49.2631 23.673 48.8448H25.4879C24.9853 50.125 23.6835 51 22.0857 51C20.0523 51 18.5312 49.5419 18.5312 47.6154ZM20.3357 46.9808H23.8021C23.7088 46.5987 23.4853 46.2595 23.1688 46.0197C22.8523 45.7799 22.462 45.654 22.0626 45.6628C21.2117 45.6628 20.5646 46.182 20.3357 46.9808Z"/>' +
+  '<path d="M26.4435 44.3819H28.1188V45.3585C28.6346 44.6861 29.3431 44.2802 30.2066 44.2802H30.4509V45.9794H30.2066C28.8664 45.9794 28.1188 46.6765 28.1188 47.7651V50.8461H26.4435V44.3819Z"/>' +
+  '<path d="M30.9152 42.4423C30.9152 42.1665 31.0265 41.902 31.2247 41.707C31.4229 41.512 31.6917 41.4025 31.972 41.4025C32.2523 41.4025 32.5211 41.512 32.7193 41.707C32.9175 41.902 33.0288 42.1665 33.0288 42.4423C33.0288 42.7181 32.9175 42.9826 32.7193 43.1776C32.5211 43.3726 32.2523 43.4821 31.972 43.4821C31.6917 43.4821 31.4229 43.3726 31.2247 43.1776C31.0265 42.9826 30.9152 42.7181 30.9152 42.4423ZM31.1343 44.3819H32.8096V50.8482H31.1343V44.3819Z"/>' +
+  '<path d="M34.5736 45.8908H33.5426V44.3798H34.5736V43.862C34.5736 42.4197 35.4371 41.6436 37.0474 41.6436H37.8593V43.1545H37.215C36.6098 43.1545 36.2489 43.4842 36.2489 44.0543V44.3839H37.7692V45.8949H36.2489V50.8523H34.5736V45.8908Z"/>' +
+  '<path d="M38.5244 42.4423C38.5315 42.1712 38.6459 41.9136 38.8433 41.7244C39.0406 41.5351 39.3053 41.4292 39.5809 41.4292C39.8565 41.4292 40.1212 41.5351 40.3185 41.7244C40.5159 41.9136 40.6303 42.1712 40.6374 42.4423C40.6303 42.7134 40.5159 42.971 40.3185 43.1603C40.1212 43.3495 39.8565 43.4554 39.5809 43.4554C39.3053 43.4554 39.0406 43.3495 38.8433 43.1603C38.6459 42.971 38.5315 42.7134 38.5244 42.4423Z"/>' +
+  '<path d="M40.4182 44.3819H38.7429V50.8482H40.4182V44.3819Z"/>' +
+  '<path d="M41.3467 47.6154C41.3467 45.6882 42.7253 44.2301 44.5576 44.2301C44.9597 44.2237 45.3586 44.3019 45.7275 44.4593C46.0965 44.6167 46.427 44.8497 46.6971 45.1429V44.3819H48.3724V50.8482H46.6971V50.0872C46.427 50.3804 46.0965 50.6134 45.7275 50.7709C45.3586 50.9283 44.9597 51.0064 44.5576 51C42.7253 51 41.3467 49.5419 41.3467 47.6154ZM46.6943 47.6154C46.6943 46.601 45.9209 45.8297 44.8794 45.8297C43.8484 45.8297 43.0757 46.603 43.0757 47.6154C43.0757 48.6278 43.8484 49.4011 44.8794 49.4011C45.9209 49.4025 46.6943 48.6291 46.6943 47.6154Z"/>' +
+  '<path d="M49.4634 42.0989H51.1387V45.1428C51.4083 44.8496 51.7385 44.6163 52.1071 44.4585C52.4756 44.3008 52.8742 44.2222 53.2761 44.228C55.1056 44.228 56.4717 45.6861 56.4717 47.6133C56.4717 49.5405 55.1056 50.9979 53.2761 50.9979C52.8745 51.0043 52.4761 50.9263 52.1076 50.7693C51.739 50.6122 51.4087 50.3797 51.1387 50.0872V50.8482H49.4634V42.0989ZM54.7461 47.6147C54.7461 46.6003 53.986 45.829 52.9424 45.829C51.9114 45.829 51.138 46.6023 51.138 47.6147C51.138 48.627 51.9114 49.4004 52.9424 49.4004C53.9846 49.4024 54.7447 48.6291 54.7447 47.6154L54.7461 47.6147Z"/>' +
+  '<path d="M57.3247 42.0989H59V50.8482H57.3247V42.0989Z"/>' +
+  '<path d="M19.702 41.2644L16.498 49.0082L16.1287 49.1676C15.8062 49.3049 15.4488 49.1346 15.2966 48.7665L14.422 46.6573L16.4463 41.7637C16.6411 41.2953 17.0403 41 17.4759 41H19.5665C19.6796 41 19.7522 41.1429 19.702 41.2644Z"/>' +
+  '<path d="M10.7859 47.2644H8.29596C8.07678 47.2644 7.93368 46.9897 8.03141 46.7548L9.30393 43.6786L10.7859 47.2644Z"/>' +
+  '<path d="M16.257 49.592L16.0162 50.1745C15.9403 50.3624 15.8165 50.528 15.6567 50.6552C15.5012 50.7791 15.3075 50.8474 15.1074 50.8489H13.3176C12.9323 50.8489 12.5812 50.5879 12.4102 50.1751L11.2109 47.2644L11.0399 46.8523L9.51331 43.171H11.8482C12.2845 43.171 12.6824 43.467 12.8771 43.9348L14.2125 47.1642L14.9594 48.967C15.1953 49.5398 15.7552 49.8084 16.257 49.592Z"/>';
+
 /**
  * Render the branded Verifiabl barcode as SVG.
  *
@@ -263,11 +390,13 @@ function renderDefaultHeader(textColor: string): string {
  * ciphertext from `encryptPii`, then returns a standalone SVG suitable for
  * embedding in a payslip PDF.
  *
- * The QR spans the full badge width on a white ground. Place the badge with a
- * clear light margin on the left, right and bottom of at least four QR modules
- * (`modulePx` in the result; a tenth of the badge width covers any realistic
- * record): that margin is the QR quiet zone, which the badge does not carry
- * itself.
+ * The QR spans the full badge width (vertical layout) or height (horizontal
+ * layout) on a white ground. Place the badge with a clear light margin of at
+ * least four QR modules (`modulePx` in the result; a tenth of the QR's side
+ * covers any realistic record) on every side the badge leaves open: the left,
+ * right and bottom for the vertical layout, and the left, top and bottom for the
+ * horizontal layout. That margin is the QR quiet zone, which the badge does not
+ * carry itself on those sides.
  *
  * Throws {@link QrCapacityError} when the encrypted PII is too long to encode.
  */
@@ -276,8 +405,9 @@ export function createBarcodeSvg(
   options: BarcodeSvgOptions = {},
 ): BarcodeSvgResult {
   rejectRemovedBarcodeFormat(options);
-  const { width = MIN_BADGE_WIDTH } = options;
-  const badgeWidth = validateBadgeWidth(width, "width");
+  const geometry = badgeGeometry(options.layout);
+  const { width = geometry.minWidth } = options;
+  const badgeWidth = validateBadgeWidth(width, "width", geometry.minWidth);
 
   const scanOptions: ScanUrlOptions = {};
   if (options.environment !== undefined) {
@@ -295,24 +425,19 @@ export function createBarcodeSvg(
     badgeWidth,
     ladder,
     content.length,
+    geometry,
   );
   const matrixData = qr.modules.data;
   const degraded = errorCorrectionLevel !== ladder[0] || modulePx < IDEAL_MODULE_PX;
 
-  const height = round2((badgeWidth * FRAME_VIEWBOX_HEIGHT) / FRAME_VIEWBOX_WIDTH);
-
-  const headerBackground = `<path d="M0 8C0 3.58172 3.58172 0 8 0H88C92.4183 0 96 3.58172 96 8V${FRAME_HEADER_HEIGHT}H0V8Z" fill="${DEFAULT_NAVY}"/>`;
-  const header = headerBackground + renderDefaultHeader(DEFAULT_TEXT);
+  const height = round2((badgeWidth * geometry.viewboxHeight) / geometry.viewboxWidth);
 
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${round2(badgeWidth)}" height="${round2(height)}" ` +
-    `viewBox="0 0 ${FRAME_VIEWBOX_WIDTH} ${FRAME_VIEWBOX_HEIGHT}" role="img" ` +
+    `viewBox="0 0 ${geometry.viewboxWidth} ${geometry.viewboxHeight}" role="img" ` +
     `aria-label="Secured by Verifiabl verification barcode">` +
-    // Starts under the opaque header so no anti-aliased seam shows at its edge.
-    `<rect x="0" y="${FRAME_HEADER_HEIGHT - 8}" width="${FRAME_VIEWBOX_WIDTH}" ` +
-    `height="${FRAME_VIEWBOX_HEIGHT - FRAME_HEADER_HEIGHT + 8}" fill="${FRAME_BACKGROUND}"/>` +
-    header +
-    `<g transform="translate(${FRAME_QR_BOX_X} ${FRAME_QR_BOX_Y})">` +
+    (geometry === HORIZONTAL_GEOMETRY ? renderHorizontalFrame() : renderVerticalFrame()) +
+    `<g transform="translate(${geometry.qrBoxX} ${geometry.qrBoxY})">` +
     `<g shape-rendering="crispEdges">` +
     renderModules(matrixData, size, moduleSize, DEFAULT_QR) +
     `</g>` +
@@ -424,8 +549,9 @@ export function selectQrRendering(
   badgeWidth: number,
   ladder: readonly BarcodeErrorCorrectionLevel[],
   contentLength?: number,
+  geometry: BadgeGeometry = VERTICAL_GEOMETRY,
 ): SelectedQrRendering {
-  const scale = badgeWidth / FRAME_VIEWBOX_WIDTH;
+  const scale = badgeWidth / geometry.viewboxWidth;
   let densestSize: number | null = null;
   for (const errorCorrectionLevel of ladder) {
     let qr: ReturnType<typeof QRCode.create>;
@@ -441,7 +567,7 @@ export function selectQrRendering(
       throw error;
     }
     const size = qr.modules.size;
-    const moduleSize = FRAME_QR_BOX_SIZE / size;
+    const moduleSize = geometry.qrBoxSize / size;
     const modulePx = moduleSize * scale;
     if (modulePx >= MIN_MODULE_PX) {
       return { qr, errorCorrectionLevel, size, moduleSize, modulePx };
@@ -547,12 +673,12 @@ function qrPenalty(modules: Uint8Array, size: number): number {
   return sameColor + blocks + finderPatterns + balance;
 }
 
-function validateBadgeWidth(value: number, name: string): number {
+function validateBadgeWidth(value: number, name: string, minWidth: number): number {
   if (!Number.isFinite(value) || value <= 0) {
     throw new Error(`${name} must be a positive number`);
   }
-  if (value < MIN_BADGE_WIDTH) {
-    throw new Error(`${name} must be at least ${MIN_BADGE_WIDTH}`);
+  if (value < minWidth) {
+    throw new Error(`${name} must be at least ${minWidth}`);
   }
   return value;
 }

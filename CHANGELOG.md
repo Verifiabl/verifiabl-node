@@ -6,6 +6,21 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-10-04
+
+### Added
+
+- Accept `four_weekly` and `semi_monthly` AU2 pay frequencies.
+- Add a horizontal badge layout: pass `layout: "horizontal"` to
+  `createBarcodeSvg` or `createBarcodePng` to put a white gap and a
+  light-tinted "Secured by Verifiabl" frame to the right of the QR code. It
+  renders the QR code at the same size as the vertical badge. Its minimum SVG
+  width is 940, and its PNG widths are 940, 1410, 1880 and 2820
+  (`SUPPORTED_HORIZONTAL_PNG_PIXEL_WIDTHS`). The vertical layout remains the
+  default and its output is unchanged.
+- `createBarcodePng` now defaults `pixelWidth` by layout: 720 for the vertical
+  layout and 1410 for the horizontal layout.
+
 ## [0.28.0] - 2026-09-30
 
 ### Changed

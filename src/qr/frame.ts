@@ -2,18 +2,31 @@ import { inflateRawSync } from "node:zlib";
 
 import {
   FRAME_ASSETS_V1,
+  HORIZONTAL_FRAME_ASSETS_V1,
+  SUPPORTED_HORIZONTAL_PNG_PIXEL_WIDTHS,
   SUPPORTED_PNG_PIXEL_WIDTHS,
+  type SupportedHorizontalPngPixelWidth,
   type SupportedPngPixelWidth,
 } from "./frameAssets.generated.js";
 import type { RgbaRaster } from "./pngEncode.js";
+import type { BarcodeLayout } from "./styled.js";
 
-export type { SupportedPngPixelWidth };
+export type { SupportedHorizontalPngPixelWidth, SupportedPngPixelWidth };
 /**
- * Pixel widths the PNG compositor supports. The frame is pre-rasterised at
- * generation time, so PNG output exists only at these widths; SVG output
- * remains continuously scalable.
+ * Pixel widths the PNG compositor supports for each layout. The frames are
+ * pre-rasterised at generation time, so PNG output exists only at these widths;
+ * SVG output remains continuously scalable. Each horizontal width renders the
+ * QR code at the same size as the matching vertical width (940 matches 480,
+ * 1410 matches 720, and so on).
  */
-export { SUPPORTED_PNG_PIXEL_WIDTHS };
+export { SUPPORTED_HORIZONTAL_PNG_PIXEL_WIDTHS, SUPPORTED_PNG_PIXEL_WIDTHS };
+
+/** The supported PNG pixel widths for `layout`. */
+export function supportedPngPixelWidths(layout: BarcodeLayout): readonly number[] {
+  return layout === "horizontal"
+    ? SUPPORTED_HORIZONTAL_PNG_PIXEL_WIDTHS
+    : SUPPORTED_PNG_PIXEL_WIDTHS;
+}
 
 export interface ParsedFrameAsset {
   width: number;
@@ -24,16 +37,23 @@ export interface ParsedFrameAsset {
   indices: Buffer;
 }
 
-const parsedAssets = new Map<SupportedPngPixelWidth, ParsedFrameAsset>();
+const parsedAssets = new Map<string, ParsedFrameAsset>();
 
-function parseAsset(pixelWidth: SupportedPngPixelWidth): ParsedFrameAsset {
-  const cached = parsedAssets.get(pixelWidth);
+function parseAsset(layout: BarcodeLayout, pixelWidth: number): ParsedFrameAsset {
+  const key = `${layout}-${pixelWidth}`;
+  const cached = parsedAssets.get(key);
   if (cached !== undefined) {
     return cached;
   }
 
-  const parsed = parseFrameContainer(Buffer.from(FRAME_ASSETS_V1[pixelWidth], "base64"));
-  parsedAssets.set(pixelWidth, parsed);
+  const assets: Readonly<Record<number, string>> =
+    layout === "horizontal" ? HORIZONTAL_FRAME_ASSETS_V1 : FRAME_ASSETS_V1;
+  const asset = assets[pixelWidth];
+  if (asset === undefined) {
+    throw new Error(`no ${layout} frame asset at width ${pixelWidth}`);
+  }
+  const parsed = parseFrameContainer(Buffer.from(asset, "base64"));
+  parsedAssets.set(key, parsed);
   return parsed;
 }
 
@@ -94,12 +114,12 @@ export function parseFrameContainer(container: Buffer): ParsedFrameAsset {
 }
 
 /**
- * Expand the baked frame for `pixelWidth` into a fresh straight-alpha RGBA
- * raster the compositor can blit onto. A new buffer every call: the caller
+ * Expand the baked `layout` frame for `pixelWidth` into a fresh straight-alpha
+ * RGBA raster the compositor can blit onto. A new buffer every call: the caller
  * mutates it.
  */
-export function frameRaster(pixelWidth: SupportedPngPixelWidth): RgbaRaster {
-  const { width, height, palette, indices } = parseAsset(pixelWidth);
+export function frameRaster(pixelWidth: number, layout: BarcodeLayout = "vertical"): RgbaRaster {
+  const { width, height, palette, indices } = parseAsset(layout, pixelWidth);
   const data = Buffer.alloc(width * height * 4);
   for (let p = 0; p < indices.length; p++) {
     const entry = (indices[p] ?? 0) * 4;

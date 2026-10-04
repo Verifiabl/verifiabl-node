@@ -1,4 +1,4 @@
-import { SUPPORTED_PNG_PIXEL_WIDTHS } from "../qr/frame.js";
+import { SUPPORTED_HORIZONTAL_PNG_PIXEL_WIDTHS, SUPPORTED_PNG_PIXEL_WIDTHS } from "../qr/frame.js";
 import { createBarcodePng } from "../qr/png.js";
 import { createBarcodeSvg, QrCapacityError } from "../qr/styled.js";
 
@@ -68,10 +68,60 @@ describe("createBarcodePng", () => {
   });
 
   it("rejects unsupported pixel widths", async () => {
-    for (const bad of [0, -720, 479, 481, 640, 1920, 720.5]) {
+    for (const bad of [0, -720, 479, 481, 640, 1920, 720.5, 940]) {
       await expect(createBarcodePng(PARTS, {}, bad)).rejects.toThrow(
-        "pixelWidth must be one of 480, 720, 960, 1440",
+        "pixelWidth must be one of 480, 720, 960, 1440 for the vertical layout",
       );
     }
+  });
+});
+
+describe("createBarcodePng horizontal layout", () => {
+  // Each horizontal width renders the QR box at the matching vertical width.
+  const MATCHING_VERTICAL_WIDTHS: Record<number, number> = {
+    940: 480,
+    1410: 720,
+    1880: 960,
+    2820: 1440,
+  };
+
+  it("renders at each supported pixel width, as tall as the QR box", async () => {
+    for (const pixelWidth of SUPPORTED_HORIZONTAL_PNG_PIXEL_WIDTHS) {
+      const { width, height } = await createBarcodePng(PARTS, { layout: "horizontal" }, pixelWidth);
+      expect(width).toBe(pixelWidth);
+      expect(height).toBe(MATCHING_VERTICAL_WIDTHS[pixelWidth]);
+    }
+  });
+
+  it("defaults to 1410, the QR size of the vertical default", async () => {
+    const horizontal = await createBarcodePng(PARTS, { layout: "horizontal" });
+    const vertical = await createBarcodePng(PARTS);
+    expect(horizontal.width).toBe(1410);
+    expect(vertical.width).toBe(720);
+    expect(horizontal.modulePx).toBe(vertical.modulePx);
+    expect(horizontal.qrVersion).toBe(vertical.qrVersion);
+  });
+
+  it("reports the same metadata as the horizontal SVG", async () => {
+    const svg = createBarcodeSvg(PARTS, { layout: "horizontal", width: 1410 });
+    const png = await createBarcodePng(PARTS, { layout: "horizontal" }, 1410);
+    expect(png.content).toBe(svg.content);
+    expect(png.errorCorrectionLevel).toBe(svg.errorCorrectionLevel);
+    expect(png.modulePx).toBe(svg.modulePx);
+    expect(png.degraded).toBe(svg.degraded);
+  });
+
+  it("rejects vertical widths", async () => {
+    for (const bad of [480, 720, 1440, 950, 939]) {
+      await expect(createBarcodePng(PARTS, { layout: "horizontal" }, bad)).rejects.toThrow(
+        "pixelWidth must be one of 940, 1410, 1880, 2820 for the horizontal layout",
+      );
+    }
+  });
+
+  it("rejects an unknown layout", async () => {
+    await expect(createBarcodePng(PARTS, { layout: "diagonal" } as never)).rejects.toThrow(
+      'layout must be "vertical" or "horizontal"',
+    );
   });
 });
