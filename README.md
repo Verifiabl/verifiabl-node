@@ -175,6 +175,15 @@ Prefer `createBarcodeSvg` when you can: SVG scales to any size without losing qu
 
 The badge is the navy header and the QR code on a white ground, and the QR code spans the full badge width. Keep a clear light margin of at least a tenth of the badge width on the left, the right and the bottom of the badge. That margin is the QR quiet zone. Scanners need it, and the badge does not carry it itself.
 
+For a short, wide space, pass `layout: "horizontal"`. The QR code then spans the full badge height, with a white gap and then a light-tinted "Secured by Verifiabl" frame to its right. Keep the same clear margin, a tenth of the badge height, above, below and to the left of the badge. The gap supplies the margin on the right.
+
+```ts
+const { svg } = createBarcodeSvg(parts, { layout: "horizontal" });
+const { png } = await createBarcodePng(parts, { layout: "horizontal" });
+```
+
+The horizontal badge renders the QR code at the same size as the vertical badge. Its minimum SVG width is 940 (the vertical minimum is 480), and its PNG widths are 940, 1410, 1880 and 2820 (`SUPPORTED_HORIZONTAL_PNG_PIXEL_WIDTHS`). PNG output defaults to 720 pixels wide for the vertical layout and 1410 for the horizontal layout.
+
 ### Rendering many codes
 
 Generate codes in a loop. Each call is independent, so a single payslip and a large pay run are both fast:

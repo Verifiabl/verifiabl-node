@@ -1,28 +1,22 @@
 import type { RgbaRaster } from "./pngEncode.js";
-import {
-  FINDER_SIZE,
-  FRAME_QR_BOX_SIZE,
-  FRAME_QR_BOX_X,
-  FRAME_QR_BOX_Y,
-  FRAME_VIEWBOX_WIDTH,
-  isFinderModule,
-} from "./styled.js";
+import { type BadgeGeometry, FINDER_SIZE, isFinderModule, VERTICAL_GEOMETRY } from "./styled.js";
 
 /**
  * Deterministic QR compositor: draws the payload-dependent QR content (data
  * modules and rounded finder patterns) onto a pre-rasterised frame.
  *
  * Everything here is integer arithmetic on exact rational coordinates. Module
- * geometry is rational by construction (`modulePx = BW / (96n)` for the QR
- * box size B), so the same inputs produce the identical raster in every
+ * geometry is rational by construction (`modulePx = BW / (Vn)` for the QR
+ * box size B and viewBox width V), so the same inputs produce the identical raster in every
  * implementation of this spec; the .NET SDK mirrors this file and byte-compares
  * rasters in CI. Do not introduce floating point here: cross-runtime float
  * differences (e.g. x87 on .NET Framework x86) would silently break that parity.
  *
  * Magnitude bound, so plain JS numbers stay exact (< 2^53) and C# fits long:
- * coordinates in Q units (1/(Q_PER_PIXEL*D) px) stay under ~3e9, and squared
+ * coordinates in Q units (1/(Q_PER_PIXEL*D) px) stay under ~3.9e9, and squared
  * distances are only taken of values bounded by the largest corner radius
- * (112*B*W <= ~1.6e7), so sums stay under ~5e14.
+ * (112*B*W <= ~3.1e7 for the horizontal layout at 2820 px), so sums stay under
+ * ~1.9e15.
  */
 
 /** Subsamples per axis for finder anti-aliasing coverage. */
@@ -48,12 +42,18 @@ export interface QrBlitGeometry {
 }
 
 /** Draw the QR modules and finders onto `frame` in place. */
-export function blitQrOntoFrame(frame: RgbaRaster, qr: QrBlitGeometry, pixelWidth: number): void {
+export function blitQrOntoFrame(
+  frame: RgbaRaster,
+  qr: QrBlitGeometry,
+  pixelWidth: number,
+  geometry: BadgeGeometry = VERTICAL_GEOMETRY,
+): void {
   const { matrixData, size } = qr;
+  const { qrBoxSize, qrBoxX, qrBoxY, viewboxWidth } = geometry;
   // Common denominator for all module-grid coordinates, in pixels.
-  const denom = FRAME_VIEWBOX_WIDTH * size;
-  const numX = (k: number): number => pixelWidth * (FRAME_QR_BOX_X * size + FRAME_QR_BOX_SIZE * k);
-  const numY = (k: number): number => pixelWidth * (FRAME_QR_BOX_Y * size + FRAME_QR_BOX_SIZE * k);
+  const denom = viewboxWidth * size;
+  const numX = (k: number): number => pixelWidth * (qrBoxX * size + qrBoxSize * k);
+  const numY = (k: number): number => pixelWidth * (qrBoxY * size + qrBoxSize * k);
   // Round half up; edges are >= 2px apart (modulePx >= 3), so never degenerate.
   const snap = (num: number): number => Math.floor((2 * num + denom) / (2 * denom));
 
@@ -86,8 +86,8 @@ export function blitQrOntoFrame(frame: RgbaRaster, qr: QrBlitGeometry, pixelWidt
   function renderFinder(raster: RgbaRaster, moduleX: number, moduleY: number): void {
     // Q units: 1/(Q_PER_PIXEL * denom) of a pixel. All geometry below is integer in Q.
     const qPerPixel = Q_PER_PIXEL * denom;
-    const moduleQ = FRAME_QR_BOX_SIZE * pixelWidth * Q_PER_PIXEL;
-    const radiusUnit = (FRAME_QR_BOX_SIZE * pixelWidth * Q_PER_PIXEL) / RADIUS_DENOM;
+    const moduleQ = qrBoxSize * pixelWidth * Q_PER_PIXEL;
+    const radiusUnit = (qrBoxSize * pixelWidth * Q_PER_PIXEL) / RADIUS_DENOM;
     const outer = {
       x0: numX(moduleX) * Q_PER_PIXEL,
       y0: numY(moduleY) * Q_PER_PIXEL,

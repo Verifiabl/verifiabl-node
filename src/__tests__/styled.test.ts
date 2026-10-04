@@ -226,6 +226,81 @@ describe("createBarcodeSvg", () => {
   });
 });
 
+describe("createBarcodeSvg horizontal layout", () => {
+  const FULL_RECORD = { ...PARTS, encryptedPii: Buffer.from("a".repeat(600), "base64url") };
+
+  it("renders the explicit vertical layout exactly as the default", () => {
+    expect(createBarcodeSvg(PARTS, { layout: "vertical" }).svg).toBe(createBarcodeSvg(PARTS).svg);
+  });
+
+  it("puts the QR box at full height on the left, then a white gap and the tinted frame", () => {
+    const { svg, width, height } = createBarcodeSvg(PARTS, { layout: "horizontal" });
+    expect(width).toBe(940);
+    expect(height).toBe(480);
+    expect(svg).toContain('viewBox="0 0 188 96"');
+    // White under the 96-unit QR box and the vertical layout's 7-unit gap, then
+    // the 85-unit panel with the 70x80 design scaled to the QR box's height.
+    expect(svg).toMatch(
+      /^<svg [^>]*><rect x="0" y="0" width="103" height="96" fill="#FFFFFF"\/><g transform="translate\(103 0\)"><path d="M0 0H75\.4C[^"]*85 9\.6V86\.4C[^"]*" fill="#EDEFFF"\/><g transform="translate\(0\.5 0\) scale\(1\.2\)" fill="#010A4F">/,
+    );
+    // Opaque, so the QR's right quiet zone stays light on any page.
+    expect(svg).toContain('fill="#EDEFFF"/>');
+    expect(svg).not.toContain("opacity");
+    expect(svg).toContain('<g transform="translate(0 0)"><g shape-rendering="crispEdges">');
+    expect(svg).toContain('aria-label="Secured by Verifiabl verification barcode"');
+    expect(svg).not.toContain("M0 8C0 3.58172");
+    expect(svg).not.toContain("clipPath");
+    expect(svg).not.toMatch(/<text[\s>]|<tspan[\s>]/);
+    expect((svg.match(/fill-rule="evenodd"/g) ?? []).length).toBe(3);
+  });
+
+  it.each([
+    [480, 940],
+    [720, 1410],
+  ])("renders the same QR as the vertical badge at %d when %d wide", (verticalWidth, width) => {
+    const vertical = createBarcodeSvg(FULL_RECORD, { width: verticalWidth });
+    const horizontal = createBarcodeSvg(FULL_RECORD, { layout: "horizontal", width });
+    expect(horizontal.content).toBe(vertical.content);
+    expect(horizontal.errorCorrectionLevel).toBe(vertical.errorCorrectionLevel);
+    expect(horizontal.qrVersion).toBe(vertical.qrVersion);
+    expect(horizontal.modulePx).toBe(vertical.modulePx);
+    expect(horizontal.degraded).toBe(vertical.degraded);
+  });
+
+  it("keeps the white gap before the frame as wide as the vertical gap", () => {
+    const { svg, qrVersion } = createBarcodeSvg(FULL_RECORD, { layout: "horizontal" });
+    expect(qrVersion).toBeGreaterThanOrEqual(10);
+    expect(svg).toContain('<rect x="0" y="0" width="103" height="96" fill="#FFFFFF"/>');
+    const moduleSize = 96 / (17 + 4 * qrVersion);
+    expect(QR_GAP / moduleSize).toBeGreaterThanOrEqual(4 - 1e-6);
+  });
+
+  it("rejects widths below the horizontal minimum", () => {
+    expect(() => createBarcodeSvg(PARTS, { layout: "horizontal", width: 939 })).toThrow(
+      "at least 940",
+    );
+    expect(createBarcodeSvg(PARTS, { layout: "horizontal", width: 1410 }).height).toBe(720);
+  });
+
+  it("rejects an unknown layout", () => {
+    expect(() => createBarcodeSvg(PARTS, { layout: "diagonal" } as never)).toThrow(
+      'layout must be "vertical" or "horizontal"',
+    );
+  });
+
+  it("hard-errors at the same payload length as the vertical badge", () => {
+    const parts = { ...PARTS, encryptedPii: Buffer.from("a".repeat(2900), "base64url") };
+    const error = capacityErrorFrom(() => createBarcodeSvg(parts, { layout: "horizontal" }));
+    expect(error.reason).toBe("frame-fit");
+    expect(error.badgeWidth).toBe(940);
+
+    const longestFittable = { ...PARTS, encryptedPii: Buffer.from("a".repeat(2500), "base64url") };
+    expect(createBarcodeSvg(longestFittable, { layout: "horizontal" }).errorCorrectionLevel).toBe(
+      "L",
+    );
+  });
+});
+
 /** Run the renderer and hand back the QrCapacityError it is expected to throw. */
 function capacityErrorFrom(render: () => unknown): QrCapacityError {
   try {

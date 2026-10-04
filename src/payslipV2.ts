@@ -216,7 +216,14 @@ export const australianSuperContributionTypes = tuple([
   "resc",
   "salary_sacrifice",
 ]);
-export const australianPayFrequencies = tuple(["weekly", "fortnightly", "monthly", "quarterly"]);
+export const australianPayFrequencies = tuple([
+  "weekly",
+  "fortnightly",
+  "monthly",
+  "quarterly",
+  "four_weekly",
+  "semi_monthly",
+]);
 export const australianEmploymentBases = tuple([
   "full_time",
   "part_time",

@@ -9357,6 +9357,14 @@
 							{
 								"type": "literal",
 								"value": "quarterly"
+							},
+							{
+								"type": "literal",
+								"value": "four_weekly"
+							},
+							{
+								"type": "literal",
+								"value": "semi_monthly"
 							}
 						]
 					},
@@ -10388,6 +10396,35 @@
 					}
 				},
 				{
+					"id": 1410,
+					"name": "layout",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {
+						"isOptional": true,
+						"isInherited": true
+					},
+					"comment": {
+						"summary": [
+							{
+								"kind": "text",
+								"text": "Badge arrangement (default \"vertical\"). \"vertical\" puts the navy \"Secured\nby Verifiabl\" header above the QR code. \"horizontal\" puts a light-tinted\n\"Secured by Verifiabl\" frame to the right of the QR code, for short, wide\nspaces."
+							}
+						]
+					},
+					"type": {
+						"type": "reference",
+						"target": 1411,
+						"name": "BarcodeLayout",
+						"package": "@verifiabl/issuer"
+					},
+					"inheritedFrom": {
+						"type": "reference",
+						"target": 1412,
+						"name": "BarcodeSvgOptions.layout"
+					}
+				},
+				{
 					"id": 548,
 					"name": "maxErrorCorrection",
 					"variant": "declaration",
@@ -10490,7 +10527,7 @@
 						"summary": [
 							{
 								"kind": "text",
-								"text": "Total badge width in SVG user units / px (default: 480, the minimum)."
+								"text": "Total badge width in SVG user units / px. The default is the minimum: 480\nfor the vertical layout and 940 for the horizontal layout. Both minimums\nrender the QR code at the same size."
 							}
 						]
 					},
@@ -10511,6 +10548,7 @@
 					"children": [
 						544,
 						545,
+						1410,
 						548,
 						543,
 						546,
@@ -10753,6 +10791,29 @@
 					}
 				},
 				{
+					"id": 1412,
+					"name": "layout",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {
+						"isOptional": true
+					},
+					"comment": {
+						"summary": [
+							{
+								"kind": "text",
+								"text": "Badge arrangement (default \"vertical\"). \"vertical\" puts the navy \"Secured\nby Verifiabl\" header above the QR code. \"horizontal\" puts a light-tinted\n\"Secured by Verifiabl\" frame to the right of the QR code, for short, wide\nspaces."
+							}
+						]
+					},
+					"type": {
+						"type": "reference",
+						"target": 1411,
+						"name": "BarcodeLayout",
+						"package": "@verifiabl/issuer"
+					}
+				},
+				{
 					"id": 568,
 					"name": "maxErrorCorrection",
 					"variant": "declaration",
@@ -10815,7 +10876,7 @@
 						"summary": [
 							{
 								"kind": "text",
-								"text": "Total badge width in SVG user units / px (default: 480, the minimum)."
+								"text": "Total badge width in SVG user units / px. The default is the minimum: 480\nfor the vertical layout and 940 for the horizontal layout. Both minimums\nrender the QR code at the same size."
 							}
 						]
 					},
@@ -10830,6 +10891,7 @@
 					"title": "Properties",
 					"children": [
 						565,
+						1412,
 						568,
 						566,
 						567
@@ -19327,6 +19389,34 @@
 			}
 		},
 		{
+			"id": 1411,
+			"name": "BarcodeLayout",
+			"variant": "declaration",
+			"kind": 2097152,
+			"flags": {},
+			"comment": {
+				"summary": [
+					{
+						"kind": "text",
+						"text": "Badge arrangement: the header above the QR code, or the frame to its right."
+					}
+				]
+			},
+			"type": {
+				"type": "union",
+				"types": [
+					{
+						"type": "literal",
+						"value": "vertical"
+					},
+					{
+						"type": "literal",
+						"value": "horizontal"
+					}
+				]
+			}
+		},
+		{
 			"id": 614,
 			"name": "BatchRecordStatus",
 			"variant": "declaration",
@@ -19971,6 +20061,29 @@
 			}
 		},
 		{
+			"id": 1409,
+			"name": "SupportedHorizontalPngPixelWidth",
+			"variant": "declaration",
+			"kind": 2097152,
+			"flags": {},
+			"type": {
+				"type": "indexedAccess",
+				"indexType": {
+					"type": "intrinsic",
+					"name": "number"
+				},
+				"objectType": {
+					"type": "query",
+					"queryType": {
+						"type": "reference",
+						"target": 1408,
+						"name": "SUPPORTED_HORIZONTAL_PNG_PIXEL_WIDTHS",
+						"package": "@verifiabl/issuer"
+					}
+				}
+			}
+		},
+		{
 			"id": 541,
 			"name": "SupportedPngPixelWidth",
 			"variant": "declaration",
@@ -20490,6 +20603,14 @@
 						{
 							"type": "literal",
 							"value": "quarterly"
+						},
+						{
+							"type": "literal",
+							"value": "four_weekly"
+						},
+						{
+							"type": "literal",
+							"value": "semi_monthly"
 						}
 					]
 				}
@@ -21122,6 +21243,41 @@
 				"name": "string"
 			},
 			"defaultValue": "ENVIRONMENTS.sandbox.scanBaseUrl"
+		},
+		{
+			"id": 1408,
+			"name": "SUPPORTED_HORIZONTAL_PNG_PIXEL_WIDTHS",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": 940
+						},
+						{
+							"type": "literal",
+							"value": 1410
+						},
+						{
+							"type": "literal",
+							"value": 1880
+						},
+						{
+							"type": "literal",
+							"value": 2820
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
 		},
 		{
 			"id": 540,
@@ -22032,14 +22188,20 @@
 								"text": "Render the branded Verifiabl QR code as a PNG.\n\nThe PNG is composited deterministically from a pre-rasterised frame plus\nexact pixel-aligned QR modules - no vector rasteriser is involved, so there\nis no native dependency, and the same record produces the byte-identical\nraster in every Verifiabl SDK.\n\nBecause the frame is pre-rasterised, PNG output exists only at the widths in\n"
 							},
 							{
-								"kind": "inline-tag",
-								"tag": "@link",
-								"text": "SUPPORTED_PNG_PIXEL_WIDTHS",
-								"target": 540
+								"kind": "code",
+								"text": "`SUPPORTED_PNG_PIXEL_WIDTHS`"
 							},
 							{
 								"kind": "text",
-								"text": ". If you need a different size, prefer\n"
+								"text": " for the vertical layout and\n"
+							},
+							{
+								"kind": "code",
+								"text": "`SUPPORTED_HORIZONTAL_PNG_PIXEL_WIDTHS`"
+							},
+							{
+								"kind": "text",
+								"text": " for the horizontal layout. Both width\nsets render the QR code at the same sizes. If you need a different size, prefer\n"
 							},
 							{
 								"kind": "code",
@@ -22092,20 +22254,21 @@
 							"name": "pixelWidth",
 							"variant": "param",
 							"kind": 32768,
-							"flags": {},
+							"flags": {
+								"isOptional": true
+							},
 							"comment": {
 								"summary": [
 									{
 										"kind": "text",
-										"text": "Output bitmap width in pixels (default: 720)."
+										"text": "Output bitmap width in pixels (default: 720 for the\n  vertical layout, 1410 for the horizontal layout)."
 									}
 								]
 							},
 							"type": {
 								"type": "intrinsic",
 								"name": "number"
-							},
-							"defaultValue": "720"
+							}
 						}
 					],
 					"type": {
@@ -22162,7 +22325,7 @@
 							},
 							{
 								"kind": "text",
-								"text": ", then returns a standalone SVG suitable for\nembedding in a payslip PDF.\n\nThe QR spans the full badge width on a white ground. Place the badge with a\nclear light margin on the left, right and bottom of at least four QR modules\n("
+								"text": ", then returns a standalone SVG suitable for\nembedding in a payslip PDF.\n\nThe QR spans the full badge width (vertical layout) or height (horizontal\nlayout) on a white ground. Place the badge with a clear light margin of at\nleast four QR modules ("
 							},
 							{
 								"kind": "code",
@@ -22170,7 +22333,7 @@
 							},
 							{
 								"kind": "text",
-								"text": " in the result; a tenth of the badge width covers any realistic\nrecord): that margin is the QR quiet zone, which the badge does not carry\nitself.\n\nThrows "
+								"text": " in the result; a tenth of the QR's side\ncovers any realistic record) on every side the badge leaves open: the left,\nright and bottom for the vertical layout, and the left, top and bottom for the\nhorizontal layout. That margin is the QR quiet zone, which the badge does not\ncarry itself on those sides.\n\nThrows "
 							},
 							{
 								"kind": "inline-tag",
@@ -23524,6 +23687,7 @@
 				836,
 				563,
 				607,
+				1411,
 				614,
 				616,
 				623,
@@ -23541,6 +23705,7 @@
 				629,
 				632,
 				633,
+				1409,
 				541,
 				385,
 				636,
@@ -23578,6 +23743,7 @@
 				471,
 				472,
 				473,
+				1408,
 				540,
 				635,
 				834
@@ -28548,6 +28714,31 @@
 			"packageName": "@verifiabl/issuer",
 			"packagePath": "src/payslipV2.ts",
 			"qualifiedName": "newZealandPaidLeaveTypes"
+		},
+		"1408": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/qr/frameAssets.generated.ts",
+			"qualifiedName": "SUPPORTED_HORIZONTAL_PNG_PIXEL_WIDTHS"
+		},
+		"1409": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/qr/frameAssets.generated.ts",
+			"qualifiedName": "SupportedHorizontalPngPixelWidth"
+		},
+		"1410": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/qr/styled.ts",
+			"qualifiedName": "BarcodeSvgOptions.layout"
+		},
+		"1411": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/qr/styled.ts",
+			"qualifiedName": "BarcodeLayout"
+		},
+		"1412": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/qr/styled.ts",
+			"qualifiedName": "BarcodeSvgOptions.layout"
 		}
 	},
 	"files": {
