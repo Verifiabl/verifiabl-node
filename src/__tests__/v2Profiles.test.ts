@@ -224,6 +224,24 @@ describe("AU2 and NZ2 registration", () => {
     }
   });
 
+  it("accepts an 'other' earnings line for a pay code that fits no type", () => {
+    const other = { type: "other", amount: "200.00", ytdAmount: "600.00" } as const;
+    expect(australianPayslipV2Schema.safeParse({ ...minimalAu, earnings: [other] }).success).toBe(
+      true,
+    );
+    expect(
+      newZealandPayslipV2Schema.safeParse({
+        periodEnd: "2026-05-31",
+        paymentDate: "2026-06-04",
+        currency: "NZD",
+        gross: "1",
+        paye: "2",
+        net: "3",
+        earnings: [other],
+      }).success,
+    ).toBe(true);
+  });
+
   it("accepts four-weekly and semi-monthly AU2 pay frequencies", () => {
     for (const payFrequency of ["four_weekly", "semi_monthly"] as const) {
       expect(australianPayslipV2Schema.safeParse({ ...minimalAu, payFrequency }).success).toBe(

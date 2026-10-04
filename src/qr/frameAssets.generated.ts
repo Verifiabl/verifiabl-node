@@ -1,5 +1,5 @@
 // Generated cross-SDK QR artifact. Do not edit by hand.
-// Source @verifiabl/issuer 0.29.0; Node v26.8.1; pngjs 7.0.0; qrcode 1.5.4; resvg 2.6.2.
+// Source @verifiabl/issuer 0.30.0; Node v26.8.1; pngjs 7.0.0; qrcode 1.5.4; resvg 2.6.2.
 export const SUPPORTED_PNG_PIXEL_WIDTHS = [480, 720, 960, 1440] as const;
 export type SupportedPngPixelWidth = (typeof SUPPORTED_PNG_PIXEL_WIDTHS)[number];
 export const SUPPORTED_HORIZONTAL_PNG_PIXEL_WIDTHS = [940, 1410, 1880, 2820] as const;

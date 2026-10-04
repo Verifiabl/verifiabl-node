@@ -241,6 +241,8 @@ const australianPlainEarningsTypes = tuple([
   "directors_fees",
   "lump_sum",
   "return_to_work",
+  // A pay code that fits no other type.
+  "other",
 ]);
 /** Known AU2 earnings discriminators, including paid leave and allowances. The API may add codes later. */
 export const australianEarningsTypes = tuple([
@@ -453,6 +455,8 @@ const newZealandPlainEarningsTypes = tuple([
   "annual_holiday_cash_out",
   "alternative_holiday_cash_out",
   "holiday_pay_on_termination",
+  // A pay code that fits no other type.
+  "other",
 ]);
 /** Known NZ2 earnings discriminators, including paid leave and allowances. The API may add codes later. */
 export const newZealandEarningsTypes = tuple([
