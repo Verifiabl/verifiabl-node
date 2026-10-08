@@ -93,6 +93,7 @@ export {
 } from "./qr/styled.js";
 
 export {
+  type AustralianPayslipV1,
   type BarcodeImage,
   type BatchRecordResult,
   type BatchRecordStatus,

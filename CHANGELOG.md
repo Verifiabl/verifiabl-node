@@ -6,6 +6,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Export `AustralianPayslipV1`, the named `au.payslip.v1` payload type.
+  `PayslipNonPii` is now an alias of it. The API reference now shows the name
+  in each registration signature instead of the expanded v1 shape.
+
 ## [0.30.0] - 2026-10-04
 
 ### Added

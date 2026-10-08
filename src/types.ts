@@ -303,6 +303,10 @@ const payslipNonPiiFields = z
   })
   .strict();
 
+// An interface, not a z.infer alias: TypeDoc expands an inferred alias at every use site.
+/** The `au.payslip.v1` non-PII payload. Prefer `AustralianPayslipV2` for a new integration. */
+export interface AustralianPayslipV1 extends z.infer<typeof payslipNonPiiFields> {}
+
 /**
  * Non-PII payslip data: the canonical `au.payslip.v1` schema.
  *
@@ -315,7 +319,7 @@ const payslipNonPiiFields = z
  * integer cents, and a periodEnd on or after periodStart. The amounts are the
  * issuer's own.
  */
-export const payslipNonPiiSchema = payslipNonPiiFields.superRefine((value, ctx) => {
+const refinedPayslipNonPiiSchema = payslipNonPiiFields.superRefine((value, ctx) => {
   // ISO dates, so a lexicographic compare is a chronological one.
   if (value.periodEnd < value.periodStart) {
     ctx.addIssue({
@@ -343,7 +347,11 @@ export const payslipNonPiiSchema = payslipNonPiiFields.superRefine((value, ctx) 
   }
 });
 
-export type PayslipNonPii = z.infer<typeof payslipNonPiiSchema>;
+export const payslipNonPiiSchema: z.ZodType<AustralianPayslipV1, AustralianPayslipV1> =
+  refinedPayslipNonPiiSchema;
+
+/** The `au.payslip.v1` non-PII payload. Prefer `AustralianPayslipV2` for a new integration. */
+export type PayslipNonPii = AustralianPayslipV1;
 
 const registrationFields = {
   issuedAt: z.iso.datetime({
