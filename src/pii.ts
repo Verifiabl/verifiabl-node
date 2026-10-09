@@ -15,70 +15,42 @@ import {
 
 export { PII_TEXT_PROFILE_UNICODE_VERSION };
 
-function tuple<const T extends readonly string[]>(value: T): T {
-  return value;
-}
-
 const PII_FIELD_DELIMITER = "|";
-const PII_V1_VERSION = "P1";
-const PII_V2_VERSION = "P2";
 const AUSTRALIAN_PII_VERSION = AU2_MARKER;
 const NEW_ZEALAND_PII_VERSION = NZ2_MARKER;
-const PII_V1_PREFIX = `${PII_V1_VERSION}${PII_FIELD_DELIMITER}`;
-const PII_V2_PREFIX = `${PII_V2_VERSION}${PII_FIELD_DELIMITER}`;
 
 /**
  * Verifiabl's compact PII wire format is a pipe-delimited plaintext string.
  * It is encrypted before being embedded in the barcode and is never sent to
  * the Verifiabl API in plaintext.
  *
- * Current layout (9 segments, "P2" prefix + 8 fields, in this exact order):
+ * {@link formatAustralianPii} writes the AU2 profile and
+ * {@link formatNewZealandPii} writes the NZ2 profile. Each writes its marker
+ * and then eight fields in the profile's fixed order, preserving empty
+ * trailing fields:
  *
- *   P2|employeeName|position|department|employerAbn|bsb|accountNumber|accountName|address
- *
- * Example:
- *
- *   P2|Jane A. Doe|Senior Developer|Engineering|12345678901|062-000|12345678|Jane A Doe|12 Example St, Sydney NSW 2000
- *
- * Omitted fields are encoded as empty segments and skipped by Verifiabl.
- * Legacy P1 plaintext remains readable for existing documents, but cannot be generated.
+ *   AU2|employeeName|position|department|employerIdentity|bsb|accountNumber|accountName|address
+ *   NZ2|employeeName|irdNumber|position|department|employerName|accountNumber|accountName|address
  */
 
-/** P1's field order is the wire contract for documents already issued. Never reorder. */
-const P1_FIELD_ORDER = tuple([
-  "employeeName",
-  "position",
-  "department",
-  "employerAbn",
-  "bsb",
-  "accountNumber",
-  "accountName",
-]);
-
-/** Field order is the current P2 wire contract. Never reorder. */
-export const PII_FIELD_ORDER = tuple([...P1_FIELD_ORDER, "address"]);
-type P2PiiFieldName = (typeof PII_FIELD_ORDER)[number];
-
+/** AU2 field order. Never reorder. */
 export const AUSTRALIAN_PII_FIELD_ORDER = AU2_FIELD_ORDER;
 
+/** NZ2 field order. Never reorder. */
 export const NEW_ZEALAND_PII_FIELD_ORDER = NZ2_FIELD_ORDER;
 
+/** An AU2 or NZ2 input field name or field position. */
 export type PiiFieldName =
-  | (typeof PII_FIELD_ORDER)[number]
+  | keyof AustralianPiiFields
+  | keyof NewZealandPiiFields
   | (typeof AUSTRALIAN_PII_FIELD_ORDER)[number]
   | (typeof NEW_ZEALAND_PII_FIELD_ORDER)[number];
 
-const PII_V1_FIELD_MAX_LENGTH = 256;
-
-/** Maximum UTF-8 size of complete newly written P2 plaintext, including framing. */
-export const PII_PAYLOAD_MAX_BYTES = 1024;
-
-export const PII_TEXT_PROFILE_ID = "io.verifiabl.p2-pii-text.v1";
 export const AUSTRALIAN_PII_TEXT_PROFILE_ID = AU2_TEXT_PROFILE_ID;
 export const NEW_ZEALAND_PII_TEXT_PROFILE_ID = NZ2_TEXT_PROFILE_ID;
 
 // Cc is permanently assigned to C0/C1. U+2028 and U+2029 are Zl/Zp rather
-// than Cc, but are forbidden because every P2 field is one line.
+// than Cc, but are forbidden because every PII field is one line.
 function containsControlOrLineCharacter(value: string): boolean {
   for (const character of value) {
     const codePoint = character.codePointAt(0);
@@ -126,7 +98,7 @@ function hasUnpairedSurrogate(value: string): boolean {
   return false;
 }
 
-function isCurrentText(value: string): boolean {
+function isPiiText(value: string): boolean {
   return (
     !hasUnpairedSurrogate(value) &&
     !value.includes(PII_FIELD_DELIMITER) &&
@@ -135,37 +107,13 @@ function isCurrentText(value: string): boolean {
   );
 }
 
-function isLegacyText(value: string): boolean {
-  return !value.includes(PII_FIELD_DELIMITER) && !containsControlOrLineCharacter(value);
-}
-
 const piiFieldSchema = z
   .string()
   .refine((value) => !hasUnpairedSurrogate(value), "PII field must contain valid Unicode")
   .refine(
-    isCurrentText,
+    isPiiText,
     "PII field must not contain '|', control characters, format characters or line separators",
   );
-
-const addressSchema = z
-  .string()
-  .refine((value) => !hasUnpairedSurrogate(value), "Address must contain valid Unicode")
-  .refine(isCurrentText, "Address must not contain '|', control, format or line separators");
-
-export const piiFieldsSchema = z
-  .object({
-    employeeName: piiFieldSchema.optional(),
-    position: piiFieldSchema.optional(),
-    department: piiFieldSchema.optional(),
-    employerAbn: piiFieldSchema.optional(),
-    bsb: piiFieldSchema.optional(),
-    accountNumber: piiFieldSchema.optional(),
-    accountName: piiFieldSchema.optional(),
-    address: addressSchema.optional(),
-  })
-  .strict();
-
-export type PiiFields = z.infer<typeof piiFieldsSchema>;
 
 export const australianAddressSchema = z
   .object({
@@ -243,8 +191,7 @@ const VIOLATION_DESCRIPTIONS: Record<PiiFieldViolationReason, string> = {
 };
 
 /**
- * Thrown by {@link formatPii}, {@link formatAustralianPii} and
- * {@link formatNewZealandPii} when a field value cannot be encoded in the PII
+ * Thrown by {@link formatAustralianPii} and {@link formatNewZealandPii} when a field value cannot be encoded in the PII
  * wire format. The pipe is the field delimiter and the format has no escape
  * mechanism, so an offending value must be corrected at the source (strip the
  * character) rather than escaped. `violations` names each field and reason so
@@ -285,13 +232,13 @@ function fieldViolation(
 
 /**
  * Inspect each supplied field for content the wire format cannot carry, in
- * field order. Non-object inputs and non-string values are left for
- * {@link piiFieldsSchema} to reject with its own (structural) ZodError, so
- * `formatPii`'s documented error contract holds for nullish callers too.
+ * field order. Non-object inputs and non-string values are left for the
+ * formatter's Zod schema to reject with its own (structural) ZodError, so the
+ * documented error contract holds for nullish callers too.
  */
 function findPiiViolations(
   fields: unknown,
-  fieldNames: readonly PiiFieldName[] = PII_FIELD_ORDER,
+  fieldNames: readonly PiiFieldName[],
 ): PiiFieldViolation[] {
   const violations: PiiFieldViolation[] = [];
   if (!isFieldObject(fields)) {
@@ -304,29 +251,6 @@ function findPiiViolations(
     if (violation !== null) violations.push(violation);
   }
   return violations;
-}
-
-/**
- * Format employee PII into Verifiabl's current P2 compact plaintext wire format.
- *
- * The result is what you encrypt with `encryptPii` before embedding it in
- * a barcode. Throws {@link PiiValidationError} if any field contains content
- * that cannot be encoded. Each such value must be corrected at the source, as
- * the format has no escape mechanism. Throws `ZodError` for structural problems
- * (unknown field, non-string value).
- */
-export function formatPii(fields: PiiFields): string {
-  const violations = findPiiViolations(fields);
-  if (violations.length > 0) {
-    throw new PiiValidationError(violations);
-  }
-  const validated = piiFieldsSchema.parse(fields);
-  const segments = PII_FIELD_ORDER.map((name) => validated[name] ?? "");
-  const plaintext = PII_V2_PREFIX + segments.join(PII_FIELD_DELIMITER);
-  if (Buffer.byteLength(plaintext, "utf8") > PII_PAYLOAD_MAX_BYTES) {
-    throw new RangeError(`P2 plaintext exceeds ${PII_PAYLOAD_MAX_BYTES} UTF-8 bytes`);
-  }
-  return plaintext;
 }
 
 function isFieldObject(value: unknown): value is Record<string, unknown> {
@@ -445,66 +369,4 @@ export function formatNewZealandPii(fields: NewZealandPiiFields): string {
     NEW_ZEALAND_PII_VERSION,
     NZ2_FIELD_ORDER.map((field) => values[field]),
   );
-}
-
-const PII_LAYOUTS: ReadonlyArray<{
-  version: string;
-  order: readonly P2PiiFieldName[];
-  currentValidation: boolean;
-}> = [
-  { version: PII_V1_VERSION, order: P1_FIELD_ORDER, currentValidation: false },
-  { version: PII_V2_VERSION, order: PII_FIELD_ORDER, currentValidation: true },
-];
-
-function validateParsedValue(
-  field: P2PiiFieldName,
-  value: string,
-  currentValidation: boolean,
-): void {
-  if (field === "address") {
-    addressSchema.parse(value);
-    return;
-  }
-  if (currentValidation) {
-    piiFieldSchema.parse(value);
-    return;
-  }
-  if (value.length > PII_V1_FIELD_MAX_LENGTH || !isLegacyText(value)) {
-    throw new Error(`PII field '${field}' is not a valid field value`);
-  }
-}
-
-/**
- * Parse Verifiabl's compact PII wire format, P2 or P1, back into named fields.
- * Empty segments are omitted from the result, mirroring Verifiabl's scan-time
- * behaviour.
- *
- * Useful for round-trip testing your integration; not needed in the
- * normal issuance flow.
- */
-export function parsePii(plaintext: string): PiiFields {
-  for (const { version, order, currentValidation } of PII_LAYOUTS) {
-    const prefix = `${version}${PII_FIELD_DELIMITER}`;
-    if (!plaintext.startsWith(prefix)) {
-      continue;
-    }
-
-    const values = plaintext.slice(prefix.length).split(PII_FIELD_DELIMITER);
-    if (values.length !== order.length) {
-      throw new Error(`Expected ${order.length} ${version} fields but got ${values.length}`);
-    }
-
-    const result: PiiFields = {};
-    for (let i = 0; i < order.length; i++) {
-      const value = values[i];
-      const name = order[i];
-      if (name !== undefined && value !== undefined && value !== "") {
-        validateParsedValue(name, value, currentValidation);
-        result[name] = value;
-      }
-    }
-    return result;
-  }
-
-  throw new Error(`Invalid PII format: expected '${PII_V1_PREFIX}' or '${PII_V2_PREFIX}' prefix`);
 }

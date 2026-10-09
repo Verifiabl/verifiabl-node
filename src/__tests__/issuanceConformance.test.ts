@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { encryptPiiWithIv } from "../internal/crypto.js";
 import { buildBarcodePayload, buildScanUrl } from "../payload.js";
-import { formatPii, type PiiFields } from "../pii.js";
+import { type AustralianPiiFields, formatAustralianPii } from "../pii.js";
 
 interface CiphertextInput {
   hex?: string;
@@ -12,7 +12,7 @@ interface CiphertextInput {
 
 interface ValidVector {
   id: string;
-  fields: PiiFields;
+  fields: AustralianPiiFields;
   plaintext: string;
   plaintextUtf8Hex: string;
   keyHex: string;
@@ -63,7 +63,7 @@ const errorPatterns = {
 describe("shared issuance conformance vectors", () => {
   it("matches every deterministic issuance stage byte for byte", () => {
     for (const vector of vectors.valid) {
-      const plaintext = formatPii(vector.fields);
+      const plaintext = formatAustralianPii(vector.fields);
       expect(plaintext, vector.id).toBe(vector.plaintext);
       expect(Buffer.from(plaintext, "utf8").toString("hex"), vector.id).toBe(
         vector.plaintextUtf8Hex,

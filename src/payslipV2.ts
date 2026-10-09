@@ -176,6 +176,12 @@ const payslipDecimalSchema = z
 const printedText = z.string().min(1);
 const currency = z.enum(supportedV2Currencies);
 
+/**
+ * ATO STP Phase 2 paid-leave codes. There is deliberately no family-and-domestic
+ * violence category: Fair Work reg 3.48 forbids identifying FDV leave on a pay
+ * slip, so it is reported as ordinary hours, another payment type or (only at
+ * the employee's request) another kind of leave.
+ */
 export const australianPaidLeaveTypes = tuple([
   "cash_out_in_service",
   "unused_on_termination",
@@ -184,6 +190,7 @@ export const australianPaidLeaveTypes = tuple([
   "ancillary_defence",
   "other_paid_leave",
 ]);
+/** ATO STP Phase 2 allowance codes (CD/AD/LD/MD/RD/TD/KN/QN/OD). */
 export const australianAllowanceTypes = tuple([
   "cents_per_km",
   "award_transport",
@@ -195,6 +202,7 @@ export const australianAllowanceTypes = tuple([
   "qualifications",
   "other",
 ]);
+/** The ATO's descriptor categories for an `other` (OD) allowance. */
 export const australianOtherAllowanceCategories = tuple([
   "home_office",
   "non_deductible",
@@ -203,6 +211,7 @@ export const australianOtherAllowanceCategories = tuple([
   "private_vehicle",
   "general",
 ]);
+/** Post-tax deductions. PAYG withholding is not one: it is `paygw`. */
 export const australianDeductionTypes = tuple([
   "union_professional_fees",
   "workplace_giving",
@@ -211,6 +220,7 @@ export const australianDeductionTypes = tuple([
   "other_post_tax",
 ]);
 export const australianSalarySacrificeTypes = tuple(["super", "other"]);
+/** Employer-side only: an after-tax member contribution is a deduction. */
 export const australianSuperContributionTypes = tuple([
   "superannuation_guarantee",
   "resc",
@@ -224,6 +234,7 @@ export const australianPayFrequencies = tuple([
   "four_weekly",
   "semi_monthly",
 ]);
+/** STP2 employment-basis codes. Independent of `engagementType`. */
 export const australianEmploymentBases = tuple([
   "full_time",
   "part_time",
@@ -234,23 +245,46 @@ export const australianEmploymentBases = tuple([
   "non_employee",
 ]);
 export const australianEngagementTypes = tuple(["permanent", "fixed_term"]);
+/**
+ * STP2 lump sum types for a `lump_sum` line: A type R, A type T, B, D and E.
+ * Lump sum W is `return_to_work`; lump sum U is `paid_leave` `unused_on_termination`.
+ */
+export const australianLumpSumTypes = tuple(["a_redundancy", "a_other", "b", "d", "e"]);
+/** ATO ETP payment codes for an `etp` line: R, O, S, P, D, N, B and T. */
+export const australianEtpTypes = tuple([
+  "redundancy",
+  "other",
+  "redundancy_split",
+  "other_split",
+  "death_dependant",
+  "death_non_dependant",
+  "death_non_dependant_split",
+  "death_trustee",
+]);
+/** STP2 reports an ETP's taxable and tax-free components separately, so each is its own `etp` line. */
+export const australianEtpComponents = tuple(["taxable", "tax_free"]);
 const australianPlainEarningsTypes = tuple([
   "ordinary",
   "overtime",
   "bonus_commission",
   "directors_fees",
-  "lump_sum",
   "return_to_work",
   // A pay code that fits no other type.
   "other",
 ]);
-/** Known AU2 earnings discriminators, including paid leave and allowances. The API may add codes later. */
+/** Known AU2 earnings discriminators, including paid leave, allowances, lump sums and ETPs. The API may add codes later. */
 export const australianEarningsTypes = tuple([
   "paid_leave",
   "allowance",
+  "lump_sum",
+  "etp",
   ...australianPlainEarningsTypes,
 ]);
 
+/**
+ * ABR checksum (abr.business.gov.au/Help/AbnFormat): subtract 1 from the first
+ * digit, weight each digit, and the sum must divide by 89.
+ */
 const ABN_WEIGHTS = [10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
 
 function isChecksumValidAbn(value: string): boolean {
@@ -262,6 +296,12 @@ function isChecksumValidAbn(value: string): boolean {
   return weighted % 89 === 0;
 }
 
+/**
+ * Unique Superannuation Identifier, APRA products only: a fund ABN plus a
+ * 3-digit product suffix, or a SPIN (e.g. STA0100AU). A bare 11-digit ABN is
+ * not accepted: that is the SMSF form, and an SMSF ABN resolves publicly to a
+ * fund name that often carries the member's name.
+ */
 const usiSchema = z
   .string()
   .regex(
@@ -293,6 +333,21 @@ const australianEarningsLineSchema = z.discriminatedUnion("type", [
       type: z.literal("allowance"),
       allowanceType: z.enum(australianAllowanceTypes),
       otherCategory: z.enum(australianOtherAllowanceCategories).optional(),
+      ...australianEarningsFields,
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("lump_sum"),
+      lumpSumType: z.enum(australianLumpSumTypes),
+      ...australianEarningsFields,
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("etp"),
+      etpType: z.enum(australianEtpTypes),
+      etpComponent: z.enum(australianEtpComponents),
       ...australianEarningsFields,
     })
     .strict(),
@@ -640,6 +695,10 @@ export function australianPayslipV2ToWire(
                   allowance_type: line.allowanceType,
                   ...when(line.otherCategory, "other_category"),
                 }
+              : {}),
+            ...(line.type === "lump_sum" ? { lump_sum_type: line.lumpSumType } : {}),
+            ...(line.type === "etp"
+              ? { etp_type: line.etpType, etp_component: line.etpComponent }
               : {}),
             amount: line.amount,
             ...defined({ units: line.units, rate: line.rate, ytd_amount: line.ytdAmount }),

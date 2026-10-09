@@ -19,19 +19,19 @@ const CIPHERTEXT_BASE64URL = "Zm9v";
 const CIPHERTEXT = Uint8Array.from(Buffer.from(CIPHERTEXT_BASE64URL, "base64url"));
 
 const REQUEST = {
-  schema: "au.payslip.v1",
+  schema: "au.payslip.v2",
   issuedAt: "2026-06-11T00:00:00Z",
-  // Balances: 900000 - 225000 (paygw) = 675000.
+  // Balances: 9000.00 - 2250.00 (paygw) = 6750.00.
   payslipNonPii: {
     periodStart: "2026-05-01",
     periodEnd: "2026-05-31",
     paymentDate: "2026-06-04",
     currency: "AUD",
-    grossCents: 900_000,
-    paygwCents: 225_000,
-    netCents: 675_000,
-    ytdGrossCents: 900_000,
-    ytdPaygwCents: 225_000,
+    gross: "9000.00",
+    paygw: "2250.00",
+    net: "6750.00",
+    ytdGross: "9000.00",
+    ytdPaygw: "2250.00",
   },
   encryptionMetadata: {
     iv: new Uint8Array(12),
@@ -45,21 +45,20 @@ const REGISTER_AND_BUILD_BARCODE_REQUEST: RegisterAndBuildBarcodeRequest = {
 };
 
 // The snake_case bodies the SDK is expected to put on the wire after
-// translating the camelCase requests above. Provider-specific payslip
-// fields (e.g. `gross`) pass through verbatim.
+// translating the camelCase requests above.
 const WIRE_REQUEST = {
-  schema: "au.payslip.v1",
+  schema: "au.payslip.v2",
   issued_at: "2026-06-11T00:00:00Z",
   payslip_non_pii: {
     period_start: "2026-05-01",
     period_end: "2026-05-31",
     payment_date: "2026-06-04",
     currency: "AUD",
-    gross_cents: 900_000,
-    paygw_cents: 225_000,
-    net_cents: 675_000,
-    ytd_gross_cents: 900_000,
-    ytd_paygw_cents: 225_000,
+    gross: "9000.00",
+    paygw: "2250.00",
+    net: "6750.00",
+    ytd_gross: "9000.00",
+    ytd_paygw: "2250.00",
   },
   encryption_metadata: {
     iv: "AAAAAAAAAAAAAAAA",
@@ -284,6 +283,26 @@ describe("VerifiablClient requests", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  // v1 is no longer a supported schema, so it fails locally like any other
+  // unknown identifier.
+  it("rejects an au.payslip.v1 registration without calling the API", async () => {
+    const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
+    const client = testClient({ fetch });
+
+    await expect(
+      // @ts-expect-error au.payslip.v1 is not a supported schema.
+      client.registerNonPii({ ...REQUEST, schema: "au.payslip.v1" }),
+    ).rejects.toThrow();
+    await expect(
+      client.registerAndBuildBarcode({
+        ...REGISTER_AND_BUILD_BARCODE_REQUEST,
+        // @ts-expect-error au.payslip.v1 is not a supported schema.
+        schema: "au.payslip.v1",
+      }),
+    ).rejects.toThrow();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("maps every canonical field to its snake_case wire name", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
     const client = testClient({ fetch });
@@ -292,22 +311,22 @@ describe("VerifiablClient requests", () => {
       ...REQUEST,
       payslipNonPii: {
         ...REQUEST.payslipNonPii,
-        taxableGrossCents: 900_000,
-        stslWithholdingCents: 25_000,
+        taxableGross: "9000.00",
+        stslWithholding: "250.00",
         employmentBasis: "full_time",
         earnings: [
-          { type: "ordinary", amountCents: 880_000 },
+          { type: "ordinary", amount: "8800.00" },
           {
             type: "allowance",
             allowanceType: "other",
             otherCategory: "uniform",
-            amountCents: 20_000,
+            amount: "200.00",
           },
         ],
         superannuation: [
-          { contributionType: "superannuation_guarantee", amountCents: 99_000, usi: "STA0100AU" },
+          { contributionType: "superannuation_guarantee", amount: "990.00", usi: "STA0100AU" },
         ],
-        ytd: { taxableCents: 900_000 },
+        ytd: { taxable: "9000.00" },
       },
     });
 
@@ -317,27 +336,27 @@ describe("VerifiablClient requests", () => {
       period_end: "2026-05-31",
       payment_date: "2026-06-04",
       currency: "AUD",
-      gross_cents: 900_000,
-      paygw_cents: 225_000,
-      net_cents: 675_000,
-      ytd_gross_cents: 900_000,
-      ytd_paygw_cents: 225_000,
-      taxable_gross_cents: 900_000,
-      stsl_withholding_cents: 25_000,
+      gross: "9000.00",
+      paygw: "2250.00",
+      net: "6750.00",
+      ytd_gross: "9000.00",
+      ytd_paygw: "2250.00",
+      taxable_gross: "9000.00",
+      stsl_withholding: "250.00",
       employment_basis: "full_time",
       earnings: [
-        { type: "ordinary", amount_cents: 880_000 },
+        { type: "ordinary", amount: "8800.00" },
         {
           type: "allowance",
           allowance_type: "other",
           other_category: "uniform",
-          amount_cents: 20_000,
+          amount: "200.00",
         },
       ],
       superannuation: [
-        { contribution_type: "superannuation_guarantee", amount_cents: 99_000, usi: "STA0100AU" },
+        { contribution_type: "superannuation_guarantee", amount: "990.00", usi: "STA0100AU" },
       ],
-      ytd: { taxable_cents: 900_000 },
+      ytd: { taxable: "9000.00" },
     });
   });
 
@@ -365,10 +384,9 @@ describe("VerifiablClient requests", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  // Every supported currency has an ISO 4217 minor-unit exponent of 2, so the
-  // `*Cents` fields stay literally cents. JPY (exponent 0) would reinterpret the
-  // same integer at a hundredfold different scale.
-  it("accepts a non-AUD exponent-2 currency and rejects one with another exponent", async () => {
+  // Wages are paid in legal tender, so a fund or precious-metal code such as XAU
+  // is rejected locally.
+  it("accepts a non-AUD currency and rejects a code outside the v2 list", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
     const client = testClient({ fetch });
 
@@ -383,10 +401,10 @@ describe("VerifiablClient requests", () => {
     await expect(
       client.registerNonPii({
         ...REQUEST,
-        // @ts-expect-error JPY is outside the v1 currency list.
         payslipNonPii: {
           ...REQUEST.payslipNonPii,
-          currency: "JPY",
+          // @ts-expect-error XAU is outside the v2 currency list.
+          currency: "XAU",
         },
       }),
     ).rejects.toThrow();
@@ -404,15 +422,15 @@ describe("VerifiablClient requests", () => {
       ...REQUEST,
       payslipNonPii: {
         ...REQUEST.payslipNonPii,
-        netCents: 999_999,
-        earnings: [{ type: "ordinary", amountCents: 1 }],
+        net: "9999.99",
+        earnings: [{ type: "ordinary", amount: "0.01" }],
       },
     });
 
     expect(requestBody(firstFetchCall(fetch))).toMatchObject({
       payslip_non_pii: {
-        net_cents: 999_999,
-        earnings: [{ type: "ordinary", amount_cents: 1 }],
+        net: "9999.99",
+        earnings: [{ type: "ordinary", amount: "0.01" }],
       },
     });
   });
@@ -1094,9 +1112,9 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
           ...REQUEST,
           verifiablReference: VERIFIABL_REF_A,
           externalId: "payslip-1",
-          // Money is integer cents, so a fractional amount is rejected locally
-          // and never sent.
-          payslipNonPii: { ...REQUEST.payslipNonPii, grossCents: 900_000.55 },
+          // Money is a plain decimal string, so a formatted amount is rejected
+          // locally and never sent.
+          payslipNonPii: { ...REQUEST.payslipNonPii, gross: "9,000.00" },
         },
         { ...REQUEST, verifiablReference: VERIFIABL_REF_B },
       ],
@@ -1115,7 +1133,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
       verifiablReference: VERIFIABL_REF_A,
       externalId: "payslip-1",
     });
-    expect(result.results[0]?.detail).toContain("grossCents");
+    expect(result.results[0]?.detail).toContain("gross");
     expect(result.results[1]).toEqual({
       status: "created",
       verifiablReference: VERIFIABL_REF_B,
@@ -1155,6 +1173,41 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
     expect(result.results[1]).toMatchObject({ status: "created" });
   });
 
+  it("reports v1 records as unsupported schemas and does not send them", async () => {
+    const fetch = mockFetch(200, {
+      results: [{ status: "created", verifiabl_reference: VERIFIABL_REF_B }],
+    });
+    const client = testClient({ fetch });
+    const VERIFIABL_REF_C = "ZyXwVuTsRqPoNmLkJiHgFe";
+
+    const result = await client.registerNonPiiBatch({
+      records: [
+        { ...REQUEST, schema: "au.payslip.v1", verifiablReference: VERIFIABL_REF_A },
+        { ...REQUEST, verifiablReference: VERIFIABL_REF_B },
+        { ...REQUEST, schema: "nz.payslip.v1", verifiablReference: VERIFIABL_REF_C },
+      ],
+    });
+
+    expect(requestBody(firstFetchCall(fetch))).toEqual({
+      records: [{ verifiabl_reference: VERIFIABL_REF_B, ...WIRE_REQUEST }],
+    });
+    expect(result.results).toEqual([
+      {
+        status: "error",
+        code: "VALIDATION_FAILED",
+        detail: "unsupported schema 'au.payslip.v1'",
+        verifiablReference: VERIFIABL_REF_A,
+      },
+      { status: "created", verifiablReference: VERIFIABL_REF_B },
+      {
+        status: "error",
+        code: "VALIDATION_FAILED",
+        detail: "unsupported schema 'nz.payslip.v1'",
+        verifiablReference: VERIFIABL_REF_C,
+      },
+    ]);
+  });
+
   it("does not call the API when every record fails locally", async () => {
     const fetch = mockFetch(200, { results: [] });
     const client = testClient({ fetch });
@@ -1164,7 +1217,7 @@ describe("VerifiablClient.registerNonPiiBatch", () => {
         {
           ...REQUEST,
           verifiablReference: VERIFIABL_REF_A,
-          payslipNonPii: { ...REQUEST.payslipNonPii, netCents: 675_000.55 },
+          payslipNonPii: { ...REQUEST.payslipNonPii, net: "6750.00.55" },
         },
       ],
     });

@@ -6,6 +6,44 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-10-09
+
+### Changed
+
+- **Breaking:** an AU2 `lump_sum` earnings line now requires a `lumpSumType`
+  from `australianLumpSumTypes`: `a_redundancy` (STP lump sum A type R),
+  `a_other` (A type T), `b`, `d` or `e`. Lump sum W stays `return_to_work`, and
+  lump sum U stays `paid_leave` with `unused_on_termination`. The SDK rejects a
+  `lump_sum` line without one before sending. The API accepts that line for now
+  and will require `lump_sum_type` before production, once every issuer is on
+  an SDK release with the lump sum codes.
+
+### Added
+
+- Add the AU2 `etp` earnings line. It requires an `etpType` from
+  `australianEtpTypes`: `redundancy` (ETP code R), `other` (O),
+  `redundancy_split` (S), `other_split` (P), `death_dependant` (D),
+  `death_non_dependant` (N), `death_non_dependant_split` (B) or
+  `death_trustee` (T), and an `etpComponent` from `australianEtpComponents`:
+  `taxable` or `tax_free`. Send the taxable and tax-free components as separate
+  `etp` lines. Tax withheld from an ETP is part of `paygw`.
+
+### Removed
+
+- **Breaking:** removed `au.payslip.v1` registration. `registerNonPii`,
+  `registerAndBuildBarcode` and `registerNonPiiBatch` no longer accept it:
+  single registrations reject it before sending, and a batch record with
+  `au.payslip.v1` or `nz.payslip.v1` returns an "unsupported schema" error
+  result and is not sent. Removed the `PayslipNonPii` type and the
+  `supportedCurrencies` list. Send `au.payslip.v2` instead, for example with
+  `prepareAustralianV2Payslip`; `supportedV2Currencies` lists its currencies.
+- **Breaking:** removed the P2 PII writer and the P1/P2 parser: `formatPii`,
+  `parsePii` and the `PiiFields` type. Verifiabl now accepts only the AU2 and
+  NZ2 PII formats from issuers. Use `prepareAustralianV2Payslip` or
+  `prepareNewZealandV2Payslip`, or for low-level use `formatAustralianPii` or
+  `formatNewZealandPii` with `encryptPii`. Payslips already issued with P1 or
+  P2 still verify.
+
 ## [0.30.0] - 2026-10-04
 
 ### Added

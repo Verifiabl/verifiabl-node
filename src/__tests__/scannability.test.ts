@@ -2,7 +2,7 @@ import { createCipheriv, createHash } from "node:crypto";
 import { Resvg } from "@resvg/resvg-js";
 
 import { type BarcodeParts, buildBarcodePayload } from "../payload.js";
-import { formatPii, type PiiFields } from "../pii.js";
+import { type AustralianPiiFields, formatAustralianPii } from "../pii.js";
 import { type BarcodeSvgOptions, createBarcodeSvg } from "../qr/styled.js";
 import { decodeQrImage } from "../test/decodeQr.js";
 
@@ -32,8 +32,13 @@ const DOCS_EXAMPLE_FIELDS = {
   bsb: "062-000",
   accountNumber: "12345678",
   accountName: "Jane A Doe",
-  address: "12 Example St, Sydney NSW 2000",
-} satisfies PiiFields;
+  address: {
+    lines: ["12 Example St"],
+    suburb: "Sydney",
+    stateOrTerritory: "NSW",
+    postcode: "2000",
+  },
+} satisfies AustralianPiiFields;
 
 const LONG_NAME_FIELDS = {
   employeeName: "Dr. Jane Alexandra Catherine Doe-Smith-Washington Nguyen",
@@ -43,8 +48,13 @@ const LONG_NAME_FIELDS = {
   bsb: "062-000",
   accountNumber: "12345678",
   accountName: "Jane Alexandra Catherine Doe Smith Washington Nguyen",
-  address: "88 Harrington Street, Sydney NSW 2000",
-} satisfies PiiFields;
+  address: {
+    lines: ["88 Harrington Street"],
+    suburb: "Sydney",
+    stateOrTerritory: "NSW",
+    postcode: "2000",
+  },
+} satisfies AustralianPiiFields;
 
 /**
  * A spread of real-world names, roles, departments, and account names
@@ -52,7 +62,7 @@ const LONG_NAME_FIELDS = {
  * holds machine readability across the variety of PII issuers actually emit,
  * all at the minimum raster width.
  */
-const DIVERSE_RECORDS: ReadonlyArray<{ label: string; fields: PiiFields }> = [
+const DIVERSE_RECORDS: ReadonlyArray<{ label: string; fields: AustralianPiiFields }> = [
   {
     label: "Irish, accented",
     fields: {
@@ -160,8 +170,8 @@ function encryptFixture(plaintext: string): Buffer {
   return Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
 }
 
-function partsFromPii(fields: PiiFields): { parts: BarcodeParts; plaintext: string } {
-  const plaintext = formatPii(fields);
+function partsFromPii(fields: AustralianPiiFields): { parts: BarcodeParts; plaintext: string } {
+  const plaintext = formatAustralianPii(fields);
   return {
     parts: {
       verifiablReference: VERIFIABL_REF,
@@ -330,7 +340,7 @@ describe("styled QR scannability", () => {
   it("decodes the encrypted docs PII example at the minimum raster width", async () => {
     const { parts, plaintext } = partsFromPii(DOCS_EXAMPLE_FIELDS);
     expect(plaintext).toBe(
-      "P2|Jane A. Doe|Senior Developer|Engineering|12-345-678-901|062-000|12345678|Jane A Doe|12 Example St, Sydney NSW 2000",
+      "AU2|Jane A. Doe|Senior Developer|Engineering|12-345-678-901|062-000|12345678|Jane A Doe|12 Example St, Sydney NSW 2000",
     );
     expect(parts.encryptedPii.length).toBe(Buffer.byteLength(plaintext));
     expect(await decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(createBarcodeSvg(parts).content);
@@ -338,7 +348,7 @@ describe("styled QR scannability", () => {
 
   it("decodes longer real-world employee fields at the minimum raster width", async () => {
     const { parts, plaintext } = partsFromPii(LONG_NAME_FIELDS);
-    expect(plaintext.length).toBeGreaterThan(formatPii(DOCS_EXAMPLE_FIELDS).length);
+    expect(plaintext.length).toBeGreaterThan(formatAustralianPii(DOCS_EXAMPLE_FIELDS).length);
     expect(parts.encryptedPii.length).toBe(Buffer.byteLength(plaintext));
     expect(await decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(createBarcodeSvg(parts).content);
   });

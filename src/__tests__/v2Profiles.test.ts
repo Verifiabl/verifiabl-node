@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { JURISDICTION_PII_MAX_BYTES } from "../generated/jurisdictionPiiProfiles.js";
 import {
+  australianEtpComponents,
+  australianEtpTypes,
+  australianLumpSumTypes,
   australianPayslipV2Schema,
   newZealandPayslipV2Schema,
   supportedV2Currencies,
@@ -15,7 +19,6 @@ import {
   NEW_ZEALAND_PII_FIELD_ORDER,
   NEW_ZEALAND_PII_TEXT_PROFILE_ID,
   type NewZealandPiiFields,
-  PII_PAYLOAD_MAX_BYTES,
   PiiValidationError,
 } from "../pii.js";
 import {
@@ -82,7 +85,7 @@ describe("AU2 and NZ2 encrypted PII", () => {
     expect(formatAustralianPii({})).toBe("AU2||||||||");
     expect(formatNewZealandPii({})).toBe("NZ2||||||||");
     const boundary = formatAustralianPii({ employeeName: "a".repeat(1013) });
-    expect(Buffer.byteLength(boundary, "utf8")).toBe(PII_PAYLOAD_MAX_BYTES);
+    expect(Buffer.byteLength(boundary, "utf8")).toBe(JURISDICTION_PII_MAX_BYTES);
     expect(() => formatAustralianPii({ employeeName: "a".repeat(1014) })).toThrow(RangeError);
   });
 
@@ -240,6 +243,74 @@ describe("AU2 and NZ2 registration", () => {
         earnings: [other],
       }).success,
     ).toBe(true);
+  });
+
+  it("requires a lump sum type on lump_sum and an ETP type and component on etp", () => {
+    const parse = (line: Record<string, string>) =>
+      australianPayslipV2Schema.safeParse({ ...minimalAu, earnings: [line] });
+    for (const lumpSumType of australianLumpSumTypes) {
+      expect(parse({ type: "lump_sum", lumpSumType, amount: "100.00" }).success).toBe(true);
+    }
+    for (const etpType of australianEtpTypes) {
+      for (const etpComponent of australianEtpComponents) {
+        expect(
+          parse({ type: "etp", etpType, etpComponent, amount: "100.00", ytdAmount: "100.00" })
+            .success,
+        ).toBe(true);
+      }
+    }
+    for (const line of [
+      { type: "lump_sum", amount: "100.00" },
+      { type: "etp", etpComponent: "taxable", amount: "100.00" },
+      { type: "etp", etpType: "redundancy", amount: "100.00" },
+      { type: "etp", etpType: "redundancy", etpComponent: "tax-free", amount: "100.00" },
+      { type: "lump_sum", lumpSumType: "w", amount: "100.00" },
+      { type: "etp", etpType: "a_redundancy", etpComponent: "taxable", amount: "100.00" },
+      { type: "lump_sum", etpType: "redundancy", amount: "100.00" },
+      { type: "lump_sum", lumpSumType: "b", etpComponent: "taxable", amount: "100.00" },
+      {
+        type: "etp",
+        etpType: "redundancy",
+        etpComponent: "taxable",
+        lumpSumType: "a_redundancy",
+        amount: "100.00",
+      },
+      { type: "ordinary", lumpSumType: "a_redundancy", amount: "100.00" },
+      { type: "return_to_work", etpType: "redundancy", amount: "100.00" },
+      { type: "ordinary", etpComponent: "tax_free", amount: "100.00" },
+    ]) {
+      expect(parse(line).success).toBe(false);
+    }
+    expect(
+      newZealandPayslipV2Schema.safeParse({
+        periodEnd: "2026-05-31",
+        paymentDate: "2026-06-04",
+        currency: "NZD",
+        gross: "1",
+        paye: "2",
+        net: "3",
+        earnings: [{ type: "etp", etpType: "redundancy", etpComponent: "taxable", amount: "1" }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("maps lump sum and ETP types to their wire fields", () => {
+    const body = registrationToWire({
+      schema: "au.payslip.v2",
+      issuedAt: "2026-06-11T00:00:00Z",
+      payslipNonPii: {
+        ...minimalAu,
+        earnings: [
+          { type: "lump_sum", lumpSumType: "e", amount: "500.00", ytdAmount: "500.00" },
+          { type: "etp", etpType: "death_trustee", etpComponent: "tax_free", amount: "9000.00" },
+        ],
+      },
+      encryptionMetadata: metadata,
+    });
+    expect((body.payslip_non_pii as { earnings: unknown }).earnings).toEqual([
+      { type: "lump_sum", lump_sum_type: "e", amount: "500.00", ytd_amount: "500.00" },
+      { type: "etp", etp_type: "death_trustee", etp_component: "tax_free", amount: "9000.00" },
+    ]);
   });
 
   it("accepts four-weekly and semi-monthly AU2 pay frequencies", () => {

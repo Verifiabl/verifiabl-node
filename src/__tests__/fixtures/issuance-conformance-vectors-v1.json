@@ -12,23 +12,23 @@
   ],
   "valid": [
     {
-      "id": "minimal-ascii",
+      "id": "au2-minimal-ascii",
       "fields": {
         "employeeName": "Jane Doe"
       },
-      "plaintext": "P2|Jane Doe|||||||",
-      "plaintextUtf8Hex": "50327c4a616e6520446f657c7c7c7c7c7c7c",
+      "plaintext": "AU2|Jane Doe|||||||",
+      "plaintextUtf8Hex": "4155327c4a616e6520446f657c7c7c7c7c7c7c",
       "keyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
       "ivHex": "000102030405060708090a0b",
-      "ciphertextHex": "1730aa51a48ba73bc92ef2f7cd950411ffaa",
-      "tagHex": "ed9528b7c310abf5dc76bf7d89b2091a",
+      "ciphertextHex": "0657e4678f84ac7ead05f8eecd950411ffaafb",
+      "tagHex": "bf0f957997c75294ac537806a7f60e9f",
       "reference": "AbCdEfGhIjKlMnOpQrStUv",
-      "xmpPayload": "2|AbCdEfGhIjKlMnOpQrStUv|C4YKUUNEROTTXSJO6L343FIECH72U",
-      "productionScanUrl": "https://v.verifiabl.io/v/AbCdEfGhIjKlMnOpQrStUv#2.C4YKUUNEROTTXSJO6L343FIECH72U",
-      "sandboxScanUrl": "https://v.sandbox.verifiabl.io/v/AbCdEfGhIjKlMnOpQrStUv#2.C4YKUUNEROTTXSJO6L343FIECH72U"
+      "xmpPayload": "2|AbCdEfGhIjKlMnOpQrStUv|AZL6IZ4PQSWH5LIF7DXM3FIECH72V6Y",
+      "productionScanUrl": "https://v.verifiabl.io/v/AbCdEfGhIjKlMnOpQrStUv#2.AZL6IZ4PQSWH5LIF7DXM3FIECH72V6Y",
+      "sandboxScanUrl": "https://v.sandbox.verifiabl.io/v/AbCdEfGhIjKlMnOpQrStUv#2.AZL6IZ4PQSWH5LIF7DXM3FIECH72V6Y"
     },
     {
-      "id": "international-full",
+      "id": "au2-international-full",
       "fields": {
         "employeeName": "Zoë Nguyễn",
         "position": "Ingénieure",
@@ -37,18 +37,23 @@
         "bsb": "062-000",
         "accountNumber": "12345678",
         "accountName": "Zoë Nguyễn",
-        "address": "東京 1-2"
+        "address": {
+          "lines": ["東京 1-2"],
+          "suburb": "Haymarket",
+          "stateOrTerritory": "NSW",
+          "postcode": "2000"
+        }
       },
-      "plaintext": "P2|Zoë Nguyễn|Ingénieure|R&D|53004085616|062-000|12345678|Zoë Nguyễn|東京 1-2",
-      "plaintextUtf8Hex": "50327c5a6fc3ab204e677579e1bb856e7c496e67c3a96e69657572657c5226447c35333030343038353631367c3036322d3030307c31323334353637387c5a6fc3ab204e677579e1bb856e7ce69db1e4baac20312d32",
+      "plaintext": "AU2|Zoë Nguyễn|Ingénieure|R&D|53004085616|062-000|12345678|Zoë Nguyễn|東京 1-2, Haymarket NSW 2000",
+      "plaintextUtf8Hex": "4155327c5a6fc3ab204e677579e1bb856e7c496e67c3a96e69657572657c5226447c35333030343038353631367c3036322d3030307c31323334353637387c5a6fc3ab204e677579e1bb856e7ce69db1e4baac20312d322c204861796d61726b6574204e53572032303030",
       "keyHex": "f0e0d0c0b0a09080706050403020100000112233445566778899aabbccddeeff",
       "ivHex": "fedcba987654321001234567",
-      "ciphertextHex": "95cab52da726a7fae0906e5f81af4bb437213e74eb8c0cf1ac70d85ea569943deae0e2a353944198ee78bb47134e60ee3b804cf0646192521659b1741d827ff875b294252d77ca7b1f177e41ff1fb3b7caaa046e0c11",
-      "tagHex": "38001b8869de9d5f39b12cb0b70a599f",
+      "ciphertextHex": "84adfb0b928acf718eb97c5319f5755f2514197d4fe6cbf6a060df49bc47e05fd2a9e4a053904590e37bbc40590266ea249d4cf0282c91531158b27512c659cdd9da1f4b0465c6e34529955365649fe294bc887f100ef919983beac0ed649895082fb7c047cbe3e61258ac",
+      "tagHex": "e8b87043e32f76821b74b7bedaaf8b9b",
       "reference": "u0FE9WLIS7GYKQnpJPygBw",
-      "xmpPayload": "2|u0FE9WLIS7GYKQnpJPygBw|SXFLKLNHE2T7VYEQNZPYDL2LWQ3SCPTU5OGAZ4NMODMF5JLJSQ66VYHCUNJZIQMY5Z4LWRYTJZQO4O4AJTYGIYMSKILFTMLUDWBH76DVWKKCKLLXZJ5R6F36IH7R7M5XZKVAI3QMCE",
-      "productionScanUrl": "https://v.verifiabl.io/v/u0FE9WLIS7GYKQnpJPygBw#2.SXFLKLNHE2T7VYEQNZPYDL2LWQ3SCPTU5OGAZ4NMODMF5JLJSQ66VYHCUNJZIQMY5Z4LWRYTJZQO4O4AJTYGIYMSKILFTMLUDWBH76DVWKKCKLLXZJ5R6F36IH7R7M5XZKVAI3QMCE",
-      "sandboxScanUrl": "https://v.sandbox.verifiabl.io/v/u0FE9WLIS7GYKQnpJPygBw#2.SXFLKLNHE2T7VYEQNZPYDL2LWQ3SCPTU5OGAZ4NMODMF5JLJSQ66VYHCUNJZIQMY5Z4LWRYTJZQO4O4AJTYGIYMSKILFTMLUDWBH76DVWKKCKLLXZJ5R6F36IH7R7M5XZKVAI3QMCE"
+      "xmpPayload": "2|u0FE9WLIS7GYKQnpJPygBw|QSW7WC4SRLHXDDVZPRJRT5LVL4SRIGL5J7TMX5VAMDPUTPCH4BP5FKPEUBJZARMQ4N53YQCZAJTOUJE5JTYCQLERKMIVRMTVCLDFTTOZ3IPUWBDFY3RUKKMVKNSWJH7CSS6IQ7YQB34RTGB35LAO2ZEYSUEC7N6AI7F6HZQSLCWA",
+      "productionScanUrl": "https://v.verifiabl.io/v/u0FE9WLIS7GYKQnpJPygBw#2.QSW7WC4SRLHXDDVZPRJRT5LVL4SRIGL5J7TMX5VAMDPUTPCH4BP5FKPEUBJZARMQ4N53YQCZAJTOUJE5JTYCQLERKMIVRMTVCLDFTTOZ3IPUWBDFY3RUKKMVKNSWJH7CSS6IQ7YQB34RTGB35LAO2ZEYSUEC7N6AI7F6HZQSLCWA",
+      "sandboxScanUrl": "https://v.sandbox.verifiabl.io/v/u0FE9WLIS7GYKQnpJPygBw#2.QSW7WC4SRLHXDDVZPRJRT5LVL4SRIGL5J7TMX5VAMDPUTPCH4BP5FKPEUBJZARMQ4N53YQCZAJTOUJE5JTYCQLERKMIVRMTVCLDFTTOZ3IPUWBDFY3RUKKMVKNSWJH7CSS6IQ7YQB34RTGB35LAO2ZEYSUEC7N6AI7F6HZQSLCWA"
     }
   ],
   "invalidPayloads": [

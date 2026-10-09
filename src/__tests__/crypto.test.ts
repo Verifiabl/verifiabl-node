@@ -1,6 +1,6 @@
 import { createDecipheriv, randomBytes } from "node:crypto";
 import { encryptPii } from "../crypto.js";
-import { formatPii, parsePii } from "../pii.js";
+import { formatAustralianPii } from "../pii.js";
 
 /** Mirrors Verifiabl scan-time AES-256-GCM decryption. */
 function decryptLikeVerifiabl(
@@ -18,7 +18,7 @@ describe("encryptPii", () => {
   const key = randomBytes(32);
 
   it("produces ciphertext the Verifiabl decrypt logic can read", () => {
-    const plaintext = formatPii({
+    const plaintext = formatAustralianPii({
       employeeName: "Jane A. Doe",
       position: "Senior Developer",
       department: "Engineering",
@@ -37,11 +37,11 @@ describe("encryptPii", () => {
     );
 
     expect(decrypted).toBe(plaintext);
-    expect(parsePii(decrypted)).toMatchObject({ employeeName: "Jane A. Doe" });
+    expect(decrypted.startsWith("AU2|Jane A. Doe|")).toBe(true);
   });
 
   it("detects tampering: a flipped ciphertext byte fails the auth tag", () => {
-    const { encryptedPii, encryptionMetadata } = encryptPii("P1|a||||||", key);
+    const { encryptedPii, encryptionMetadata } = encryptPii("AU2|a|||||||", key);
     const corrupted = Buffer.from(encryptedPii);
     corrupted.writeUInt8(corrupted.readUInt8(0) ^ 0x01, 0);
     expect(() =>
@@ -50,7 +50,7 @@ describe("encryptPii", () => {
   });
 
   it("only decrypts with the issuing provider's key", () => {
-    const { encryptedPii, encryptionMetadata } = encryptPii("P1|a||||||", key);
+    const { encryptedPii, encryptionMetadata } = encryptPii("AU2|a|||||||", key);
     const otherProviderKey = randomBytes(32);
     expect(() =>
       decryptLikeVerifiabl(
@@ -63,7 +63,7 @@ describe("encryptPii", () => {
   });
 
   it("emits binary values in the exact sizes the API validates", () => {
-    const { encryptedPii, encryptionMetadata } = encryptPii("P1|a||||||", key);
+    const { encryptedPii, encryptionMetadata } = encryptPii("AU2|a|||||||", key);
     expect(encryptedPii).toBeInstanceOf(Uint8Array);
     expect(encryptionMetadata.iv).toBeInstanceOf(Uint8Array);
     expect(encryptionMetadata.tag).toBeInstanceOf(Uint8Array);
@@ -75,13 +75,13 @@ describe("encryptPii", () => {
   });
 
   it("uses a fresh IV per call", () => {
-    const a = encryptPii("P1|a||||||", key);
-    const b = encryptPii("P1|a||||||", key);
+    const a = encryptPii("AU2|a|||||||", key);
+    const b = encryptPii("AU2|a|||||||", key);
     expect(a.encryptionMetadata.iv).not.toEqual(b.encryptionMetadata.iv);
     expect(a.encryptedPii).not.toEqual(b.encryptedPii);
   });
 
   it("rejects keys that are not 32 bytes", () => {
-    expect(() => encryptPii("P1|a||||||", randomBytes(16))).toThrow("32 bytes");
+    expect(() => encryptPii("AU2|a|||||||", randomBytes(16))).toThrow("32 bytes");
   });
 });
