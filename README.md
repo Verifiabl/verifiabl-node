@@ -131,21 +131,25 @@ entry point. For example, `australianPayFrequencies` contains `"monthly"`,
 `australianEarningsTypes` includes `"paid_leave"` and `"allowance"`, and
 `newZealandLeaveBalanceUnits` contains `"hours"`, `"days"` and `"weeks"`.
 Other exported lists cover paid leave, allowances, deductions and employment
-codes. TypeScript input types already guide those fields; the lists also let
-JavaScript consumers discover current values without copying literals. The
-API remains the authority, and the SDK does not add a new local validator.
+codes. An AU2 `lump_sum` line needs a `lumpSumType` from
+`australianLumpSumTypes`, and an `etp` line needs an `etpType` from
+`australianEtpTypes` and an `etpComponent` from `australianEtpComponents`.
+TypeScript input types already guide those fields; the lists also let
+JavaScript consumers discover current values without copying literals. The API
+remains the authority, and the SDK does not add a new local validator.
 
-### Legacy P2 compatibility writer
+### Low-level AU2 and NZ2 formatting
 
-The low-level `formatPii` helper remains available for legacy P2 integrations. New AU/NZ v2 integrations should use the preparation helpers instead:
+Most integrations should use the preparation helpers. To select the schema and formatter yourself, format the PII with `formatAustralianPii` or `formatNewZealandPii`, then encrypt it with `encryptPii`:
 
 ```ts
-import { buildBarcodePayload, createBarcodeSvg, encryptPii, formatPii } from "@verifiabl/issuer";
+import { buildBarcodePayload, createBarcodeSvg, encryptPii, formatAustralianPii } from "@verifiabl/issuer";
 
-const plaintext = formatPii({
+const plaintext = formatAustralianPii({
   employeeName: "Zoë Nguyễn",
   position: "Ingénieure",
-  address: "12 Rue de l’Église, Apt 4B, 75005 Paris, France 🇫🇷",
+  employerAbn: "12 345 678 901",
+  address: { lines: ["12 Example St"], suburb: "Sydney", stateOrTerritory: "NSW", postcode: "2000" },
 });
 const { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);
 const parts = { verifiablReference, encryptedPii };
@@ -153,16 +157,13 @@ const { svg } = createBarcodeSvg(parts, { environment: "sandbox" });
 const xmpPayload = buildBarcodePayload(parts);
 ```
 
-P2 is exactly `P2|employeeName|position|department|employerAbn|bsb|accountNumber|accountName|address`.
-P2 preserves valid Unicode without normalization. Writers limit the complete plaintext, including
-framing and delimiters, to 1024 UTF-8 bytes. Readers continue to accept oversized P2 plaintext from
-legacy documents. The pipe and Unicode General Categories Cc (control), Cf (format), Zl (line
-separator), and Zp (paragraph separator) are rejected before encryption. Ordinary international
-Unicode remains valid. A v2 QR uses uppercase, unpadded RFC 4648 Base32 and the short
-`v.verifiabl.io` scan host (`v.sandbox.verifiabl.io` in sandbox), with `#2.<BASE32>` and an
-explicit byte/alphanumeric segment split. Its XMP copy is the matching
-`2|reference|BASE32`. The SDK reads P1 plaintext for existing-document tooling, but all issuer
-writers generate only P2/v2.
+Register the non-PII fields with `au.payslip.v2` for AU2 plaintext and `nz.payslip.v2` for NZ2.
+Both formatters preserve valid Unicode without normalization. The pipe and Unicode General
+Categories Cc (control), Cf (format), Zl (line separator), and Zp (paragraph separator) are rejected
+before encryption. Ordinary international Unicode remains valid. A v2 QR uses uppercase, unpadded
+RFC 4648 Base32 and the short `v.verifiabl.io` scan host (`v.sandbox.verifiabl.io` in sandbox), with
+`#2.<BASE32>` and an explicit byte/alphanumeric segment split. Its XMP copy is the matching
+`2|reference|BASE32`.
 
 Ciphertext, IV, and authentication tags are binary values. The SDK exposes all
 three as `Uint8Array` instances, which you can persist directly in binary database

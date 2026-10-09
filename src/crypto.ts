@@ -35,7 +35,8 @@ const IV_BYTES = 12; // 96-bit IV, the NIST-recommended size for GCM
  * rejects a repeated iv, and the SDK surfaces that as `VerifiablIvReuseError`
  * (or, in a batch, an error result matched by `isIvReuseResult`).
  *
- * @param plaintext The formatted string from `formatPii`.
+ * @param plaintext The AU2 or NZ2 plaintext from `formatAustralianPii` or
+ *   `formatNewZealandPii`.
  * @param key Your 32-byte provider encryption key.
  */
 export function encryptPii(plaintext: string, key: Buffer): EncryptedPii {

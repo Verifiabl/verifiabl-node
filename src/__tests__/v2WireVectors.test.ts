@@ -32,6 +32,28 @@ const inputs = {
       { type: "allowance", amount: "12.50", allowanceType: "other", otherCategory: "home_office" },
     ],
   },
+  "au-lump-sum-and-etp": {
+    schema: "au.payslip.v2" as const,
+    periodEnd: "2026-09-30",
+    paymentDate: "2026-09-30",
+    currency: "AUD",
+    gross: "41250.00",
+    paygw: "9850.00",
+    net: "31400.00",
+    earnings: [
+      { type: "ordinary", amount: "3250.00" },
+      { type: "lump_sum", lumpSumType: "a_redundancy", amount: "6000.00" },
+      { type: "lump_sum", lumpSumType: "d", amount: "20000.00", ytdAmount: "20000.00" },
+      {
+        type: "etp",
+        etpType: "redundancy_split",
+        etpComponent: "taxable",
+        amount: "12000.00",
+        units: "8",
+        rate: "1500.00",
+      },
+    ],
+  },
   "nz-leave-and-dates": {
     schema: "nz.payslip.v2" as const,
     periodEnd: "2026-08-31",

@@ -2,26 +2,21 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  formatPii,
-  PII_FIELD_ORDER,
-  PII_PAYLOAD_MAX_BYTES,
-  PII_TEXT_PROFILE_ID,
+  formatAustralianPii,
+  formatNewZealandPii,
   PII_TEXT_PROFILE_UNICODE_VERSION,
   PiiValidationError,
-  parsePii,
-  piiFieldsSchema,
 } from "../pii.js";
 
-interface P2TextProfile {
+interface PiiTextProfile {
   profileId: string;
   unicodeVersion: string;
-  writerPayloadMaxUtf8Bytes: number;
   controlCharacterRanges: Array<[string, string]>;
   lineSeparatorCodePoints: string[];
   formatCharacterRanges: Array<[string, string]>;
 }
 
-interface P2TextProfileVectors {
+interface PiiTextProfileVectors {
   profileId: string;
   validText: Array<{ name: string; value: string }>;
   invalidText: Array<{ name: string; codePoints: string[]; reason: string }>;
@@ -31,303 +26,127 @@ interface P2TextProfileVectors {
 const fixturesDirectory = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const textProfile = JSON.parse(
   readFileSync(join(fixturesDirectory, "p2-pii-text-profile-v1.json"), "utf8"),
-) as P2TextProfile;
+) as PiiTextProfile;
 const textProfileVectors = JSON.parse(
   readFileSync(join(fixturesDirectory, "p2-pii-text-profile-v1-vectors.json"), "utf8"),
-) as P2TextProfileVectors;
+) as PiiTextProfileVectors;
 
-describe("formatPii", () => {
-  it("formats the documented example exactly", () => {
-    const result = formatPii({
-      employeeName: "Jane A. Doe",
-      position: "Senior Developer",
-      department: "Engineering",
-      employerAbn: "12-345-678-901",
-      bsb: "062-000",
-      accountNumber: "12345678",
-      accountName: "Jane A Doe",
-      address: "12 Example St, Sydney NSW 2000",
+// AU2 and NZ2 apply the shared PII text profile to every field.
+const formatters = [
+  { name: "AU2", format: (employeeName: string) => formatAustralianPii({ employeeName }) },
+  { name: "NZ2", format: (employeeName: string) => formatNewZealandPii({ employeeName }) },
+] as const;
+
+function codePointRange([startHex, endHex]: [string, string]): number[] {
+  const start = Number.parseInt(startHex, 16);
+  const end = Number.parseInt(endHex, 16);
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+}
+
+describe("shared PII text profile", () => {
+  it("matches the canonical text-profile identity", () => {
+    expect(textProfileVectors.profileId).toBe(textProfile.profileId);
+    expect(PII_TEXT_PROFILE_UNICODE_VERSION).toBe(textProfile.unicodeVersion);
+  });
+
+  describe.each(formatters)("$name", ({ format }) => {
+    it("rejects every canonical control and line-separator code point", () => {
+      for (const range of textProfile.controlCharacterRanges) {
+        for (const codePoint of codePointRange(range)) {
+          expect(() => format(String.fromCodePoint(codePoint))).toThrow(PiiValidationError);
+        }
+      }
+      for (const codePointHex of textProfile.lineSeparatorCodePoints) {
+        expect(() => format(String.fromCodePoint(Number.parseInt(codePointHex, 16)))).toThrow(
+          PiiValidationError,
+        );
+      }
     });
-    expect(result).toBe(
-      "P2|Jane A. Doe|Senior Developer|Engineering|12-345-678-901|062-000|12345678|Jane A Doe|12 Example St, Sydney NSW 2000",
+
+    it("rejects every canonical Unicode 17.0 format-character range", () => {
+      for (const range of textProfile.formatCharacterRanges) {
+        for (const codePoint of codePointRange(range)) {
+          expect(() => format(String.fromCodePoint(codePoint))).toThrow(PiiValidationError);
+        }
+      }
+    });
+
+    it.each(textProfileVectors.validText)("accepts canonical text vector: $name", ({ value }) => {
+      expect(format(value)).toContain(value);
+    });
+
+    it.each(textProfileVectors.invalidText)(
+      "rejects canonical text vector: $name",
+      ({ codePoints, reason }) => {
+        const value = String.fromCodePoint(
+          ...codePoints.map((value) => Number.parseInt(value, 16)),
+        );
+        let caught: unknown;
+        try {
+          format(value);
+        } catch (error) {
+          caught = error;
+        }
+        expect(caught).toBeInstanceOf(PiiValidationError);
+        const expectedReason = reason === "line-separator" ? "control-character" : reason;
+        expect((caught as PiiValidationError).violations).toEqual([
+          { field: "employeeName", reason: expectedReason },
+        ]);
+      },
     );
+
+    it.each(textProfileVectors.invalidUtf16)(
+      "rejects canonical malformed UTF-16 vector: $name",
+      ({ codeUnits }) => {
+        expect(() => format(String.fromCharCode(...codeUnits))).toThrow(PiiValidationError);
+      },
+    );
+
+    it("accepts fields over the former 256 UTF-16-code-unit limit", () => {
+      expect(format("x".repeat(257))).toContain("x".repeat(257));
+    });
+
+    it("accepts unicode names without normalizing them", () => {
+      expect(format("Zoë O'Brien-Nguyễn")).toContain("Zoë O'Brien-Nguyễn");
+    });
   });
 
-  it("encodes omitted fields as empty segments", () => {
-    expect(formatPii({ employeeName: "Jane", bsb: "062-000" })).toBe("P2|Jane||||062-000|||");
+  it("preserves a realistic international address line verbatim", () => {
+    const line = "12 Rue de l’Église, Apt 4B 🇫🇷";
+    expect(formatAustralianPii({ address: { lines: [line] } })).toBe(`AU2||||||||${line}`);
+    expect(formatNewZealandPii({ address: { lines: [line] } })).toBe(`NZ2||||||||${line}`);
   });
 
-  it("produces 9 segments even with no fields", () => {
-    expect(formatPii({}).split("|")).toHaveLength(9);
-  });
-
-  it("rejects pipe characters in field values", () => {
-    expect(() => formatPii({ employeeName: "Jane|Doe" })).toThrow(PiiValidationError);
-  });
-
-  it("reports violations in the address field too", () => {
-    try {
-      formatPii({ address: "12 Example St\nSydney NSW 2000" });
-      throw new Error("expected formatPii to throw");
-    } catch (error) {
-      expect((error as PiiValidationError).violations).toEqual([
-        { field: "address", reason: "control-character" },
-      ]);
-    }
-  });
-
-  it("rejects control characters in field values", () => {
-    expect(() => formatPii({ position: "Dev\nOps" })).toThrow(PiiValidationError);
-    expect(() => formatPii({ position: "Dev\tOps" })).toThrow(PiiValidationError);
-    expect(() => formatPii({ position: "Dev\u0085Ops" })).toThrow(PiiValidationError);
+  it("accepts addresses over the former 320 UTF-8-byte limit", () => {
+    const line = "x".repeat(321);
+    expect(formatAustralianPii({ address: { lines: [line] } }).endsWith(`|${line}`)).toBe(true);
   });
 
   it("rejects the line separators that are not control characters", () => {
     // U+2028 and U+2029 are Zl/Zp, so a Cc-only check would let them through.
-    expect(() => formatPii({ address: "12 Example St\u2028Sydney" })).toThrow(PiiValidationError);
-    expect(() => formatPii({ address: "12 Example St\u2029Sydney" })).toThrow(PiiValidationError);
-  });
-
-  it("names the offending field and reason without echoing the value", () => {
-    try {
-      formatPii({ employeeName: "Jane", accountName: "ACME|Trading" });
-      throw new Error("expected formatPii to throw");
-    } catch (error) {
-      expect(error).toBeInstanceOf(PiiValidationError);
-      const violations = (error as PiiValidationError).violations;
-      expect(violations).toEqual([{ field: "accountName", reason: "pipe" }]);
-      // The value itself is PII and must never appear in the message.
-      expect((error as PiiValidationError).message).not.toContain("ACME|Trading");
-      expect((error as PiiValidationError).message).toContain("accountName");
-    }
-  });
-
-  it("does not report a field solely for exceeding the former per-field limit", () => {
-    try {
-      formatPii({ employeeName: "a|b", position: "x".repeat(257) });
-      throw new Error("expected formatPii to throw");
-    } catch (error) {
-      expect(error).toBeInstanceOf(PiiValidationError);
-      expect((error as PiiValidationError).violations).toEqual([
-        { field: "employeeName", reason: "pipe" },
-      ]);
-    }
-  });
-
-  it("rejects unknown fields", () => {
-    expect(() => piiFieldsSchema.parse({ tax_file_number: "123" })).toThrow();
-  });
-
-  it("leaves nullish input to the schema (ZodError, not TypeError)", () => {
-    for (const bad of [null, undefined]) {
-      try {
-        formatPii(bad as never);
-        throw new Error("expected formatPii to throw");
-      } catch (error) {
-        expect((error as Error).name).toBe("ZodError");
-      }
-    }
-  });
-
-  it("accepts fields over the former 256 UTF-16-code-unit limit", () => {
-    expect(formatPii({ employeeName: "x".repeat(257) })).toContain("x".repeat(257));
-  });
-
-  it("accepts unicode names", () => {
-    expect(formatPii({ employeeName: "Zoë O'Brien-Nguyễn" })).toContain("Zoë O'Brien-Nguyễn");
-  });
-});
-
-describe("P2 formatting", () => {
-  const core = {
-    employeeName: "Zoë Nguyễn",
-    position: "Ingénieure",
-    department: "R&D",
-    employerAbn: "53004085616",
-    bsb: "062-000",
-    accountNumber: "12345678",
-    accountName: "Zoë Nguyễn",
-  };
-
-  it("writes exact P2 bytes with an empty final address when absent", () => {
-    expect(Buffer.from(formatPii(core), "utf8")).toEqual(
-      Buffer.from("P2|Zoë Nguyễn|Ingénieure|R&D|53004085616|062-000|12345678|Zoë Nguyễn|", "utf8"),
-    );
-  });
-
-  it("preserves a realistic international address verbatim", () => {
-    const address = "12 Rue de l’Église, Apt 4B, 75005 Paris, France 🇫🇷";
-    expect(formatPii({ ...core, address })).toBe(
-      `P2|Zoë Nguyễn|Ingénieure|R&D|53004085616|062-000|12345678|Zoë Nguyễn|${address}`,
-    );
-  });
-
-  it("accepts addresses over the former 320 UTF-8-byte limit", () => {
-    const address = "x".repeat(321);
-    expect(formatPii({ ...core, address }).endsWith(`|${address}`)).toBe(true);
-  });
-
-  it("enforces the complete P2 plaintext byte limit only on writes", () => {
-    const boundary = { employeeName: "a".repeat(1014) };
-    const plaintext = formatPii(boundary);
-    expect(Buffer.byteLength(plaintext, "utf8")).toBe(PII_PAYLOAD_MAX_BYTES);
-    expect(() => formatPii({ employeeName: `${boundary.employeeName}a` })).toThrow(
-      `exceeds ${PII_PAYLOAD_MAX_BYTES} UTF-8 bytes`,
-    );
-
-    const legacyOversized = `${plaintext}a`;
-    expect(Buffer.byteLength(legacyOversized, "utf8")).toBe(PII_PAYLOAD_MAX_BYTES + 1);
-    expect(parsePii(legacyOversized)).toMatchObject({ employeeName: boundary.employeeName });
-  });
-
-  it("rejects malformed UTF-16 instead of changing it during encryption", () => {
-    try {
-      formatPii({ ...core, address: "bad\uD800address" });
-      throw new Error("expected formatPii to throw");
-    } catch (error) {
-      expect((error as PiiValidationError).violations).toEqual([
-        { field: "address", reason: "invalid-unicode" },
-      ]);
-    }
-
-    expect(() => formatPii({ employeeName: "bad\uDC00name" })).toThrow(PiiValidationError);
-  });
-
-  it.each(["bad|address", "bad\naddress", "bad\u200Baddress"])(
-    "rejects delimiter, control, and format characters: %j",
-    (address) => expect(() => formatPii({ ...core, address })).toThrow(PiiValidationError),
-  );
-
-  it("matches the canonical P2 text-profile identity", () => {
-    expect(PII_TEXT_PROFILE_ID).toBe(textProfile.profileId);
-    expect(textProfileVectors.profileId).toBe(textProfile.profileId);
-    expect(PII_TEXT_PROFILE_UNICODE_VERSION).toBe(textProfile.unicodeVersion);
-    expect(PII_PAYLOAD_MAX_BYTES).toBe(textProfile.writerPayloadMaxUtf8Bytes);
-  });
-
-  it("rejects every canonical control and line-separator code point", () => {
-    for (const [startHex, endHex] of textProfile.controlCharacterRanges) {
-      const start = Number.parseInt(startHex, 16);
-      const end = Number.parseInt(endHex, 16);
-      for (let codePoint = start; codePoint <= end; codePoint++) {
-        expect(() => formatPii({ employeeName: String.fromCodePoint(codePoint) })).toThrow(
-          PiiValidationError,
-        );
-      }
-    }
-    for (const codePointHex of textProfile.lineSeparatorCodePoints) {
+    for (const separator of [" ", " "]) {
       expect(() =>
-        formatPii({ employeeName: String.fromCodePoint(Number.parseInt(codePointHex, 16)) }),
+        formatAustralianPii({ address: { lines: [`12 Example St${separator}Sydney`] } }),
       ).toThrow(PiiValidationError);
     }
   });
 
-  it("rejects every canonical Unicode 17.0 format-character range", () => {
-    for (const [startHex, endHex] of textProfile.formatCharacterRanges) {
-      const start = Number.parseInt(startHex, 16);
-      const end = Number.parseInt(endHex, 16);
-      for (let codePoint = start; codePoint <= end; codePoint++) {
-        expect(() => formatPii({ employeeName: String.fromCodePoint(codePoint) })).toThrow(
-          PiiValidationError,
-        );
+  it("leaves nullish input to the schema (ZodError, not TypeError)", () => {
+    for (const format of [formatAustralianPii, formatNewZealandPii]) {
+      for (const bad of [null, undefined]) {
+        let caught: unknown;
+        try {
+          format(bad as never);
+        } catch (error) {
+          caught = error;
+        }
+        expect((caught as Error).name).toBe("ZodError");
       }
     }
   });
 
-  it.each(textProfileVectors.validText)("accepts canonical text vector: $name", ({ value }) => {
-    expect(formatPii({ employeeName: value })).toContain(value);
-    expect(formatPii({ address: value })).toContain(value);
-  });
-
-  it.each(textProfileVectors.invalidText)(
-    "rejects canonical text vector: $name",
-    ({ codePoints, reason }) => {
-      const value = String.fromCodePoint(...codePoints.map((value) => Number.parseInt(value, 16)));
-      try {
-        formatPii({ employeeName: value });
-        throw new Error("expected formatPii to throw");
-      } catch (error) {
-        expect(error).toBeInstanceOf(PiiValidationError);
-        const expectedReason = reason === "line-separator" ? "control-character" : reason;
-        expect((error as PiiValidationError).violations).toEqual([
-          { field: "employeeName", reason: expectedReason },
-        ]);
-      }
-    },
-  );
-
-  it.each(textProfileVectors.invalidUtf16)(
-    "rejects canonical malformed UTF-16 vector: $name",
-    ({ codeUnits }) => {
-      const value = String.fromCharCode(...codeUnits);
-      expect(() => formatPii({ employeeName: value })).toThrow(PiiValidationError);
-    },
-  );
-
-  it("exports the permanent current field order", () => {
-    expect(PII_FIELD_ORDER).toEqual([
-      "employeeName",
-      "position",
-      "department",
-      "employerAbn",
-      "bsb",
-      "accountNumber",
-      "accountName",
-      "address",
-    ]);
-  });
-});
-
-describe("parsePii", () => {
-  it("round-trips formatPii output", () => {
-    const fields = {
-      employeeName: "Jane A. Doe",
-      department: "Engineering",
-      accountNumber: "12345678",
-      address: "12 Example St, Sydney NSW 2000",
-    };
-    expect(parsePii(formatPii(fields))).toEqual(fields);
-  });
-
-  it("omits empty segments like Verifiabl does", () => {
-    expect(parsePii("P2|Jane|||||||")).toEqual({ employeeName: "Jane" });
-  });
-
-  it("treats an empty P2 address as an omitted field", () => {
-    expect(parsePii("P2|Jane|||||||")).not.toHaveProperty("address");
-  });
-
-  it("still reads P1, which documents issued before P2 carry", () => {
-    expect(parsePii("P1|Jane A. Doe||||||Jane A Doe")).toEqual({
-      employeeName: "Jane A. Doe",
-      accountName: "Jane A Doe",
-    });
-  });
-
-  it("rejects unsupported wire versions", () => {
-    expect(() => parsePii("P3|a|b|c|d|e|f|g|h")).toThrow("expected 'P1|' or 'P2|' prefix");
-  });
-
-  it("rejects wrong field counts", () => {
-    expect(() => parsePii("P2|only|three|fields")).toThrow("Expected 8 P2 fields but got 3");
-    expect(() => parsePii("P1|only|three|fields")).toThrow("Expected 7 P1 fields but got 3");
-  });
-
-  it("rejects a P2 payload missing the address segment rather than reading it as P1", () => {
-    expect(() => parsePii("P2|a|b|c|d|e|f|g")).toThrow("Expected 8 P2 fields but got 7");
-  });
-
-  it("accepts legacy P2 fields above the former per-field limits", () => {
-    expect(parsePii(`P2|${"x".repeat(1024)}|||||||`)).toMatchObject({
-      employeeName: "x".repeat(1024),
-    });
-    expect(parsePii(`P2|Jane|||||||${"x".repeat(321)}`)).toMatchObject({
-      address: "x".repeat(321),
-    });
-  });
-
-  it("rejects malformed UTF-16 in parsed P2 fields", () => {
-    expect(() => parsePii("P2|bad\uD800name|||||||")).toThrow();
-    expect(() => parsePii("P2|Jane|||||||bad\uDC00address")).toThrow();
+  it("rejects unknown fields", () => {
+    expect(() => formatAustralianPii({ tax_file_number: "123" } as never)).toThrow();
+    expect(() => formatNewZealandPii({ tax_file_number: "123" } as never)).toThrow();
   });
 });

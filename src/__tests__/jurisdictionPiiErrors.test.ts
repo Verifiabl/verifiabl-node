@@ -136,7 +136,7 @@ for (const { name, format, fields, addressParts } of profiles) {
       expect(() => format(input)).toThrow(ZodError);
     });
 
-    it("reports forbidden text before structural errors, like formatPii", () => {
+    it("reports forbidden text before structural errors", () => {
       expectViolations(
         () => format({ employeeName: "Synthetic|Value", address: { lines: [42] } }),
         [{ field: "employeeName", reason: "pipe" }],
