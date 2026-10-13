@@ -6,6 +6,20 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-10-13
+
+### Changed
+
+- **Breaking:** AU2 and NZ2 replace `hourly` and `annualRate` with `baseRate`,
+  the base rate the payslip prints apart from the earnings lines:
+  `{ amount: "450.00", per: "day" }`. `per` is one of
+  `australianBaseRatePeriods` (`hour`, `day`, `year`) or
+  `newZealandBaseRatePeriods` (`hour`, `day`, `week`, `year`).
+  To migrate, send the printed annual rate as `baseRate` with `per: "year"`,
+  and a printed hourly rate as `baseRate` with `per: "hour"`. Send hours and
+  amounts only on `ordinary` earnings lines. The API still accepts the old
+  fields from earlier SDK versions.
+
 ## [0.31.0] - 2026-10-09
 
 ### Changed

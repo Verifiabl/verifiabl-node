@@ -176,6 +176,14 @@ const payslipDecimalSchema = z
 const printedText = z.string().min(1);
 const currency = z.enum(supportedV2Currencies);
 
+/** AU2 `baseRate.per` values: the period of a base rate printed apart from the earnings lines. */
+export const australianBaseRatePeriods = tuple(["hour", "day", "year"]);
+/** NZ2 `baseRate.per` values: the period of a base rate printed apart from the earnings lines. */
+export const newZealandBaseRatePeriods = tuple(["hour", "day", "week", "year"]);
+function baseRateSchema<const T extends readonly [string, ...string[]]>(periods: T) {
+  return z.object({ amount: payslipDecimalSchema, per: z.enum(periods) }).strict();
+}
+
 /**
  * ATO STP Phase 2 paid-leave codes. There is deliberately no family-and-domestic
  * violence category: Fair Work reg 3.48 forbids identifying FDV leave on a pay
@@ -371,15 +379,7 @@ const australianPayslipV2Fields = z
     employmentBasis: z.enum(australianEmploymentBases).optional(),
     engagementType: z.enum(australianEngagementTypes).optional(),
     award: printedText.optional(),
-    hourly: z
-      .object({
-        ordinaryRate: payslipDecimalSchema,
-        hours: payslipDecimalSchema,
-        amount: payslipDecimalSchema,
-      })
-      .strict()
-      .optional(),
-    annualRate: payslipDecimalSchema.optional(),
+    baseRate: baseRateSchema(australianBaseRatePeriods).optional(),
     taxableGross: payslipDecimalSchema.optional(),
     stslWithholding: payslipDecimalSchema.optional(),
     earnings: z.array(australianEarningsLineSchema).optional(),
@@ -566,15 +566,7 @@ const newZealandPayslipV2Fields = z
     taxCode: printedText.optional(),
     employmentType: printedText.optional(),
     hoursPaid: payslipDecimalSchema.optional(),
-    hourly: z
-      .object({
-        ordinaryRate: payslipDecimalSchema,
-        hours: payslipDecimalSchema,
-        amount: payslipDecimalSchema,
-      })
-      .strict()
-      .optional(),
-    annualRate: payslipDecimalSchema.optional(),
+    baseRate: baseRateSchema(newZealandBaseRatePeriods).optional(),
     earningsNotLiableForAcc: payslipDecimalSchema.optional(),
     earnings: z.array(newZealandEarningsLineSchema).optional(),
     employeeShareScheme: payslipDecimalSchema.optional(),
@@ -666,7 +658,6 @@ export function australianPayslipV2ToWire(
       net: data.net,
       ytd_gross: data.ytdGross,
       ytd_paygw: data.ytdPaygw,
-      annual_rate: data.annualRate,
       taxable_gross: data.taxableGross,
       stsl_withholding: data.stslWithholding,
       reimbursements: data.reimbursements,
@@ -675,15 +666,7 @@ export function australianPayslipV2ToWire(
     ...when(data.employmentBasis, "employment_basis"),
     ...when(data.engagementType, "engagement_type"),
     ...when(data.award, "award"),
-    ...(data.hourly === undefined
-      ? {}
-      : {
-          hourly: {
-            ordinary_rate: data.hourly.ordinaryRate,
-            hours: data.hourly.hours,
-            amount: data.hourly.amount,
-          },
-        }),
+    ...when(data.baseRate, "base_rate"),
     ...(data.earnings === undefined
       ? {}
       : {
@@ -765,7 +748,6 @@ export function newZealandPayslipV2ToWire(
       ytd_gross: data.ytdGross,
       ytd_paye: data.ytdPaye,
       hours_paid: data.hoursPaid,
-      annual_rate: data.annualRate,
       earnings_not_liable_for_acc: data.earningsNotLiableForAcc,
       employee_share_scheme: data.employeeShareScheme,
       prior_period_gross_adjustment: data.priorPeriodGrossAdjustment,
@@ -784,15 +766,7 @@ export function newZealandPayslipV2ToWire(
     ...when(data.payCycle, "pay_cycle"),
     ...when(data.taxCode, "tax_code"),
     ...when(data.employmentType, "employment_type"),
-    ...(data.hourly === undefined
-      ? {}
-      : {
-          hourly: {
-            ordinary_rate: data.hourly.ordinaryRate,
-            hours: data.hourly.hours,
-            amount: data.hourly.amount,
-          },
-        }),
+    ...when(data.baseRate, "base_rate"),
     ...(data.earnings === undefined
       ? {}
       : {
