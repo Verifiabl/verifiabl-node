@@ -4989,27 +4989,6 @@
 			"flags": {},
 			"children": [
 				{
-					"id": 687,
-					"name": "annualRate",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {
-						"isOptional": true,
-						"isInherited": true
-					},
-					"type": {
-						"type": "intrinsic",
-						"name": "string"
-					},
-					"defaultValue": "...",
-					"inheritedFrom": {
-						"type": "reference",
-						"target": -1,
-						"name": "z.input.annualRate",
-						"package": "@verifiabl/issuer"
-					}
-				},
-				{
 					"id": 682,
 					"name": "award",
 					"variant": "declaration",
@@ -5027,6 +5006,81 @@
 						"type": "reference",
 						"target": -1,
 						"name": "z.input.award",
+						"package": "@verifiabl/issuer"
+					}
+				},
+				{
+					"id": 1431,
+					"name": "baseRate",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {
+						"isOptional": true,
+						"isInherited": true
+					},
+					"type": {
+						"type": "reflection",
+						"declaration": {
+							"id": 299,
+							"name": "__type",
+							"variant": "declaration",
+							"kind": 65536,
+							"flags": {},
+							"children": [
+								{
+									"id": 686,
+									"name": "amount",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "payslipDecimalSchema"
+								},
+								{
+									"id": 1432,
+									"name": "per",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {},
+									"type": {
+										"type": "union",
+										"types": [
+											{
+												"type": "literal",
+												"value": "hour"
+											},
+											{
+												"type": "literal",
+												"value": "day"
+											},
+											{
+												"type": "literal",
+												"value": "year"
+											}
+										]
+									},
+									"defaultValue": "..."
+								}
+							],
+							"groups": [
+								{
+									"title": "Properties",
+									"children": [
+										686,
+										1432
+									]
+								}
+							]
+						}
+					},
+					"defaultValue": "...",
+					"inheritedFrom": {
+						"type": "reference",
+						"target": -1,
+						"name": "z.input.baseRate",
 						"package": "@verifiabl/issuer"
 					}
 				},
@@ -6602,81 +6656,6 @@
 					}
 				},
 				{
-					"id": 683,
-					"name": "hourly",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {
-						"isOptional": true,
-						"isInherited": true
-					},
-					"type": {
-						"type": "reflection",
-						"declaration": {
-							"id": 299,
-							"name": "__type",
-							"variant": "declaration",
-							"kind": 65536,
-							"flags": {},
-							"children": [
-								{
-									"id": 686,
-									"name": "amount",
-									"variant": "declaration",
-									"kind": 1024,
-									"flags": {},
-									"type": {
-										"type": "intrinsic",
-										"name": "string"
-									},
-									"defaultValue": "payslipDecimalSchema"
-								},
-								{
-									"id": 685,
-									"name": "hours",
-									"variant": "declaration",
-									"kind": 1024,
-									"flags": {},
-									"type": {
-										"type": "intrinsic",
-										"name": "string"
-									},
-									"defaultValue": "payslipDecimalSchema"
-								},
-								{
-									"id": 684,
-									"name": "ordinaryRate",
-									"variant": "declaration",
-									"kind": 1024,
-									"flags": {},
-									"type": {
-										"type": "intrinsic",
-										"name": "string"
-									},
-									"defaultValue": "payslipDecimalSchema"
-								}
-							],
-							"groups": [
-								{
-									"title": "Properties",
-									"children": [
-										686,
-										685,
-										684
-									]
-								}
-							]
-						}
-					},
-					"defaultValue": "...",
-					"inheritedFrom": {
-						"type": "reference",
-						"target": -1,
-						"name": "z.input.hourly",
-						"package": "@verifiabl/issuer"
-					}
-				},
-				{
 					"id": 674,
 					"name": "net",
 					"variant": "declaration",
@@ -7256,15 +7235,14 @@
 				{
 					"title": "Properties",
 					"children": [
-						687,
 						682,
+						1431,
 						676,
 						715,
 						690,
 						680,
 						681,
 						672,
-						683,
 						674,
 						679,
 						673,
@@ -8763,8 +8741,8 @@
 			"flags": {},
 			"children": [
 				{
-					"id": 755,
-					"name": "annualRate",
+					"id": 1434,
+					"name": "baseRate",
 					"variant": "declaration",
 					"kind": 1024,
 					"flags": {
@@ -8772,14 +8750,72 @@
 						"isInherited": true
 					},
 					"type": {
-						"type": "intrinsic",
-						"name": "string"
+						"type": "reflection",
+						"declaration": {
+							"id": 1048,
+							"name": "__type",
+							"variant": "declaration",
+							"kind": 65536,
+							"flags": {},
+							"children": [
+								{
+									"id": 766,
+									"name": "amount",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {},
+									"type": {
+										"type": "intrinsic",
+										"name": "string"
+									},
+									"defaultValue": "payslipDecimalSchema"
+								},
+								{
+									"id": 1435,
+									"name": "per",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {},
+									"type": {
+										"type": "union",
+										"types": [
+											{
+												"type": "literal",
+												"value": "hour"
+											},
+											{
+												"type": "literal",
+												"value": "day"
+											},
+											{
+												"type": "literal",
+												"value": "year"
+											},
+											{
+												"type": "literal",
+												"value": "week"
+											}
+										]
+									},
+									"defaultValue": "..."
+								}
+							],
+							"groups": [
+								{
+									"title": "Properties",
+									"children": [
+										766,
+										1435
+									]
+								}
+							]
+						}
 					},
 					"defaultValue": "...",
 					"inheritedFrom": {
 						"type": "reference",
 						"target": -1,
-						"name": "z.input.annualRate",
+						"name": "z.input.baseRate",
 						"package": "@verifiabl/issuer"
 					}
 				},
@@ -10106,81 +10142,6 @@
 					}
 				},
 				{
-					"id": 750,
-					"name": "hourly",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {
-						"isOptional": true,
-						"isInherited": true
-					},
-					"type": {
-						"type": "reflection",
-						"declaration": {
-							"id": 1048,
-							"name": "__type",
-							"variant": "declaration",
-							"kind": 65536,
-							"flags": {},
-							"children": [
-								{
-									"id": 766,
-									"name": "amount",
-									"variant": "declaration",
-									"kind": 1024,
-									"flags": {},
-									"type": {
-										"type": "intrinsic",
-										"name": "string"
-									},
-									"defaultValue": "payslipDecimalSchema"
-								},
-								{
-									"id": 753,
-									"name": "hours",
-									"variant": "declaration",
-									"kind": 1024,
-									"flags": {},
-									"type": {
-										"type": "intrinsic",
-										"name": "string"
-									},
-									"defaultValue": "payslipDecimalSchema"
-								},
-								{
-									"id": 752,
-									"name": "ordinaryRate",
-									"variant": "declaration",
-									"kind": 1024,
-									"flags": {},
-									"type": {
-										"type": "intrinsic",
-										"name": "string"
-									},
-									"defaultValue": "payslipDecimalSchema"
-								}
-							],
-							"groups": [
-								{
-									"title": "Properties",
-									"children": [
-										766,
-										753,
-										752
-									]
-								}
-							]
-						}
-					},
-					"defaultValue": "...",
-					"inheritedFrom": {
-						"type": "reference",
-						"target": -1,
-						"name": "z.input.hourly",
-						"package": "@verifiabl/issuer"
-					}
-				},
-				{
 					"id": 749,
 					"name": "hoursPaid",
 					"variant": "declaration",
@@ -11123,7 +11084,7 @@
 				{
 					"title": "Properties",
 					"children": [
-						755,
+						1434,
 						785,
 						743,
 						790,
@@ -11133,7 +11094,6 @@
 						748,
 						789,
 						739,
-						750,
 						749,
 						786,
 						787,
@@ -14728,6 +14688,53 @@
 			"defaultValue": "..."
 		},
 		{
+			"id": 1436,
+			"name": "australianBaseRatePeriods",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"comment": {
+				"summary": [
+					{
+						"kind": "text",
+						"text": "AU2 "
+					},
+					{
+						"kind": "code",
+						"text": "`baseRate.per`"
+					},
+					{
+						"kind": "text",
+						"text": " values: the period of a base rate printed apart from the earnings lines."
+					}
+				]
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "hour"
+						},
+						{
+							"type": "literal",
+							"value": "day"
+						},
+						{
+							"type": "literal",
+							"value": "year"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
 			"id": 1394,
 			"name": "australianDeductionTypes",
 			"variant": "declaration",
@@ -15622,6 +15629,57 @@
 						{
 							"type": "literal",
 							"value": "other"
+						}
+					]
+				}
+			},
+			"defaultValue": "..."
+		},
+		{
+			"id": 1437,
+			"name": "newZealandBaseRatePeriods",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"comment": {
+				"summary": [
+					{
+						"kind": "text",
+						"text": "NZ2 "
+					},
+					{
+						"kind": "code",
+						"text": "`baseRate.per`"
+					},
+					{
+						"kind": "text",
+						"text": " values: the period of a base rate printed apart from the earnings lines."
+					}
+				]
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "hour"
+						},
+						{
+							"type": "literal",
+							"value": "day"
+						},
+						{
+							"type": "literal",
+							"value": "week"
+						},
+						{
+							"type": "literal",
+							"value": "year"
 						}
 					]
 				}
@@ -17947,6 +18005,7 @@
 			"children": [
 				668,
 				1393,
+				1436,
 				1394,
 				1395,
 				1396,
@@ -17967,6 +18026,7 @@
 				625,
 				735,
 				1403,
+				1437,
 				1404,
 				1405,
 				1406,
@@ -19879,30 +19939,10 @@
 			"packagePath": "src/payslipV2.ts",
 			"qualifiedName": "award"
 		},
-		"683": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "hourly"
-		},
-		"684": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "ordinaryRate"
-		},
-		"685": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "hours"
-		},
 		"686": {
 			"packageName": "@verifiabl/issuer",
 			"packagePath": "src/payslipV2.ts",
 			"qualifiedName": "amount"
-		},
-		"687": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "annualRate"
 		},
 		"688": {
 			"packageName": "@verifiabl/issuer",
@@ -20189,30 +20229,10 @@
 			"packagePath": "src/payslipV2.ts",
 			"qualifiedName": "hoursPaid"
 		},
-		"750": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "hourly"
-		},
-		"752": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "ordinaryRate"
-		},
-		"753": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "hours"
-		},
 		"754": {
 			"packageName": "@verifiabl/issuer",
 			"packagePath": "src/payslipV2.ts",
 			"qualifiedName": "amount"
-		},
-		"755": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/payslipV2.ts",
-			"qualifiedName": "annualRate"
 		},
 		"756": {
 			"packageName": "@verifiabl/issuer",
@@ -21503,6 +21523,36 @@
 			"packageName": "@verifiabl/issuer",
 			"packagePath": "src/payslipV2.ts",
 			"qualifiedName": "australianEtpComponents"
+		},
+		"1431": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "baseRate"
+		},
+		"1432": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "per"
+		},
+		"1434": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "baseRate"
+		},
+		"1435": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "per"
+		},
+		"1436": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "australianBaseRatePeriods"
+		},
+		"1437": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "newZealandBaseRatePeriods"
 		}
 	},
 	"files": {

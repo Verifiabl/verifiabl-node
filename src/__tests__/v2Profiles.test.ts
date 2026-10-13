@@ -336,7 +336,8 @@ describe("AU2 and NZ2 registration", () => {
           gross: "8125",
           paygw: "2030.00",
           net: "6095.00",
-          hourly: { ordinaryRate: "47.3684", hours: "-76.00", amount: "3600.00" },
+          baseRate: { amount: "47.3684", per: "hour" },
+          earnings: [{ type: "ordinary", units: "-76.00", rate: "47.3684", amount: "3600.00" }],
         },
         encryptionMetadata: metadata,
       }),
@@ -349,7 +350,8 @@ describe("AU2 and NZ2 registration", () => {
         gross: "8125",
         paygw: "2030.00",
         net: "6095.00",
-        hourly: { ordinary_rate: "47.3684", hours: "-76.00", amount: "3600.00" },
+        base_rate: { amount: "47.3684", per: "hour" },
+        earnings: [{ type: "ordinary", units: "-76.00", rate: "47.3684", amount: "3600.00" }],
       },
     });
     expect(

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   australianAllowanceTypes,
+  australianBaseRatePeriods,
   australianDeductionTypes,
   australianEarningsTypes,
   australianEmploymentBases,
@@ -14,6 +15,7 @@ import {
   australianSalarySacrificeTypes,
   australianSuperContributionTypes,
   newZealandAllowanceTypes,
+  newZealandBaseRatePeriods,
   newZealandDeductionTypes,
   newZealandEarningsTypes,
   newZealandLeaveBalanceUnits,
@@ -70,6 +72,7 @@ it("exports complete runtime code lists from the public entry point", () => {
         australianPayFrequencies,
         australianEmploymentBases,
         australianEngagementTypes,
+        australianBaseRatePeriods,
       ],
     ],
     [
@@ -79,6 +82,7 @@ it("exports complete runtime code lists from the public entry point", () => {
         newZealandAllowanceTypes,
         newZealandDeductionTypes,
         newZealandLeaveBalanceUnits,
+        newZealandBaseRatePeriods,
       ],
     ],
   ] as const) {
