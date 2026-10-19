@@ -176,13 +176,16 @@ const payslipDecimalSchema = z
 const printedText = z.string().min(1);
 const currency = z.enum(supportedV2Currencies);
 
+// Payslips print base rates per hour, day, week, fortnight, month or year, so AU2 and NZ2
+// share one period set.
+const baseRatePeriods = tuple(["hour", "day", "week", "fortnight", "month", "year"]);
 /** AU2 `baseRate.per` values: the period of a base rate printed apart from the earnings lines. */
-export const australianBaseRatePeriods = tuple(["hour", "day", "year"]);
+export const australianBaseRatePeriods = baseRatePeriods;
 /** NZ2 `baseRate.per` values: the period of a base rate printed apart from the earnings lines. */
-export const newZealandBaseRatePeriods = tuple(["hour", "day", "week", "year"]);
-function baseRateSchema<const T extends readonly [string, ...string[]]>(periods: T) {
-  return z.object({ amount: payslipDecimalSchema, per: z.enum(periods) }).strict();
-}
+export const newZealandBaseRatePeriods = baseRatePeriods;
+const baseRateSchema = z
+  .object({ amount: payslipDecimalSchema, per: z.enum(baseRatePeriods) })
+  .strict();
 
 /**
  * ATO STP Phase 2 paid-leave codes. There is deliberately no family-and-domestic
@@ -228,11 +231,16 @@ export const australianDeductionTypes = tuple([
   "other_post_tax",
 ]);
 export const australianSalarySacrificeTypes = tuple(["super", "other"]);
-/** Employer-side only: an after-tax member contribution is a deduction. */
+/**
+ * Employer-side only: an after-tax member contribution is a deduction. `resc` excludes salary
+ * sacrifice, which has its own line. `other` is an employer contribution that is not SG, RESC or
+ * salary sacrifice, such as an award or agreement rate above SG.
+ */
 export const australianSuperContributionTypes = tuple([
   "superannuation_guarantee",
   "resc",
   "salary_sacrifice",
+  "other",
 ]);
 export const australianPayFrequencies = tuple([
   "weekly",
@@ -379,7 +387,7 @@ const australianPayslipV2Fields = z
     employmentBasis: z.enum(australianEmploymentBases).optional(),
     engagementType: z.enum(australianEngagementTypes).optional(),
     award: printedText.optional(),
-    baseRate: baseRateSchema(australianBaseRatePeriods).optional(),
+    baseRate: baseRateSchema.optional(),
     taxableGross: payslipDecimalSchema.optional(),
     stslWithholding: payslipDecimalSchema.optional(),
     earnings: z.array(australianEarningsLineSchema).optional(),
@@ -566,7 +574,7 @@ const newZealandPayslipV2Fields = z
     taxCode: printedText.optional(),
     employmentType: printedText.optional(),
     hoursPaid: payslipDecimalSchema.optional(),
-    baseRate: baseRateSchema(newZealandBaseRatePeriods).optional(),
+    baseRate: baseRateSchema.optional(),
     earningsNotLiableForAcc: payslipDecimalSchema.optional(),
     earnings: z.array(newZealandEarningsLineSchema).optional(),
     employeeShareScheme: payslipDecimalSchema.optional(),

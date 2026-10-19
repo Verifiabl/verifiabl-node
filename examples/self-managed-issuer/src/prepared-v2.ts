@@ -9,7 +9,7 @@ import {
 export async function issuePreparedV2(client: VerifiablClient, key: Buffer) {
   const issuedAt = new Date().toISOString();
   const au = prepareAustralianV2Payslip({
-    pii: { employeeName: "Example Employee", employerName: "Example Pty Ltd" },
+    pii: { employeeName: "Example Employee", employerName: "Example Software Pty Ltd" },
     payslipNonPii: {
       periodEnd: "2026-08-31",
       paymentDate: "2026-09-04",
@@ -30,7 +30,7 @@ export async function issuePreparedV2(client: VerifiablClient, key: Buffer) {
   });
 
   const nz = prepareNewZealandV2Payslip({
-    pii: { employeeName: "Example Employee", employerName: "Example NZ Ltd" },
+    pii: { employeeName: "Example Employee", employerName: "Example Software Limited" },
     payslipNonPii: {
       periodEnd: "2026-08-31",
       paymentDate: "2026-09-04",

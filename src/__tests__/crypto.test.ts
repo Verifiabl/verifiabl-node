@@ -19,13 +19,13 @@ describe("encryptPii", () => {
 
   it("produces ciphertext the Verifiabl decrypt logic can read", () => {
     const plaintext = formatAustralianPii({
-      employeeName: "Jane A. Doe",
+      employeeName: "Ana Leota",
       position: "Senior Developer",
       department: "Engineering",
       employerAbn: "12-345-678-901",
       bsb: "062-000",
       accountNumber: "12345678",
-      accountName: "Jane A Doe",
+      accountName: "A Leota",
     });
 
     const { encryptedPii, encryptionMetadata } = encryptPii(plaintext, key);
@@ -37,7 +37,7 @@ describe("encryptPii", () => {
     );
 
     expect(decrypted).toBe(plaintext);
-    expect(decrypted.startsWith("AU2|Jane A. Doe|")).toBe(true);
+    expect(decrypted.startsWith("AU2|Ana Leota|")).toBe(true);
   });
 
   it("detects tampering: a flipped ciphertext byte fails the auth tag", () => {

@@ -25,13 +25,13 @@ const BADGE_VIEWBOX_HEIGHT = 150;
 const HOST_MARGIN_UNITS = BADGE_VIEWBOX_WIDTH / 10;
 
 const DOCS_EXAMPLE_FIELDS = {
-  employeeName: "Jane A. Doe",
+  employeeName: "Ana Leota",
   position: "Senior Developer",
   department: "Engineering",
   employerAbn: "12-345-678-901",
   bsb: "062-000",
   accountNumber: "12345678",
-  accountName: "Jane A Doe",
+  accountName: "A Leota",
   address: {
     lines: ["12 Example St"],
     suburb: "Sydney",
@@ -41,15 +41,15 @@ const DOCS_EXAMPLE_FIELDS = {
 } satisfies AustralianPiiFields;
 
 const LONG_NAME_FIELDS = {
-  employeeName: "Dr. Jane Alexandra Catherine Doe-Smith-Washington Nguyen",
-  position: "Senior Principal Software Engineering Manager",
-  department: "Engineering, Platform and Infrastructure",
+  employeeName: "Maximiliana Alexandria Catherine Papadopoulos-Okafor-Rēweti",
+  position: "Principal Engineering Manager, Payroll Platform and Integrations",
+  department: "Finance",
   employerAbn: "12-345-678-901",
   bsb: "062-000",
   accountNumber: "12345678",
-  accountName: "Jane Alexandra Catherine Doe Smith Washington Nguyen",
+  accountName: "Maximiliana Alexandria Catherine Papadopoulos-Okafor-Rēweti",
   address: {
-    lines: ["88 Harrington Street"],
+    lines: ["12 Example St"],
     suburb: "Sydney",
     stateOrTerritory: "NSW",
     postcode: "2000",
@@ -57,106 +57,106 @@ const LONG_NAME_FIELDS = {
 } satisfies AustralianPiiFields;
 
 /**
- * A spread of real-world names, roles, departments, and account names
- * (accented, hyphenated, transliterated, and CJK characters) to prove styling
- * holds machine readability across the variety of PII issuers actually emit,
- * all at the minimum raster width.
+ * A spread of names, roles, departments, and account names (accented,
+ * hyphenated, right-to-left, and CJK characters) to prove styling holds
+ * machine readability across the variety of PII issuers actually emit, all at
+ * the minimum raster width.
  */
 const DIVERSE_RECORDS: ReadonlyArray<{ label: string; fields: AustralianPiiFields }> = [
   {
-    label: "Irish, accented",
+    label: "Irish particles",
     fields: {
       employeeName: "Aoife Ní Bhraonáin",
-      position: "Software Engineer",
-      department: "Platform",
+      position: "QA Engineer",
+      department: "Engineering",
       employerAbn: "51-824-753-556",
       bsb: "083-004",
       accountNumber: "55512345",
-      accountName: "Aoife Ni Bhraonain",
+      accountName: "Aoife Ní Bhraonáin",
     },
   },
   {
-    label: "Spanish, compound surname",
+    label: "Several given and family names",
     fields: {
       employeeName: "José María García-López",
-      position: "Registered Nurse",
-      department: "Aged Care",
+      position: "Office Coordinator",
+      department: "Operations",
       employerAbn: "33-051-775-556",
       bsb: "062-001",
       accountNumber: "10293847",
-      accountName: "Jose M Garcia Lopez",
+      accountName: "José María García-López",
     },
   },
   {
-    label: "Vietnamese, diacritics",
+    label: "Vietnamese diacritics, family name first",
     fields: {
-      employeeName: "Nguyễn Thị Minh Khai",
-      position: "Regional Manager",
-      department: "Sales & Marketing",
+      employeeName: "Trần Thị Mai Anh",
+      position: "Operations Manager",
+      department: "Operations",
       employerAbn: "29-002-589-460",
       bsb: "923-100",
       accountNumber: "44556677",
-      accountName: "Nguyen T M Khai",
+      accountName: "Trần Thị Mai Anh",
     },
   },
   {
-    label: "Chinese, CJK glyphs",
+    label: "Chinese script, family name first",
     fields: {
-      employeeName: "Wei Zhang (张伟)",
-      position: "Site Supervisor",
-      department: "Construction",
+      employeeName: "张伟 (Zhang Wei)",
+      position: "Sales Representative",
+      department: "Sales",
       employerAbn: "11-004-447-790",
       bsb: "013-006",
       accountNumber: "98761234",
-      accountName: "Wei Zhang",
+      accountName: "张伟 (Zhang Wei)",
     },
   },
   {
-    label: "Yoruba, accented",
+    label: "Tone marks, dots below",
     fields: {
-      employeeName: "Olúwáségun Adébáyò",
-      position: "Data Analyst",
-      department: "Insights & Reporting",
+      employeeName: "Olúwaṣẹ́gun Adébáyọ̀",
+      position: "Senior Accountant",
+      department: "Finance",
       employerAbn: "72-629-770-111",
       bsb: "484-799",
       accountNumber: "11224455",
-      accountName: "Oluwasegun Adebayo",
+      accountName: "Olúwaṣẹ́gun Adébáyọ̀",
     },
   },
   {
-    label: "German, long compound",
+    label: "Latin diacritics",
     fields: {
-      employeeName: "Maximilian von Habsburg-Lothringen",
-      position: "Apprentice Electrician",
-      department: "Trades",
+      employeeName: "José Müller",
+      position: "Customer Support Officer",
+      department: "Operations",
       employerAbn: "60-008-661-002",
       bsb: "036-002",
       accountNumber: "33445566",
-      accountName: "M von Habsburg-Lothringen",
+      accountName: "José Müller",
     },
   },
   {
-    label: "Arabic, transliterated",
+    label: "Right-to-left script",
     fields: {
-      employeeName: "Fatima Al-Sayed",
-      position: "Operations Lead",
-      department: "Logistics",
+      employeeName: "فاطمة السيد (Fatima Al-Sayed)",
+      position: "Engineering Manager",
+      department: "Engineering",
       employerAbn: "45-110-892-340",
       bsb: "112-879",
       accountNumber: "77889900",
-      accountName: "Fatima Al-Sayed",
+      accountName: "فاطمة السيد (Fatima Al-Sayed)",
     },
   },
   {
-    label: "Māori, macrons",
+    label: "Macrons",
     fields: {
-      employeeName: "Tāne Whakaari-Ngata",
-      position: "Finance Director",
-      department: "Finance",
+      employeeName: "Rāwiri Hōhaia",
+      position: "Product Designer",
+      department: "Product",
       employerAbn: "98-771-203-884",
       bsb: "021-000",
       accountNumber: "12309876",
-      accountName: "Tane Whakaari Ngata",
+      accountName: "Rāwiri Hōhaia",
     },
   },
 ] as const;
@@ -340,13 +340,13 @@ describe("styled QR scannability", () => {
   it("decodes the encrypted docs PII example at the minimum raster width", async () => {
     const { parts, plaintext } = partsFromPii(DOCS_EXAMPLE_FIELDS);
     expect(plaintext).toBe(
-      "AU2|Jane A. Doe|Senior Developer|Engineering|12-345-678-901|062-000|12345678|Jane A Doe|12 Example St, Sydney NSW 2000",
+      "AU2|Ana Leota|Senior Developer|Engineering|12-345-678-901|062-000|12345678|A Leota|12 Example St, Sydney NSW 2000",
     );
     expect(parts.encryptedPii.length).toBe(Buffer.byteLength(plaintext));
     expect(await decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(createBarcodeSvg(parts).content);
   });
 
-  it("decodes longer real-world employee fields at the minimum raster width", async () => {
+  it("decodes longer employee fields at the minimum raster width", async () => {
     const { parts, plaintext } = partsFromPii(LONG_NAME_FIELDS);
     expect(plaintext.length).toBeGreaterThan(formatAustralianPii(DOCS_EXAMPLE_FIELDS).length);
     expect(parts.encryptedPii.length).toBe(Buffer.byteLength(plaintext));
@@ -354,7 +354,7 @@ describe("styled QR scannability", () => {
   });
 
   it.each(DIVERSE_RECORDS)(
-    "decodes a diverse real-world record at the minimum raster width ($label)",
+    "decodes a diverse record at the minimum raster width ($label)",
     async ({ fields }) => {
       const { parts } = partsFromPii(fields);
       expect(await decode(parts, {}, MIN_TESTED_RASTER_WIDTH)).toBe(

@@ -35,8 +35,8 @@ const key = Buffer.from(process.env.VERIFIABL_ENCRYPTION_KEY_BASE64!, "base64");
 // 1. Select AU2 and au.payslip.v2, validate non-PII fields, and encrypt locally.
 const prepared = prepareAustralianV2Payslip({
   pii: {
-    employeeName: "Jane A. Doe",
-    employerName: "Example Payroll Pty Ltd",
+    employeeName: "Ana Leota",
+    employerName: "Example Software Pty Ltd",
     employerAbn: "12 345 678 901",
     address: { lines: ["12 Example St"], suburb: "Sydney", stateOrTerritory: "NSW", postcode: "2000" },
   },
@@ -83,10 +83,10 @@ ambiguous failure.
 import { prepareNewZealandV2Payslip } from "@verifiabl/issuer";
 
 const nzPrepared = prepareNewZealandV2Payslip({
-  pii: { employeeName: "Zoë Nguyễn", irdNumber: "***-***-***", employerName: "Example NZ Ltd" },
+  pii: { employeeName: "Ana Leota", irdNumber: "***-***-***", employerName: "Example Software Limited" },
   payslipNonPii: {
     periodEnd: "2026-05-31", paymentDate: "2026-06-04", currency: "NZD",
-    gross: "7600.00", paye: "1710.00", net: "5890.00",
+    gross: "9000.00", paye: "2283.96", net: "6716.04",
   },
   issuedAt: new Date().toISOString(),
   key,
@@ -146,8 +146,8 @@ Most integrations should use the preparation helpers. To select the schema and f
 import { buildBarcodePayload, createBarcodeSvg, encryptPii, formatAustralianPii } from "@verifiabl/issuer";
 
 const plaintext = formatAustralianPii({
-  employeeName: "Zoë Nguyễn",
-  position: "Ingénieure",
+  employeeName: "Ana Leota",
+  position: "Senior Developer",
   employerAbn: "12 345 678 901",
   address: { lines: ["12 Example St"], suburb: "Sydney", stateOrTerritory: "NSW", postcode: "2000" },
 });

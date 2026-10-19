@@ -36,48 +36,50 @@ describe("AU2 and NZ2 encrypted PII", () => {
   it("formats AU2 in its permanent order and prefers the ABN", () => {
     expect(
       formatAustralianPii({
-        employeeName: "Jo Worker",
-        position: "Analyst",
+        employeeName: "Taylor Nguyen",
+        position: "Payroll Officer",
         department: "Finance",
-        employerName: "Acme Pty Ltd",
+        employerName: "Example Software Pty Ltd",
         employerAbn: "12 345 678 901",
         bsb: "062-000",
         accountNumber: "****5678",
-        accountName: "J Worker",
+        accountName: "T Nguyen",
         address: {
-          lines: ["A204/11-17 Eve Street"],
-          suburb: "Erskineville",
+          lines: ["12 Example St"],
+          suburb: "Sydney",
           stateOrTerritory: "NSW",
-          postcode: "2043",
+          postcode: "2000",
         },
       }),
     ).toBe(
-      "AU2|Jo Worker|Analyst|Finance|12 345 678 901|062-000|****5678|J Worker|" +
-        "A204/11-17 Eve Street, Erskineville NSW 2043",
+      "AU2|Taylor Nguyen|Payroll Officer|Finance|12 345 678 901|062-000|****5678|T Nguyen|" +
+        "12 Example St, Sydney NSW 2000",
     );
-    expect(formatAustralianPii({ employerName: "Acme Pty Ltd" })).toBe("AU2||||Acme Pty Ltd||||");
+    expect(formatAustralianPii({ employerName: "Example Software Pty Ltd" })).toBe(
+      "AU2||||Example Software Pty Ltd||||",
+    );
   });
 
   it("formats NZ2 in its permanent order", () => {
     expect(
       formatNewZealandPii({
-        employeeName: "Jo Worker",
+        employeeName: "Taylor Nguyen",
         irdNumber: "***-***-789",
-        position: "Analyst",
+        position: "Payroll Officer",
         department: "Finance",
-        employerName: "Acme Limited",
+        employerName: "Example Software Limited",
         accountNumber: "**-****-****5678-**",
-        accountName: "J Worker",
+        accountName: "T Nguyen",
         address: {
-          lines: ["Level 2", "10 Lambton Quay"],
-          suburb: "Wellington Central",
+          lines: ["12 Example Street"],
+          suburb: "Te Aro",
           city: "Wellington",
           postcode: "6011",
         },
       }),
     ).toBe(
-      "NZ2|Jo Worker|***-***-789|Analyst|Finance|Acme Limited|**-****-****5678-**|" +
-        "J Worker|Level 2, 10 Lambton Quay, Wellington Central, Wellington 6011",
+      "NZ2|Taylor Nguyen|***-***-789|Payroll Officer|Finance|Example Software Limited|**-****-****5678-**|" +
+        "T Nguyen|12 Example Street, Te Aro, Wellington 6011",
     );
   });
 
@@ -322,6 +324,54 @@ describe("AU2 and NZ2 registration", () => {
     expect(
       australianPayslipV2Schema.safeParse({ ...minimalAu, payFrequency: "half_monthly" }).success,
     ).toBe(false);
+  });
+
+  it("accepts an other employer super contribution in AU2", () => {
+    for (const contributionType of [
+      "superannuation_guarantee",
+      "resc",
+      "salary_sacrifice",
+      "other",
+    ]) {
+      const superannuation = [{ contributionType, amount: "120.00" }];
+      expect(
+        australianPayslipV2Schema.safeParse({ ...minimalAu, superannuation }).success,
+        contributionType,
+      ).toBe(true);
+    }
+    const superannuation = [{ contributionType: "employee_voluntary", amount: "120.00" }];
+    expect(australianPayslipV2Schema.safeParse({ ...minimalAu, superannuation }).success).toBe(
+      false,
+    );
+  });
+
+  it("accepts every base rate period in AU2 and NZ2", () => {
+    const minimalNz = {
+      periodEnd: "2026-05-31",
+      paymentDate: "2026-06-04",
+      currency: "NZD",
+      gross: "1",
+      paye: "2",
+      net: "3",
+    } as const;
+    for (const per of ["hour", "day", "week", "fortnight", "month", "year"]) {
+      const baseRate = { amount: "450.00", per };
+      expect(australianPayslipV2Schema.safeParse({ ...minimalAu, baseRate }).success, per).toBe(
+        true,
+      );
+      expect(newZealandPayslipV2Schema.safeParse({ ...minimalNz, baseRate }).success, per).toBe(
+        true,
+      );
+    }
+    for (const baseRate of [
+      { amount: "450.00", per: "fixed" },
+      { amount: "450.00", per: "Per Day" },
+      { amount: "450.00" },
+      "450.00",
+    ]) {
+      expect(australianPayslipV2Schema.safeParse({ ...minimalAu, baseRate }).success).toBe(false);
+      expect(newZealandPayslipV2Schema.safeParse({ ...minimalNz, baseRate }).success).toBe(false);
+    }
   });
 
   it("maps AU2 without a period start", () => {

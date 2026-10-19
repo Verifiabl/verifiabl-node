@@ -6,6 +6,29 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-19
+
+First stable release. The public API now follows Semantic Versioning.
+
+### Removed
+
+- **Breaking:** `BarcodePngOptions.palette`. It has been ignored since PNG
+  output moved to the frame compositor, which always emits the smallest
+  lossless encoding. To migrate, delete the option.
+
+### Changed
+
+- AU2 and NZ2 `baseRate.per` accept every period a payslip prints a rate in:
+  `australianBaseRatePeriods` and `newZealandBaseRatePeriods` both list `hour`,
+  `day`, `week`, `fortnight`, `month` and `year`.
+
+### Added
+
+- `australianSuperContributionTypes` adds `other`, for an employer super
+  contribution that is not SG, RESC or salary sacrifice, such as an award or
+  agreement rate above SG. `resc` excludes salary sacrifice, which has its own
+  `salary_sacrifice` line.
+
 ## [0.32.0] - 2026-10-13
 
 ### Changed
