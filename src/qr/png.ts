@@ -34,12 +34,6 @@ export interface BarcodePngResult {
 /** PNG-specific options. A superset of the SVG options, so callers can pass either. */
 export interface BarcodePngOptions extends BarcodeSvgOptions {
   /**
-   * @deprecated The compositor always emits the smallest lossless encoding
-   * (an 8-bit palette PNG; truecolour only if the palette ever overflows).
-   * This flag is ignored and will be removed in a future release.
-   */
-  palette?: boolean;
-  /**
    * DEFLATE level (0-9, default 6). Lossless at every level; only trades file
    * size for encode speed.
    */

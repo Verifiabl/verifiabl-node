@@ -276,7 +276,7 @@ describe("VerifiablClient requests", () => {
         payslipNonPii: {
           ...REQUEST.payslipNonPii,
           // @ts-expect-error employeeName is PII, not a payslipNonPii field.
-          employeeName: "Alice Smith",
+          employeeName: "Taylor Nguyen",
         },
       }),
     ).rejects.toThrow();

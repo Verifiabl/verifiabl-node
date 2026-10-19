@@ -36,42 +36,42 @@
       "id": "au-full",
       "profile": "AU2",
       "fields": {
-        "employeeName": "Jo Worker",
-        "position": "Analyst",
+        "employeeName": "Taylor Nguyen",
+        "position": "Payroll Officer",
         "department": "Finance",
-        "employerName": "Acme Pty Ltd",
+        "employerName": "Example Software Pty Ltd",
         "employerAbn": "12 345 678 901",
         "bsb": "062-000",
         "accountNumber": "****5678",
-        "accountName": "J Worker",
+        "accountName": "T Nguyen",
         "address": {
-          "lines": ["A204/11-17 Eve Street"],
-          "suburb": "Erskineville",
+          "lines": ["12 Example St"],
+          "suburb": "Sydney",
           "stateOrTerritory": "NSW",
-          "postcode": "2043"
+          "postcode": "2000"
         }
       },
-      "plaintext": "AU2|Jo Worker|Analyst|Finance|12 345 678 901|062-000|****5678|J Worker|A204/11-17 Eve Street, Erskineville NSW 2043",
-      "plaintextUtf8Hex": "4155327c4a6f20576f726b65727c416e616c7973747c46696e616e63657c31322033343520363738203930317c3036322d3030307c2a2a2a2a353637387c4a20576f726b65727c413230342f31312d313720457665205374726565742c204572736b696e6576696c6c65204e53572032303433"
+      "plaintext": "AU2|Taylor Nguyen|Payroll Officer|Finance|12 345 678 901|062-000|****5678|T Nguyen|12 Example St, Sydney NSW 2000",
+      "plaintextUtf8Hex": "4155327c5461796c6f72204e677579656e7c506179726f6c6c204f6666696365727c46696e616e63657c31322033343520363738203930317c3036322d3030307c2a2a2a2a353637387c54204e677579656e7c3132204578616d706c652053742c205379646e6579204e53572032303030"
     },
     {
       "id": "au-employer-name-fallback",
       "profile": "AU2",
       "fields": {
-        "employerName": "Acme Pty Ltd"
+        "employerName": "Example Software Pty Ltd"
       },
-      "plaintext": "AU2||||Acme Pty Ltd||||",
-      "plaintextUtf8Hex": "4155327c7c7c7c41636d6520507479204c74647c7c7c7c"
+      "plaintext": "AU2||||Example Software Pty Ltd||||",
+      "plaintextUtf8Hex": "4155327c7c7c7c4578616d706c6520536f66747761726520507479204c74647c7c7c7c"
     },
     {
       "id": "au-empty-abn-falls-back-to-name",
       "profile": "AU2",
       "fields": {
-        "employerName": "Acme Pty Ltd",
+        "employerName": "Example Software Pty Ltd",
         "employerAbn": ""
       },
-      "plaintext": "AU2||||Acme Pty Ltd||||",
-      "plaintextUtf8Hex": "4155327c7c7c7c41636d6520507479204c74647c7c7c7c"
+      "plaintext": "AU2||||Example Software Pty Ltd||||",
+      "plaintextUtf8Hex": "4155327c7c7c7c4578616d706c6520536f66747761726520507479204c74647c7c7c7c"
     },
     {
       "id": "au-empty",
@@ -109,11 +109,12 @@
       "profile": "AU2",
       "fields": {
         "employeeName": "José Müller",
-        "department": "Engineering – R&D",
+        "position": "Customer Support Officer",
+        "department": "Operations",
         "accountName": "給与明細"
       },
-      "plaintext": "AU2|José Müller||Engineering – R&D||||給与明細|",
-      "plaintextUtf8Hex": "4155327c4a6f73c3a9204dc3bc6c6c65727c7c456e67696e656572696e6720e28093205226447c7c7c7ce7b5a6e4b88ee6988ee7b4b07c"
+      "plaintext": "AU2|José Müller|Customer Support Officer|Operations||||給与明細|",
+      "plaintextUtf8Hex": "4155327c4a6f73c3a9204dc3bc6c6c65727c437573746f6d657220537570706f7274204f6666696365727c4f7065726174696f6e737c7c7c7ce7b5a6e4b88ee6988ee7b4b07c"
     },
     {
       "id": "au-at-byte-limit",
@@ -128,22 +129,22 @@
       "id": "nz-full",
       "profile": "NZ2",
       "fields": {
-        "employeeName": "Jo Worker",
+        "employeeName": "Taylor Nguyen",
         "irdNumber": "***-***-789",
-        "position": "Analyst",
+        "position": "Payroll Officer",
         "department": "Finance",
-        "employerName": "Acme Limited",
+        "employerName": "Example Software Limited",
         "accountNumber": "**-****-****5678-**",
-        "accountName": "J Worker",
+        "accountName": "T Nguyen",
         "address": {
-          "lines": ["Level 2", "10 Lambton Quay"],
-          "suburb": "Wellington Central",
+          "lines": ["12 Example Street"],
+          "suburb": "Te Aro",
           "city": "Wellington",
           "postcode": "6011"
         }
       },
-      "plaintext": "NZ2|Jo Worker|***-***-789|Analyst|Finance|Acme Limited|**-****-****5678-**|J Worker|Level 2, 10 Lambton Quay, Wellington Central, Wellington 6011",
-      "plaintextUtf8Hex": "4e5a327c4a6f20576f726b65727c2a2a2a2d2a2a2a2d3738397c416e616c7973747c46696e616e63657c41636d65204c696d697465647c2a2a2d2a2a2a2a2d2a2a2a2a353637382d2a2a7c4a20576f726b65727c4c6576656c20322c203130204c616d62746f6e20517561792c2057656c6c696e67746f6e2043656e7472616c2c2057656c6c696e67746f6e2036303131"
+      "plaintext": "NZ2|Taylor Nguyen|***-***-789|Payroll Officer|Finance|Example Software Limited|**-****-****5678-**|T Nguyen|12 Example Street, Te Aro, Wellington 6011",
+      "plaintextUtf8Hex": "4e5a327c5461796c6f72204e677579656e7c2a2a2a2d2a2a2a2d3738397c506179726f6c6c204f6666696365727c46696e616e63657c4578616d706c6520536f667477617265204c696d697465647c2a2a2d2a2a2a2a2d2a2a2a2a353637382d2a2a7c54204e677579656e7c3132204578616d706c65205374726565742c2054652041726f2c2057656c6c696e67746f6e2036303131"
     },
     {
       "id": "nz-address-without-suburb",

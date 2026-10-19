@@ -40,13 +40,10 @@ describe("createBarcodePng", () => {
     expect(Buffer.compare(first.png, second.png)).toBe(0);
   });
 
-  it("always emits the palette encoding; the deprecated palette flag is a no-op", async () => {
+  it("always emits the palette encoding", async () => {
     // colour type byte: signature(8)+len(4)+"IHDR"(4)+w(4)+h(4)+bitDepth(1) => 25
-    const plain = await createBarcodePng(PARTS, {}, 480);
-    expect(plain.png[25]).toBe(3); // indexed
-
-    const withFlag = await createBarcodePng(PARTS, { palette: true }, 480);
-    expect(Buffer.compare(plain.png, withFlag.png)).toBe(0);
+    const { png } = await createBarcodePng(PARTS, {}, 480);
+    expect(png[25]).toBe(3); // indexed
   });
 
   it("reports the same content and scannability metadata as the SVG renderer", async () => {

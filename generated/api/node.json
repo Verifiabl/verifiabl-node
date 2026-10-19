@@ -5058,6 +5058,18 @@
 											},
 											{
 												"type": "literal",
+												"value": "week"
+											},
+											{
+												"type": "literal",
+												"value": "fortnight"
+											},
+											{
+												"type": "literal",
+												"value": "month"
+											},
+											{
+												"type": "literal",
 												"value": "year"
 											}
 										]
@@ -6976,6 +6988,10 @@
 											"types": [
 												{
 													"type": "literal",
+													"value": "other"
+												},
+												{
+													"type": "literal",
 													"value": "superannuation_guarantee"
 												},
 												{
@@ -7805,33 +7821,6 @@
 					}
 				},
 				{
-					"id": 543,
-					"name": "palette",
-					"variant": "declaration",
-					"kind": 1024,
-					"flags": {
-						"isOptional": true
-					},
-					"comment": {
-						"summary": [],
-						"blockTags": [
-							{
-								"tag": "@deprecated",
-								"content": [
-									{
-										"kind": "text",
-										"text": "The compositor always emits the smallest lossless encoding\n(an 8-bit palette PNG; truecolour only if the palette ever overflows).\nThis flag is ignored and will be removed in a future release."
-									}
-								]
-							}
-						]
-					},
-					"type": {
-						"type": "intrinsic",
-						"name": "boolean"
-					}
-				},
-				{
 					"id": 546,
 					"name": "scanBaseUrl",
 					"variant": "declaration",
@@ -7894,7 +7883,6 @@
 						545,
 						1410,
 						548,
-						543,
 						546,
 						547
 					]
@@ -8789,11 +8777,19 @@
 											},
 											{
 												"type": "literal",
-												"value": "year"
+												"value": "week"
 											},
 											{
 												"type": "literal",
-												"value": "week"
+												"value": "fortnight"
+											},
+											{
+												"type": "literal",
+												"value": "month"
+											},
+											{
+												"type": "literal",
+												"value": "year"
 											}
 										]
 									},
@@ -14727,12 +14723,24 @@
 						},
 						{
 							"type": "literal",
+							"value": "week"
+						},
+						{
+							"type": "literal",
+							"value": "fortnight"
+						},
+						{
+							"type": "literal",
+							"value": "month"
+						},
+						{
+							"type": "literal",
 							"value": "year"
 						}
 					]
 				}
 			},
-			"defaultValue": "..."
+			"defaultValue": "baseRatePeriods"
 		},
 		{
 			"id": 1394,
@@ -15327,7 +15335,23 @@
 				"summary": [
 					{
 						"kind": "text",
-						"text": "Employer-side only: an after-tax member contribution is a deduction."
+						"text": "Employer-side only: an after-tax member contribution is a deduction. "
+					},
+					{
+						"kind": "code",
+						"text": "`resc`"
+					},
+					{
+						"kind": "text",
+						"text": " excludes salary\nsacrifice, which has its own line. "
+					},
+					{
+						"kind": "code",
+						"text": "`other`"
+					},
+					{
+						"kind": "text",
+						"text": " is an employer contribution that is not SG, RESC or\nsalary sacrifice, such as an award or agreement rate above SG."
 					}
 				]
 			},
@@ -15348,6 +15372,10 @@
 						{
 							"type": "literal",
 							"value": "salary_sacrifice"
+						},
+						{
+							"type": "literal",
+							"value": "other"
 						}
 					]
 				}
@@ -15679,12 +15707,20 @@
 						},
 						{
 							"type": "literal",
+							"value": "fortnight"
+						},
+						{
+							"type": "literal",
+							"value": "month"
+						},
+						{
+							"type": "literal",
 							"value": "year"
 						}
 					]
 				}
 			},
-			"defaultValue": "..."
+			"defaultValue": "baseRatePeriods"
 		},
 		{
 			"id": 1404,
@@ -19393,11 +19429,6 @@
 			"packageName": "@verifiabl/issuer",
 			"packagePath": "src/qr/png.ts",
 			"qualifiedName": "BarcodePngOptions"
-		},
-		"543": {
-			"packageName": "@verifiabl/issuer",
-			"packagePath": "src/qr/png.ts",
-			"qualifiedName": "BarcodePngOptions.palette"
 		},
 		"544": {
 			"packageName": "@verifiabl/issuer",
