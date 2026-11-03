@@ -8,6 +8,7 @@ import {
   australianEngagementTypes,
   australianEtpComponents,
   australianEtpTypes,
+  australianLeaveBalanceUnits,
   australianLumpSumTypes,
   australianOtherAllowanceCategories,
   australianPaidLeaveTypes,
@@ -73,6 +74,7 @@ it("exports complete runtime code lists from the public entry point", () => {
         australianEmploymentBases,
         australianEngagementTypes,
         australianBaseRatePeriods,
+        australianLeaveBalanceUnits,
       ],
     ],
     [

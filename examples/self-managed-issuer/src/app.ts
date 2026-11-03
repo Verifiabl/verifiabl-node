@@ -108,7 +108,6 @@ function optionalEnvironment(name: string): string | undefined {
 }
 
 function createLiveClient(): VerifiablClient {
-  // snippet:start:node.self-managed.create-client
   const clientId = process.env.VERIFIABL_CLIENT_ID?.trim();
   const clientSecret = process.env.VERIFIABL_CLIENT_SECRET?.trim();
 
@@ -120,7 +119,6 @@ function createLiveClient(): VerifiablClient {
     environment: "sandbox",
     auth: { clientId, clientSecret },
   });
-  // snippet:end:node.self-managed.create-client
   return client;
 }
 
@@ -140,7 +138,6 @@ function readLiveKey(): Buffer {
 }
 
 function prepare(payslip: ExamplePayslip, key: Buffer): PreparedPayslip {
-  // snippet:start:node.self-managed.format-and-encrypt
   const issuedAt = new Date().toISOString();
   const prepared =
     payslip.country === "AU"
@@ -156,13 +153,10 @@ function prepare(payslip: ExamplePayslip, key: Buffer): PreparedPayslip {
           issuedAt,
           key,
         });
-  // snippet:end:node.self-managed.format-and-encrypt
 
-  // snippet:start:node.self-managed.prepare-registration
   // Atomically persist prepared.registration and
   // prepared.barcodeParts(prepared.verifiablReference).encryptedPii before sending.
   // After a restart, resend the same registration and render with saved ciphertext.
-  // snippet:end:node.self-managed.prepare-registration
   return { payslip, prepared };
 }
 
@@ -174,17 +168,13 @@ async function writeArtifacts(
   resultReference = prepared.prepared.verifiablReference,
 ): Promise<void> {
   const request = prepared.prepared.registration;
-  // snippet:start:node.self-managed.build-qr
   const parts = prepared.prepared.barcodeParts(resultReference);
   const badge = createBarcodeSvg(parts, { environment: "sandbox" });
   const svg = badge.svg;
-  // snippet:end:node.self-managed.build-qr
 
   const scanUrl = buildScanUrl(parts, { environment: "sandbox" });
 
-  // snippet:start:node.self-managed.build-xmp
   const xmpPayload = buildBarcodePayload(parts);
-  // snippet:end:node.self-managed.build-xmp
   if (badge.content !== scanUrl || !scanUrl.includes("#2.") || !xmpPayload.startsWith("2|")) {
     throw new Error("Generated QR and XMP artifacts do not use the matching v2 contract");
   }
@@ -242,10 +232,8 @@ async function run(): Promise<void> {
   const firstPayslip = payslips[0];
   if (firstPayslip === undefined) throw new Error("The example fixture is missing");
   const single = prepare(firstPayslip, key);
-  // snippet:start:node.self-managed.prepare-batch
   const batch = payslips.map((payslip) => prepare(payslip, key));
   // Persist each prepared registration and matching ciphertext before sending.
-  // snippet:end:node.self-managed.prepare-batch
   let batchOutcomes: Array<Record<string, string>>;
   let batchToWrite = batch;
   let singleResultReference = single.prepared.verifiablReference;
@@ -263,12 +251,9 @@ async function run(): Promise<void> {
   if (mode === "live") {
     if (client === undefined) throw new Error("Live client was not initialized");
 
-    // snippet:start:node.self-managed.register-single
     const singleResult = await client.registerNonPii(single.prepared.registration);
     singleResultReference = singleResult.verifiablReference;
-    // snippet:end:node.self-managed.register-single
 
-    // snippet:start:node.self-managed.register-batch
     const response = await client.registerNonPiiBatch({
       records: batch.map((record) => ({
         ...record.prepared.registration,
@@ -284,7 +269,6 @@ async function run(): Promise<void> {
       ...(result.code === undefined ? {} : { code: result.code }),
       ...(result.detail === undefined ? {} : { detail: result.detail }),
     }));
-    // snippet:end:node.self-managed.register-batch
     batchOutcomes = registeredOutcomes;
     batchToWrite = batch.filter((record, index) => {
       const result = response.results[index];

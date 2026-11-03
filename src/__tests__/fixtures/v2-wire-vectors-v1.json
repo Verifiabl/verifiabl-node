@@ -39,6 +39,29 @@
       }
     },
     {
+      "id": "au-leave-balances",
+      "schema": "au.payslip.v2",
+      "payslip_non_pii": {
+        "period_start": "2026-08-01",
+        "period_end": "2026-08-14",
+        "payment_date": "2026-08-18",
+        "currency": "AUD",
+        "gross": "3100.00",
+        "paygw": "620.00",
+        "net": "2480.00",
+        "pay_frequency": "fortnightly",
+        "earnings": [{ "type": "ordinary", "amount": "3100.00" }],
+        "leave_balances": {
+          "annual": { "amount": "98.50", "unit": "hours" },
+          "annual_accrued_this_period": { "amount": "5.85", "unit": "hours" },
+          "personal": { "amount": "-4.00", "unit": "hours" },
+          "personal_accrued_this_period": { "amount": "2.92", "unit": "hours" },
+          "long_service": { "amount": "1.5", "unit": "weeks" },
+          "long_service_accrued_this_period": { "amount": "0.03", "unit": "weeks" }
+        }
+      }
+    },
+    {
       "id": "nz-leave-and-dates",
       "schema": "nz.payslip.v2",
       "payslip_non_pii": {

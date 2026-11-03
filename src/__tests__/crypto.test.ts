@@ -49,15 +49,15 @@ describe("encryptPii", () => {
     ).toThrow();
   });
 
-  it("only decrypts with the issuing provider's key", () => {
+  it("only decrypts with the issuer's own key", () => {
     const { encryptedPii, encryptionMetadata } = encryptPii("AU2|a|||||||", key);
-    const otherProviderKey = randomBytes(32);
+    const otherIssuerKey = randomBytes(32);
     expect(() =>
       decryptLikeVerifiabl(
         encryptedPii,
         encryptionMetadata.iv,
         encryptionMetadata.tag,
-        otherProviderKey,
+        otherIssuerKey,
       ),
     ).toThrow();
   });

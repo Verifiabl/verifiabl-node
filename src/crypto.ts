@@ -11,12 +11,12 @@ export type { EncryptedPii };
  * ciphertext as buffers. The SDK applies the required encoding when it sends
  * an API request or builds a barcode.
  *
- * Each provider has its own encryption key, so a ciphertext can only be
- * decrypted with the key of the provider that issued it. Verifiabl finds
+ * Each issuer has its own encryption key, so a ciphertext can only be
+ * decrypted with the key of the issuer that issued it. Verifiabl finds
  * the right key at verification time; no key identifier is sent.
  *
- * Key handling rules (ISO 27001-aligned, these are your obligations as a
- * provider):
+ * Key handling rules (ISO 27001-aligned, these are your obligations as an
+ * issuer):
  *  - The 32-byte key must come from a KMS or secrets manager. Never hard
  *    code it, commit it, or log it.
  *  - The formatted plaintext string is PII. Keep it in memory only; never
@@ -37,7 +37,7 @@ const IV_BYTES = 12; // 96-bit IV, the NIST-recommended size for GCM
  *
  * @param plaintext The AU2 or NZ2 plaintext from `formatAustralianPii` or
  *   `formatNewZealandPii`.
- * @param key Your 32-byte provider encryption key.
+ * @param key Your 32-byte issuer encryption key.
  */
 export function encryptPii(plaintext: string, key: Buffer): EncryptedPii {
   return encryptPiiWithIv(plaintext, key, randomBytes(IV_BYTES));
