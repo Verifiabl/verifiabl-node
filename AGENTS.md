@@ -2,11 +2,11 @@
 
 ## Rules
 
-- Keep this issuer SDK provider-side. Do not add verifier clients or reader-side/internal helpers.
+- Keep this issuer SDK issuer-side. Do not add verifier clients or reader-side/internal helpers.
 - Keep wire contracts compatible with the other SDKs.
 - Keep this exported repository self-contained. Do not reference external development paths or tools.
 - Use synthetic data. Do not log payslip values, keys or credentials.
-- Regenerate profiles, fixtures, snippets and API references from source. Do not edit generated output.
+- Regenerate profiles, fixtures and API references from source. Do not edit generated output.
 
 ## Checks
 
@@ -32,7 +32,7 @@ Read the relevant documents before edits.
 
 | Task | Read |
 | --- | --- |
-| API, validation or wire contracts | [README](README.md) |
-| Development or API reference | [Development](README.md#development), `package.json` |
+| API, validation or wire contracts | [Issuer SDK guide](https://docs.verifiabl.io/issuer-sdk?lang=node) |
+| Development or API reference | [Development](DEVELOPMENT.md), `package.json` |
 | Examples | [Example guide](examples/self-managed-issuer/README.md) |
 | Packages or releases | Local `.github/workflows/` files and export checks |

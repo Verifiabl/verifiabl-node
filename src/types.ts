@@ -98,7 +98,7 @@ const basePayslipRegistrationSchema = z.discriminatedUnion("schema", [
 export const registerNonPiiRequestSchema = z.discriminatedUnion("schema", [
   australianV2RegistrationSchema.extend({
     /**
-     * Optional provider-generated reference (from `generateVerifiablReference`).
+     * Optional issuer-generated reference (from `generateVerifiablReference`).
      * When omitted, the SDK generates one for this call. The reference makes
      * automatic retries idempotent: an identical replay succeeds without
      * creating another record, while reuse with different data returns a
@@ -158,7 +158,7 @@ export type RegisterAndBuildBarcodeResponse = z.infer<typeof registerAndBuildBar
  * The HTTP API uses snake_case. These helpers convert the camelCase   *
  * SDK types to and from that wire shape at the network boundary, so   *
  * the public surface never exposes snake_case. Only SDK-defined keys  *
- * are renamed; provider-specific payslip fields pass through verbatim. *
+ * are renamed; issuer-specific payslip fields pass through verbatim. *
  * ------------------------------------------------------------------ */
 
 function encryptionMetadataToWire(metadata: EncryptionMetadata): Record<string, unknown> {
@@ -248,7 +248,7 @@ export function registerAndBuildBarcodeFromWire(value: unknown): RegisterAndBuil
  * Batch registration                                                  *
  *                                                                     *
  * `registerNonPiiBatch` lets a pay run be submitted in one request.    *
- * The provider generates each record's reference up-front with         *
+ * The issuer generates each record's reference up-front with           *
  * `generateVerifiablReference` and includes it in the record.          *
  * ------------------------------------------------------------------ */
 

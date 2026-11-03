@@ -214,7 +214,7 @@ describe("VerifiablClient requests", () => {
     }
   });
 
-  it("sends a provider-generated reference for retry-safe registration", async () => {
+  it("sends an issuer-generated reference for retry-safe registration", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
     const client = testClient({ fetch });
 
@@ -242,7 +242,7 @@ describe("VerifiablClient requests", () => {
     });
   });
 
-  it("rejects a malformed provider-generated reference without calling the API", async () => {
+  it("rejects a malformed issuer-generated reference without calling the API", async () => {
     const fetch = mockFetch(201, { verifiabl_reference: VERIFIABL_REF });
     const client = testClient({ fetch });
 

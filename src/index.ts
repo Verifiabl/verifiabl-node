@@ -43,6 +43,7 @@ export {
   australianEngagementTypes,
   australianEtpComponents,
   australianEtpTypes,
+  australianLeaveBalanceUnits,
   australianLumpSumTypes,
   australianOtherAllowanceCategories,
   australianPaidLeaveTypes,

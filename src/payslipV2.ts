@@ -187,6 +187,17 @@ const baseRateSchema = z
   .object({ amount: payslipDecimalSchema, per: z.enum(baseRatePeriods) })
   .strict();
 
+// Payrolls keep leave in hours, days or weeks, so the unit travels with the balance.
+const leaveBalanceUnits = tuple(["hours", "days", "weeks"]);
+/** AU2 `leaveBalances` `unit` values. */
+export const australianLeaveBalanceUnits = leaveBalanceUnits;
+/** NZ2 `leaveBalances` `unit` values. */
+export const newZealandLeaveBalanceUnits = leaveBalanceUnits;
+/** A printed leave balance. Negative when leave is taken in advance. */
+const leaveBalanceSchema = z
+  .object({ amount: payslipDecimalSchema, unit: z.enum(leaveBalanceUnits) })
+  .strict();
+
 /**
  * ATO STP Phase 2 paid-leave codes. There is deliberately no family-and-domestic
  * violence category: Fair Work reg 3.48 forbids identifying FDV leave on a pay
@@ -427,6 +438,19 @@ const australianPayslipV2Fields = z
       )
       .optional(),
     reimbursements: payslipDecimalSchema.optional(),
+    // Closed, with no family and domestic violence key and no key for a
+    // business-named leave type, which could carry it.
+    leaveBalances: z
+      .object({
+        annual: leaveBalanceSchema.optional(),
+        annualAccruedThisPeriod: leaveBalanceSchema.optional(),
+        personal: leaveBalanceSchema.optional(),
+        personalAccruedThisPeriod: leaveBalanceSchema.optional(),
+        longService: leaveBalanceSchema.optional(),
+        longServiceAccruedThisPeriod: leaveBalanceSchema.optional(),
+      })
+      .strict()
+      .optional(),
     ytd: z
       .object({
         taxable: payslipDecimalSchema.optional(),
@@ -503,7 +527,6 @@ export const newZealandDeductionTypes = tuple([
   "ir_arrears",
   "other_post_tax",
 ]);
-export const newZealandLeaveBalanceUnits = tuple(["hours", "days", "weeks"]);
 const newZealandPlainEarningsTypes = tuple([
   "ordinary",
   "overtime",
@@ -554,10 +577,6 @@ const newZealandEarningsLineSchema = z.discriminatedUnion("type", [
     z.object({ type: z.literal(type), ...newZealandEarningsFields }).strict(),
   ),
 ]);
-
-const leaveBalanceSchema = z
-  .object({ amount: payslipDecimalSchema, unit: z.enum(newZealandLeaveBalanceUnits) })
-  .strict();
 
 const newZealandPayslipV2Fields = z
   .object({
@@ -722,6 +741,21 @@ export function australianPayslipV2ToWire(
             ...defined({ rate: line.rate, ytd_amount: line.ytdAmount }),
             ...when(line.usi, "usi"),
           })),
+        }),
+    ...(data.leaveBalances === undefined
+      ? {}
+      : {
+          leave_balances: {
+            ...when(data.leaveBalances.annual, "annual"),
+            ...when(data.leaveBalances.annualAccruedThisPeriod, "annual_accrued_this_period"),
+            ...when(data.leaveBalances.personal, "personal"),
+            ...when(data.leaveBalances.personalAccruedThisPeriod, "personal_accrued_this_period"),
+            ...when(data.leaveBalances.longService, "long_service"),
+            ...when(
+              data.leaveBalances.longServiceAccruedThisPeriod,
+              "long_service_accrued_this_period",
+            ),
+          },
         }),
     ...(data.ytd === undefined
       ? {}

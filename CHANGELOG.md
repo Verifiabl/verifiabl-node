@@ -4,7 +4,26 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.0] - 2026-11-03
+
+### Added
+
+- AU2 `leaveBalances`: `annual`, `personal` and `longService`, each with its
+  accrual this period (for example `annualAccruedThisPeriod`), as
+  `{ amount, unit }` with `unit` `hours`, `days` or `weeks`. The new
+  `australianLeaveBalanceUnits` lists the units. Needs an API that accepts
+  AU2 leave balances.
+
+### Changed
+
+- The README now links to the documentation at docs.verifiabl.io instead of
+  repeating it.
+
+### Security
+
+- Require zod 4.6.7, which fixes memory exhaustion when validating oversized
+  constrained collections
+  ([GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)).
 
 ## [1.0.0] - 2026-10-19
 

@@ -374,6 +374,27 @@ describe("AU2 and NZ2 registration", () => {
     }
   });
 
+  it("accepts AU2 leave balances only under the closed keys and units", () => {
+    for (const unit of ["hours", "days", "weeks"]) {
+      const leaveBalances = { longService: { amount: "-1.5", unit } };
+      expect(
+        australianPayslipV2Schema.safeParse({ ...minimalAu, leaveBalances }).success,
+        unit,
+      ).toBe(true);
+    }
+    for (const leaveBalances of [
+      { familyAndDomesticViolence: { amount: "10", unit: "days" } },
+      { study: { amount: "10", unit: "days" } },
+      { annual: { amount: "10", unit: "months" } },
+      { annual: { amount: "10" } },
+      { annual: { amount: 10, unit: "days" } },
+    ]) {
+      expect(australianPayslipV2Schema.safeParse({ ...minimalAu, leaveBalances }).success).toBe(
+        false,
+      );
+    }
+  });
+
   it("maps AU2 without a period start", () => {
     expect(
       registrationToWire({

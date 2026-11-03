@@ -8,3 +8,8 @@ allowBuilds:
 overrides:
   esbuild: 0.28.1
   js-yaml: 4.3.1
+  # GHSA-g3hv-75wg-m249; remove when TypeDoc requires minimatch >=11.0.1.
+  typedoc>minimatch: 11.0.1
+
+patchedDependencies:
+  typedoc@0.28.20: patches/typedoc@0.28.20.patch

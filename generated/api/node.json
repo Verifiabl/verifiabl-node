@@ -3451,7 +3451,7 @@
 																"summary": [
 																	{
 																		"kind": "text",
-																		"text": "Optional provider-generated reference (from "
+																		"text": "Optional issuer-generated reference (from "
 																	},
 																	{
 																		"kind": "code",
@@ -3763,7 +3763,7 @@
 									},
 									{
 										"kind": "text",
-										"text": " records. Each record carries a provider-generated\nVerifiabl reference (from "
+										"text": " records. Each record carries an issuer-generated\nVerifiabl reference (from "
 									},
 									{
 										"kind": "code",
@@ -6668,6 +6668,456 @@
 					}
 				},
 				{
+					"id": 796,
+					"name": "leaveBalances",
+					"variant": "declaration",
+					"kind": 1024,
+					"flags": {
+						"isOptional": true,
+						"isInherited": true
+					},
+					"type": {
+						"type": "reflection",
+						"declaration": {
+							"id": 1045,
+							"name": "__type",
+							"variant": "declaration",
+							"kind": 65536,
+							"flags": {},
+							"children": [
+								{
+									"id": 798,
+									"name": "annual",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "reflection",
+										"declaration": {
+											"id": 1048,
+											"name": "__type",
+											"variant": "declaration",
+											"kind": 65536,
+											"flags": {},
+											"children": [
+												{
+													"id": 766,
+													"name": "amount",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {},
+													"type": {
+														"type": "intrinsic",
+														"name": "string"
+													},
+													"defaultValue": "payslipDecimalSchema"
+												},
+												{
+													"id": 801,
+													"name": "unit",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {},
+													"type": {
+														"type": "union",
+														"types": [
+															{
+																"type": "literal",
+																"value": "hours"
+															},
+															{
+																"type": "literal",
+																"value": "days"
+															},
+															{
+																"type": "literal",
+																"value": "weeks"
+															}
+														]
+													},
+													"defaultValue": "..."
+												}
+											],
+											"groups": [
+												{
+													"title": "Properties",
+													"children": [
+														766,
+														801
+													]
+												}
+											]
+										}
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 802,
+									"name": "annualAccruedThisPeriod",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "reflection",
+										"declaration": {
+											"id": 1049,
+											"name": "__type",
+											"variant": "declaration",
+											"kind": 65536,
+											"flags": {},
+											"children": [
+												{
+													"id": 773,
+													"name": "amount",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {},
+													"type": {
+														"type": "intrinsic",
+														"name": "string"
+													},
+													"defaultValue": "payslipDecimalSchema"
+												},
+												{
+													"id": 805,
+													"name": "unit",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {},
+													"type": {
+														"type": "union",
+														"types": [
+															{
+																"type": "literal",
+																"value": "hours"
+															},
+															{
+																"type": "literal",
+																"value": "days"
+															},
+															{
+																"type": "literal",
+																"value": "weeks"
+															}
+														]
+													},
+													"defaultValue": "..."
+												}
+											],
+											"groups": [
+												{
+													"title": "Properties",
+													"children": [
+														773,
+														805
+													]
+												}
+											]
+										}
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 1440,
+									"name": "longService",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "reflection",
+										"declaration": {
+											"id": 1052,
+											"name": "__type",
+											"variant": "declaration",
+											"kind": 65536,
+											"flags": {},
+											"children": [
+												{
+													"id": 804,
+													"name": "amount",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {},
+													"type": {
+														"type": "intrinsic",
+														"name": "string"
+													},
+													"defaultValue": "payslipDecimalSchema"
+												},
+												{
+													"id": 817,
+													"name": "unit",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {},
+													"type": {
+														"type": "union",
+														"types": [
+															{
+																"type": "literal",
+																"value": "hours"
+															},
+															{
+																"type": "literal",
+																"value": "days"
+															},
+															{
+																"type": "literal",
+																"value": "weeks"
+															}
+														]
+													},
+													"defaultValue": "..."
+												}
+											],
+											"groups": [
+												{
+													"title": "Properties",
+													"children": [
+														804,
+														817
+													]
+												}
+											]
+										}
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 1441,
+									"name": "longServiceAccruedThisPeriod",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "reflection",
+										"declaration": {
+											"id": 1053,
+											"name": "__type",
+											"variant": "declaration",
+											"kind": 65536,
+											"flags": {},
+											"children": [
+												{
+													"id": 808,
+													"name": "amount",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {},
+													"type": {
+														"type": "intrinsic",
+														"name": "string"
+													},
+													"defaultValue": "payslipDecimalSchema"
+												},
+												{
+													"id": 1442,
+													"name": "unit",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {},
+													"type": {
+														"type": "union",
+														"types": [
+															{
+																"type": "literal",
+																"value": "hours"
+															},
+															{
+																"type": "literal",
+																"value": "days"
+															},
+															{
+																"type": "literal",
+																"value": "weeks"
+															}
+														]
+													},
+													"defaultValue": "..."
+												}
+											],
+											"groups": [
+												{
+													"title": "Properties",
+													"children": [
+														808,
+														1442
+													]
+												}
+											]
+										}
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 1438,
+									"name": "personal",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "reflection",
+										"declaration": {
+											"id": 1050,
+											"name": "__type",
+											"variant": "declaration",
+											"kind": 65536,
+											"flags": {},
+											"children": [
+												{
+													"id": 793,
+													"name": "amount",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {},
+													"type": {
+														"type": "intrinsic",
+														"name": "string"
+													},
+													"defaultValue": "payslipDecimalSchema"
+												},
+												{
+													"id": 809,
+													"name": "unit",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {},
+													"type": {
+														"type": "union",
+														"types": [
+															{
+																"type": "literal",
+																"value": "hours"
+															},
+															{
+																"type": "literal",
+																"value": "days"
+															},
+															{
+																"type": "literal",
+																"value": "weeks"
+															}
+														]
+													},
+													"defaultValue": "..."
+												}
+											],
+											"groups": [
+												{
+													"title": "Properties",
+													"children": [
+														793,
+														809
+													]
+												}
+											]
+										}
+									},
+									"defaultValue": "..."
+								},
+								{
+									"id": 1439,
+									"name": "personalAccruedThisPeriod",
+									"variant": "declaration",
+									"kind": 1024,
+									"flags": {
+										"isOptional": true
+									},
+									"type": {
+										"type": "reflection",
+										"declaration": {
+											"id": 1051,
+											"name": "__type",
+											"variant": "declaration",
+											"kind": 65536,
+											"flags": {},
+											"children": [
+												{
+													"id": 800,
+													"name": "amount",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {},
+													"type": {
+														"type": "intrinsic",
+														"name": "string"
+													},
+													"defaultValue": "payslipDecimalSchema"
+												},
+												{
+													"id": 813,
+													"name": "unit",
+													"variant": "declaration",
+													"kind": 1024,
+													"flags": {},
+													"type": {
+														"type": "union",
+														"types": [
+															{
+																"type": "literal",
+																"value": "hours"
+															},
+															{
+																"type": "literal",
+																"value": "days"
+															},
+															{
+																"type": "literal",
+																"value": "weeks"
+															}
+														]
+													},
+													"defaultValue": "..."
+												}
+											],
+											"groups": [
+												{
+													"title": "Properties",
+													"children": [
+														800,
+														813
+													]
+												}
+											]
+										}
+									},
+									"defaultValue": "..."
+								}
+							],
+							"groups": [
+								{
+									"title": "Properties",
+									"children": [
+										798,
+										802,
+										1440,
+										1441,
+										1438,
+										1439
+									]
+								}
+							]
+						}
+					},
+					"defaultValue": "...",
+					"inheritedFrom": {
+						"type": "reference",
+						"target": -1,
+						"name": "z.input.leaveBalances",
+						"package": "@verifiabl/issuer"
+					}
+				},
+				{
 					"id": 674,
 					"name": "net",
 					"variant": "declaration",
@@ -7105,7 +7555,7 @@
 					"type": {
 						"type": "reflection",
 						"declaration": {
-							"id": 1045,
+							"id": 1054,
 							"name": "__type",
 							"variant": "declaration",
 							"kind": 65536,
@@ -7259,6 +7709,7 @@
 						680,
 						681,
 						672,
+						796,
 						674,
 						679,
 						673,
@@ -7662,7 +8113,7 @@
 						"summary": [
 							{
 								"kind": "text",
-								"text": "Provider-generated reference, or one returned by "
+								"text": "Issuer-generated reference, or one returned by "
 							},
 							{
 								"kind": "code",
@@ -8740,14 +9191,14 @@
 					"type": {
 						"type": "reflection",
 						"declaration": {
-							"id": 1048,
+							"id": 1055,
 							"name": "__type",
 							"variant": "declaration",
 							"kind": 65536,
 							"flags": {},
 							"children": [
 								{
-									"id": 766,
+									"id": 812,
 									"name": "amount",
 									"variant": "declaration",
 									"kind": 1024,
@@ -8800,7 +9251,7 @@
 								{
 									"title": "Properties",
 									"children": [
-										766,
+										812,
 										1435
 									]
 								}
@@ -9490,14 +9941,14 @@
 						"elementType": {
 							"type": "reflection",
 							"declaration": {
-								"id": 1052,
+								"id": 1059,
 								"name": "__type",
 								"variant": "declaration",
 								"kind": 65536,
 								"flags": {},
 								"children": [
 									{
-										"id": 804,
+										"id": 1444,
 										"name": "amount",
 										"variant": "declaration",
 										"kind": 1024,
@@ -9560,7 +10011,7 @@
 									{
 										"title": "Properties",
 										"children": [
-											804,
+											1444,
 											1423,
 											1424
 										]
@@ -9594,14 +10045,14 @@
 								{
 									"type": "reflection",
 									"declaration": {
-										"id": 1049,
+										"id": 1056,
 										"name": "__type",
 										"variant": "declaration",
 										"kind": 65536,
 										"flags": {},
 										"children": [
 											{
-												"id": 773,
+												"id": 816,
 												"name": "amount",
 												"variant": "declaration",
 												"kind": 1024,
@@ -9708,7 +10159,7 @@
 											{
 												"title": "Properties",
 												"children": [
-													773,
+													816,
 													761,
 													776,
 													774,
@@ -9722,7 +10173,7 @@
 								{
 									"type": "reflection",
 									"declaration": {
-										"id": 1050,
+										"id": 1057,
 										"name": "__type",
 										"variant": "declaration",
 										"kind": 65536,
@@ -9794,7 +10245,7 @@
 												"defaultValue": "..."
 											},
 											{
-												"id": 793,
+												"id": 1425,
 												"name": "amount",
 												"variant": "declaration",
 												"kind": 1024,
@@ -9865,7 +10316,7 @@
 												"title": "Properties",
 												"children": [
 													768,
-													793,
+													1425,
 													1418,
 													792,
 													1417,
@@ -9878,14 +10329,14 @@
 								{
 									"type": "reflection",
 									"declaration": {
-										"id": 1051,
+										"id": 1058,
 										"name": "__type",
 										"variant": "declaration",
 										"kind": 65536,
 										"flags": {},
 										"children": [
 											{
-												"id": 800,
+												"id": 1426,
 												"name": "amount",
 												"variant": "declaration",
 												"kind": 1024,
@@ -10012,7 +10463,7 @@
 											{
 												"title": "Properties",
 												"children": [
-													800,
+													1426,
 													1421,
 													1419,
 													1420,
@@ -10222,7 +10673,7 @@
 					}
 				},
 				{
-					"id": 796,
+					"id": 1445,
 					"name": "leaveBalances",
 					"variant": "declaration",
 					"kind": 1024,
@@ -10233,7 +10684,7 @@
 					"type": {
 						"type": "reflection",
 						"declaration": {
-							"id": 1053,
+							"id": 1060,
 							"name": "__type",
 							"variant": "declaration",
 							"kind": 65536,
@@ -10250,14 +10701,14 @@
 									"type": {
 										"type": "reflection",
 										"declaration": {
-											"id": 1058,
+											"id": 1457,
 											"name": "__type",
 											"variant": "declaration",
 											"kind": 65536,
 											"flags": {},
 											"children": [
 												{
-													"id": 1426,
+													"id": 1458,
 													"name": "amount",
 													"variant": "declaration",
 													"kind": 1024,
@@ -10269,7 +10720,7 @@
 													"defaultValue": "payslipDecimalSchema"
 												},
 												{
-													"id": 817,
+													"id": 1459,
 													"name": "unit",
 													"variant": "declaration",
 													"kind": 1024,
@@ -10298,8 +10749,8 @@
 												{
 													"title": "Properties",
 													"children": [
-														1426,
-														817
+														1458,
+														1459
 													]
 												}
 											]
@@ -10308,7 +10759,7 @@
 									"defaultValue": "..."
 								},
 								{
-									"id": 798,
+									"id": 1446,
 									"name": "annual",
 									"variant": "declaration",
 									"kind": 1024,
@@ -10318,14 +10769,14 @@
 									"type": {
 										"type": "reflection",
 										"declaration": {
-											"id": 1054,
+											"id": 1061,
 											"name": "__type",
 											"variant": "declaration",
 											"kind": 65536,
 											"flags": {},
 											"children": [
 												{
-													"id": 808,
+													"id": 1447,
 													"name": "amount",
 													"variant": "declaration",
 													"kind": 1024,
@@ -10337,7 +10788,7 @@
 													"defaultValue": "payslipDecimalSchema"
 												},
 												{
-													"id": 801,
+													"id": 1448,
 													"name": "unit",
 													"variant": "declaration",
 													"kind": 1024,
@@ -10366,8 +10817,8 @@
 												{
 													"title": "Properties",
 													"children": [
-														808,
-														801
+														1447,
+														1448
 													]
 												}
 											]
@@ -10376,7 +10827,7 @@
 									"defaultValue": "..."
 								},
 								{
-									"id": 802,
+									"id": 1449,
 									"name": "annualAccruedThisPeriod",
 									"variant": "declaration",
 									"kind": 1024,
@@ -10386,14 +10837,14 @@
 									"type": {
 										"type": "reflection",
 										"declaration": {
-											"id": 1055,
+											"id": 1427,
 											"name": "__type",
 											"variant": "declaration",
 											"kind": 65536,
 											"flags": {},
 											"children": [
 												{
-													"id": 812,
+													"id": 1450,
 													"name": "amount",
 													"variant": "declaration",
 													"kind": 1024,
@@ -10405,7 +10856,7 @@
 													"defaultValue": "payslipDecimalSchema"
 												},
 												{
-													"id": 805,
+													"id": 1451,
 													"name": "unit",
 													"variant": "declaration",
 													"kind": 1024,
@@ -10434,8 +10885,8 @@
 												{
 													"title": "Properties",
 													"children": [
-														812,
-														805
+														1450,
+														1451
 													]
 												}
 											]
@@ -10454,14 +10905,14 @@
 									"type": {
 										"type": "reflection",
 										"declaration": {
-											"id": 1056,
+											"id": 1428,
 											"name": "__type",
 											"variant": "declaration",
 											"kind": 65536,
 											"flags": {},
 											"children": [
 												{
-													"id": 816,
+													"id": 1452,
 													"name": "amount",
 													"variant": "declaration",
 													"kind": 1024,
@@ -10473,7 +10924,7 @@
 													"defaultValue": "payslipDecimalSchema"
 												},
 												{
-													"id": 809,
+													"id": 1453,
 													"name": "unit",
 													"variant": "declaration",
 													"kind": 1024,
@@ -10502,8 +10953,8 @@
 												{
 													"title": "Properties",
 													"children": [
-														816,
-														809
+														1452,
+														1453
 													]
 												}
 											]
@@ -10522,14 +10973,14 @@
 									"type": {
 										"type": "reflection",
 										"declaration": {
-											"id": 1057,
+											"id": 1454,
 											"name": "__type",
 											"variant": "declaration",
 											"kind": 65536,
 											"flags": {},
 											"children": [
 												{
-													"id": 1425,
+													"id": 1455,
 													"name": "amount",
 													"variant": "declaration",
 													"kind": 1024,
@@ -10541,7 +10992,7 @@
 													"defaultValue": "payslipDecimalSchema"
 												},
 												{
-													"id": 813,
+													"id": 1456,
 													"name": "unit",
 													"variant": "declaration",
 													"kind": 1024,
@@ -10570,8 +11021,8 @@
 												{
 													"title": "Properties",
 													"children": [
-														1425,
-														813
+														1455,
+														1456
 													]
 												}
 											]
@@ -10585,8 +11036,8 @@
 									"title": "Properties",
 									"children": [
 										814,
-										798,
-										802,
+										1446,
+										1449,
 										806,
 										810
 									]
@@ -10904,7 +11355,7 @@
 					"type": {
 						"type": "reflection",
 						"declaration": {
-							"id": 1059,
+							"id": 1460,
 							"name": "__type",
 							"variant": "declaration",
 							"kind": 65536,
@@ -11094,7 +11545,7 @@
 						786,
 						787,
 						788,
-						796,
+						1445,
 						741,
 						746,
 						740,
@@ -12232,7 +12683,7 @@
 												"summary": [
 													{
 														"kind": "text",
-														"text": "Optional provider-generated reference (from "
+														"text": "Optional issuer-generated reference (from "
 													},
 													{
 														"kind": "code",
@@ -15065,6 +15516,61 @@
 			"defaultValue": "..."
 		},
 		{
+			"id": 1443,
+			"name": "australianLeaveBalanceUnits",
+			"variant": "declaration",
+			"kind": 32,
+			"flags": {
+				"isConst": true
+			},
+			"comment": {
+				"summary": [
+					{
+						"kind": "text",
+						"text": "AU2 "
+					},
+					{
+						"kind": "code",
+						"text": "`leaveBalances`"
+					},
+					{
+						"kind": "text",
+						"text": " "
+					},
+					{
+						"kind": "code",
+						"text": "`unit`"
+					},
+					{
+						"kind": "text",
+						"text": " values."
+					}
+				]
+			},
+			"type": {
+				"type": "typeOperator",
+				"operator": "readonly",
+				"target": {
+					"type": "tuple",
+					"elements": [
+						{
+							"type": "literal",
+							"value": "hours"
+						},
+						{
+							"type": "literal",
+							"value": "days"
+						},
+						{
+							"type": "literal",
+							"value": "weeks"
+						}
+					]
+				}
+			},
+			"defaultValue": "leaveBalanceUnits"
+		},
+		{
 			"id": 1416,
 			"name": "australianLumpSumTypes",
 			"variant": "declaration",
@@ -15860,6 +16366,30 @@
 			"flags": {
 				"isConst": true
 			},
+			"comment": {
+				"summary": [
+					{
+						"kind": "text",
+						"text": "NZ2 "
+					},
+					{
+						"kind": "code",
+						"text": "`leaveBalances`"
+					},
+					{
+						"kind": "text",
+						"text": " "
+					},
+					{
+						"kind": "code",
+						"text": "`unit`"
+					},
+					{
+						"kind": "text",
+						"text": " values."
+					}
+				]
+			},
 			"type": {
 				"type": "typeOperator",
 				"operator": "readonly",
@@ -15881,7 +16411,7 @@
 					]
 				}
 			},
-			"defaultValue": "..."
+			"defaultValue": "leaveBalanceUnits"
 		},
 		{
 			"id": 1407,
@@ -17028,7 +17558,7 @@
 							},
 							{
 								"kind": "text",
-								"text": " in the result; a tenth of the QR's side\ncovers any realistic record) on every side the badge leaves open: the left,\nright and bottom for the vertical layout, and the left, top and bottom for the\nhorizontal layout. That margin is the QR quiet zone, which the badge does not\ncarry itself on those sides.\n\nThrows "
+								"text": " in the result; a tenth of the QR width is\nenough for any full payslip record) on every side the badge leaves open: the\nleft, right and bottom for the vertical layout, and the left, top and bottom\nfor the horizontal layout. That margin is the QR quiet zone, which the badge\ndoes not carry itself on those sides.\n\nThrows "
 							},
 							{
 								"kind": "inline-tag",
@@ -17179,7 +17709,7 @@
 								"summary": [
 									{
 										"kind": "text",
-										"text": "Your 32-byte provider encryption key."
+										"text": "Your 32-byte issuer encryption key."
 									}
 								]
 							},
@@ -17262,7 +17792,7 @@
 							"type": {
 								"type": "reflection",
 								"declaration": {
-									"id": 1060,
+									"id": 1461,
 									"name": "__type",
 									"variant": "declaration",
 									"kind": 65536,
@@ -17307,7 +17837,7 @@
 											"type": {
 												"type": "reflection",
 												"declaration": {
-													"id": 1061,
+													"id": 1462,
 													"name": "__type",
 													"variant": "declaration",
 													"kind": 65536,
@@ -17557,7 +18087,7 @@
 							"type": {
 								"type": "reflection",
 								"declaration": {
-									"id": 1427,
+									"id": 1463,
 									"name": "__type",
 									"variant": "declaration",
 									"kind": 65536,
@@ -17602,7 +18132,7 @@
 											"type": {
 												"type": "reflection",
 												"declaration": {
-													"id": 1428,
+													"id": 1464,
 													"name": "__type",
 													"variant": "declaration",
 													"kind": 65536,
@@ -17797,7 +18327,7 @@
 						"summary": [
 							{
 								"kind": "text",
-								"text": "Generate a fresh Verifiabl reference: 16 cryptographically random bytes\n(128 bits) encoded as 22 base64url characters without padding. Matches the\nserver's algorithm so a provider-generated reference is indistinguishable\nfrom one issued by the API.\n\nUse this for "
+								"text": "Generate a fresh Verifiabl reference: 16 cryptographically random bytes\n(128 bits) encoded as 22 base64url characters without padding. Matches the\nserver's algorithm so an issuer-generated reference is indistinguishable\nfrom one issued by the API.\n\nUse this for "
 							},
 							{
 								"kind": "code",
@@ -18048,6 +18578,7 @@
 				1397,
 				1430,
 				1415,
+				1443,
 				1416,
 				1398,
 				1399,
@@ -21584,6 +22115,141 @@
 			"packageName": "@verifiabl/issuer",
 			"packagePath": "src/payslipV2.ts",
 			"qualifiedName": "newZealandBaseRatePeriods"
+		},
+		"1438": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "personal"
+		},
+		"1439": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "personalAccruedThisPeriod"
+		},
+		"1440": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "longService"
+		},
+		"1441": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "longServiceAccruedThisPeriod"
+		},
+		"1442": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "unit"
+		},
+		"1443": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "australianLeaveBalanceUnits"
+		},
+		"1444": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "amount"
+		},
+		"1445": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "leaveBalances"
+		},
+		"1446": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "annual"
+		},
+		"1447": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "amount"
+		},
+		"1448": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "unit"
+		},
+		"1449": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "annualAccruedThisPeriod"
+		},
+		"1450": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "amount"
+		},
+		"1451": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "unit"
+		},
+		"1452": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "amount"
+		},
+		"1453": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "unit"
+		},
+		"1454": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1455": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "amount"
+		},
+		"1456": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "unit"
+		},
+		"1457": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1458": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "amount"
+		},
+		"1459": {
+			"packageName": "@verifiabl/issuer",
+			"packagePath": "src/payslipV2.ts",
+			"qualifiedName": "unit"
+		},
+		"1460": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1461": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1462": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1463": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
+		},
+		"1464": {
+			"packageName": "zod",
+			"packagePath": "v4/core/util.d.cts",
+			"qualifiedName": "__type"
 		}
 	},
 	"files": {

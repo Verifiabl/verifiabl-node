@@ -392,11 +392,11 @@ const HORIZONTAL_FRAME_TEXT_PATHS =
  *
  * The QR spans the full badge width (vertical layout) or height (horizontal
  * layout) on a white ground. Place the badge with a clear light margin of at
- * least four QR modules (`modulePx` in the result; a tenth of the QR's side
- * covers any realistic record) on every side the badge leaves open: the left,
- * right and bottom for the vertical layout, and the left, top and bottom for the
- * horizontal layout. That margin is the QR quiet zone, which the badge does not
- * carry itself on those sides.
+ * least four QR modules (`modulePx` in the result; a tenth of the QR width is
+ * enough for any full payslip record) on every side the badge leaves open: the
+ * left, right and bottom for the vertical layout, and the left, top and bottom
+ * for the horizontal layout. That margin is the QR quiet zone, which the badge
+ * does not carry itself on those sides.
  *
  * Throws {@link QrCapacityError} when the encrypted PII is too long to encode.
  */
